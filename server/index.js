@@ -1,47 +1,29 @@
-require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const admin = require('firebase-admin');
-const path = require('path');
+const dotenv = require('dotenv');
 
-// Initialize Express app
+// Load environment variables
+dotenv.config();
+
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Initialize Firebase Admin
-try {
-  const serviceAccount = require('./config/serviceAccountKey.json');
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-} catch (error) {
-  console.error('Error initializing Firebase Admin:', error.message);
-  console.log('Please ensure serviceAccountKey.json is properly configured');
-}
-
-// MongoDB Connection
-if (!process.env.MONGODB_URI) {
-  console.error('MONGODB_URI is not defined in .env file');
-  process.exit(1);
-}
-
+// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Import routes
 const authRoutes = require('./routes/auth');
-const bookingRoutes = require('./routes/bookings');
-const slotRoutes = require('./routes/slots');
+const systemsRoutes = require('./routes/systems');
 
 // Use routes
 app.use('/api/auth', authRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/slots', slotRoutes);
+app.use('/api/systems', systemsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -49,7 +31,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

@@ -1,73 +1,100 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const { verifyToken } = require('../middleware/auth');
-const admin = require('firebase-admin');
 
-// Register new user (no token required as this is the initial registration)
+// Register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email } = req.body;
-    const decodedToken = await admin.auth().verifyIdToken(
-      req.headers.authorization?.split('Bearer ')[1]
-    );
-    const firebaseUid = decodedToken.uid;
+    const { name, email, password } = req.body;
 
-    // Check if user already exists
-    let user = await User.findOne({ firebaseUid });
-    if (user) {
-      return res.status(200).json(user); // User already exists, return the user
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create new user
-    user = new User({
-      firebaseUid,
-      email,
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = new User({
       name,
-      role: 'user' // Default role
+      email,
+      password: hashedPassword
     });
 
     await user.save();
-    res.status(201).json(user);
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
   } catch (error) {
     console.error('Register Error:', error);
     res.status(500).json({ message: 'Error registering user' });
   }
 });
 
-// Get current user profile
-router.get('/profile', verifyToken, async (req, res) => {
+// Login
+router.post('/login', async (req, res) => {
   try {
-    const user = await User.findOne({ firebaseUid: req.user.uid });
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
-    res.json(user);
+
+    // Check password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
   } catch (error) {
-    console.error('Profile Error:', error);
-    res.status(500).json({ message: 'Error fetching profile' });
+    console.error('Login Error:', error);
+    res.status(500).json({ message: 'Error logging in' });
   }
 });
 
-// Update user role (admin only)
-router.put('/role/:userId', verifyToken, async (req, res) => {
+// Get current user
+router.get('/me', verifyToken, async (req, res) => {
   try {
-    const adminUser = await User.findOne({ firebaseUid: req.user.uid });
-    if (!adminUser || adminUser.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
-
-    const user = await User.findById(req.params.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    user.role = req.body.role;
-    await user.save();
+    const user = await User.findById(req.user._id).select('-password');
     res.json(user);
   } catch (error) {
-    console.error('Update Role Error:', error);
-    res.status(500).json({ message: 'Error updating user role' });
+    console.error('Get User Error:', error);
+    res.status(500).json({ message: 'Error fetching user' });
   }
 });
 
