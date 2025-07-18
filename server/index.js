@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -23,9 +24,12 @@ try {
 }
 
 // MongoDB Connection
-const MONGODB_URI = 'mongodb+srv://deepu6892:SaOkBEEl873q6ePc@negsuslabdb.g8yreln.mongodb.net/?retryWrites=true&w=majority&appName=Negsuslabdb';
+if (!process.env.MONGODB_URI) {
+  console.error('MONGODB_URI is not defined in .env file');
+  process.exit(1);
+}
 
-mongoose.connect(MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
