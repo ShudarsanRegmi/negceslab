@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Typography,
@@ -13,69 +13,78 @@ import {
   CardActions,
   Box,
   Chip,
-} from '@mui/material';
-import { format } from 'date-fns';
-import { useFormik } from 'formik';
-import * as yup from 'yup';
-import { bookingsAPI, slotsAPI } from '../services/api';
+} from "@mui/material";
+import { format } from "date-fns";
+import { useFormik } from "formik";
+import * as yup from "yup";
+import { computersAPI, bookingsAPI } from "../services/api";
 
-interface Slot {
+interface Computer {
   _id: string;
-  startTime: string;
-  endTime: string;
-  capacity: number;
-  lab: string;
-  description: string;
+  name: string;
+  config: any;
   isAvailable: boolean;
 }
 
 const validationSchema = yup.object({
-  purpose: yup
+  reason: yup
     .string()
-    .required('Purpose is required')
-    .min(10, 'Purpose should be at least 10 characters'),
+    .required("Reason is required")
+    .min(10, "Reason should be at least 10 characters"),
+  startTime: yup.string().required("Start time is required"),
+  endTime: yup.string().required("End time is required"),
 });
 
 const BookingForm = () => {
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [error, setError] = useState('');
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [computers, setComputers] = useState<Computer[]>([]);
+  const [error, setError] = useState("");
+  const [selectedComputer, setSelectedComputer] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchSlots();
+    fetchComputers();
   }, []);
 
-  const fetchSlots = async () => {
+  const fetchComputers = async () => {
     try {
-      const response = await slotsAPI.getAvailableSlots();
-      setSlots(response.data);
+      const response = await computersAPI.getAllComputers();
+      setComputers(response.data);
     } catch (err) {
-      setError('Failed to fetch available slots');
-      console.error('Error fetching slots:', err);
+      setError("Failed to fetch computers");
+      console.error("Error fetching computers:", err);
     }
   };
 
   const formik = useFormik({
     initialValues: {
-      purpose: '',
+      reason: "",
+      startTime: "",
+      endTime: "",
     },
-    validationSchema: validationSchema,
+    validationSchema: yup.object({
+      reason: yup
+        .string()
+        .required("Reason is required")
+        .min(10, "Reason should be at least 10 characters"),
+      startTime: yup.string().required("Start time is required"),
+      endTime: yup.string().required("End time is required"),
+    }),
     onSubmit: async (values) => {
-      if (!selectedSlot) {
-        setError('Please select a slot');
+      if (!selectedComputer) {
+        setError("Please select a computer");
         return;
       }
-
       try {
         await bookingsAPI.createBooking({
-          slotId: selectedSlot,
-          purpose: values.purpose,
+          computerId: selectedComputer,
+          reason: values.reason,
+          startTime: new Date(values.startTime).toISOString(),
+          endTime: new Date(values.endTime).toISOString(),
         });
-        navigate('/');
+        navigate("/");
       } catch (err) {
-        setError('Failed to create booking');
-        console.error('Error creating booking:', err);
+        setError("Failed to create booking");
+        console.error("Error creating booking:", err);
       }
     },
   });
@@ -95,61 +104,47 @@ const BookingForm = () => {
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Typography variant="h6" sx={{ mb: 2 }}>
-            Available Slots
+            Available Computers
           </Typography>
           <Grid container spacing={2}>
-            {slots.map((slot) => (
-              <Grid key={slot._id} item xs={12} sm={6} md={4}>
+            {computers.map((computer) => (
+              <Grid key={computer._id} item xs={12} sm={6} md={4}>
                 <Card
                   variant="outlined"
                   sx={{
-                    border: selectedSlot === slot._id ? 2 : 1,
-                    borderColor: selectedSlot === slot._id ? 'primary.main' : 'divider',
+                    border: selectedComputer === computer._id ? 2 : 1,
+                    borderColor:
+                      selectedComputer === computer._id
+                        ? "primary.main"
+                        : "divider",
                   }}
+                  onClick={() => setSelectedComputer(computer._id)}
                 >
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
-                      {slot.lab}
+                      {computer.name}
                     </Typography>
-                    <Typography variant="body2" color="textSecondary" gutterBottom>
-                      {slot.description}
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      gutterBottom
+                    >
+                      {JSON.stringify(computer.config)}
                     </Typography>
-                    <Box sx={{ mb: 1 }}>
-                      <Typography variant="body2">
-                        {format(new Date(slot.startTime), 'PPP')}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {format(new Date(slot.startTime), 'p')} -{' '}
-                        {format(new Date(slot.endTime), 'p')}
-                      </Typography>
-                    </Box>
                     <Chip
-                      label={`Capacity: ${slot.capacity}`}
+                      label={computer.isAvailable ? "Available" : "Booked"}
+                      color={computer.isAvailable ? "success" : "error"}
                       size="small"
-                      color="primary"
                     />
                   </CardContent>
-                  <CardActions>
-                    <Button
-                      size="small"
-                      color={selectedSlot === slot._id ? 'error' : 'primary'}
-                      onClick={() =>
-                        setSelectedSlot(
-                          selectedSlot === slot._id ? null : slot._id
-                        )
-                      }
-                    >
-                      {selectedSlot === slot._id ? 'Unselect' : 'Select'}
-                    </Button>
-                  </CardActions>
                 </Card>
               </Grid>
             ))}
-            {slots.length === 0 && (
+            {computers.length === 0 && (
               <Grid item xs={12}>
-                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <Paper sx={{ p: 2, textAlign: "center" }}>
                   <Typography variant="body1">
-                    No available slots found. Please check back later.
+                    No available computers found. Please check back later.
                   </Typography>
                 </Paper>
               </Grid>
@@ -165,26 +160,52 @@ const BookingForm = () => {
             <Box component="form" onSubmit={formik.handleSubmit}>
               <TextField
                 fullWidth
-                id="purpose"
-                name="purpose"
-                label="Purpose of Booking"
+                id="reason"
+                name="reason"
+                label="Reason for Booking"
                 multiline
                 rows={4}
-                value={formik.values.purpose}
+                value={formik.values.reason}
                 onChange={formik.handleChange}
-                error={formik.touched.purpose && Boolean(formik.errors.purpose)}
-                helperText={formik.touched.purpose && formik.errors.purpose}
+                error={formik.touched.reason && Boolean(formik.errors.reason)}
+                helperText={formik.touched.reason && formik.errors.reason}
                 sx={{ mb: 2 }}
               />
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <Button onClick={() => navigate('/')} color="inherit">
+              <TextField
+                fullWidth
+                id="startTime"
+                name="startTime"
+                label="Start Time"
+                type="datetime-local"
+                value={formik.values.startTime}
+                onChange={formik.handleChange}
+                error={
+                  formik.touched.startTime && Boolean(formik.errors.startTime)
+                }
+                helperText={formik.touched.startTime && formik.errors.startTime}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                id="endTime"
+                name="endTime"
+                label="End Time"
+                type="datetime-local"
+                value={formik.values.endTime}
+                onChange={formik.handleChange}
+                error={formik.touched.endTime && Boolean(formik.errors.endTime)}
+                helperText={formik.touched.endTime && formik.errors.endTime}
+                sx={{ mb: 2 }}
+              />
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+                <Button onClick={() => navigate("/")} color="inherit">
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   variant="contained"
                   color="primary"
-                  disabled={!selectedSlot}
+                  disabled={!selectedComputer}
                 >
                   Submit Booking
                 </Button>
@@ -197,4 +218,4 @@ const BookingForm = () => {
   );
 };
 
-export default BookingForm; 
+export default BookingForm;

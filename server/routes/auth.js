@@ -38,11 +38,12 @@ router.post('/register', async (req, res) => {
 // Get current user profile
 router.get('/profile', verifyToken, async (req, res) => {
   try {
-    const user = await User.findOne({ firebaseUid: req.user.uid });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.json(user);
+    // const user = await User.findOne({ firebaseUid: req.user.uid });
+    // if (!user) {
+    //   return res.status(404).json({ message: 'User not found' });
+    // }
+    // res.json(user);
+    res.json(req.user); // req.user is already the user document
   } catch (error) {
     console.error('Profile Error:', error);
     res.status(500).json({ message: 'Error fetching profile' });

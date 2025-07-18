@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers';
 import { format } from 'date-fns';
-import { bookingsAPI, slotsAPI } from '../services/api';
+import { bookingsAPI, computersAPI } from '../services/api';
 
 interface Booking {
   _id: string;
@@ -31,10 +31,9 @@ interface Booking {
     name: string;
     email: string;
   };
-  slot: {
-    startTime: string;
-    endTime: string;
-    lab: string;
+  computer: {
+    _id: string;
+    name: string;
     description: string;
   };
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
@@ -42,12 +41,9 @@ interface Booking {
   createdAt: string;
 }
 
-interface Slot {
+interface Computer {
   _id: string;
-  startTime: string;
-  endTime: string;
-  capacity: number;
-  lab: string;
+  name: string;
   description: string;
   isAvailable: boolean;
 }
@@ -62,22 +58,23 @@ const statusColors = {
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [slots, setSlots] = useState<Slot[]>([]);
+  const [computers, setComputers] = useState<Computer[]>([]);
   const [error, setError] = useState('');
-  const [isCreateSlotOpen, setIsCreateSlotOpen] = useState(false);
-  const [newSlot, setNewSlot] = useState({
-    startTime: new Date(),
-    endTime: new Date(),
-    capacity: 1,
-    lab: '',
+  const [isCreateComputerOpen, setIsCreateComputerOpen] = useState(false);
+  const [newComputer, setNewComputer] = useState({
+    name: '',
     description: '',
+    cpu: 'Intel Core i5',
+    ram: '8GB',
+    storage: '256GB SSD',
+    os: 'Windows 10',
   });
 
   useEffect(() => {
     if (activeTab === 0) {
       fetchBookings();
     } else {
-      fetchSlots();
+      fetchComputers();
     }
   }, [activeTab]);
 
@@ -91,13 +88,13 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchSlots = async () => {
+  const fetchComputers = async () => {
     try {
-      const response = await slotsAPI.getAvailableSlots();
-      setSlots(response.data);
+      const response = await computersAPI.getAllComputers();
+      setComputers(response.data);
     } catch (err) {
-      setError('Failed to fetch slots');
-      console.error('Error fetching slots:', err);
+      setError('Failed to fetch computers');
+      console.error('Error fetching computers:', err);
     }
   };
 
@@ -111,24 +108,30 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleCreateSlot = async () => {
+  const handleCreateComputer = async () => {
     try {
-      await slotsAPI.createSlot(newSlot);
-      setIsCreateSlotOpen(false);
-      fetchSlots();
+      const config = {
+        cpu: newComputer.cpu,
+        ram: newComputer.ram,
+        storage: newComputer.storage,
+        os: newComputer.os,
+      };
+      await computersAPI.createComputer({ ...newComputer, config });
+      setIsCreateComputerOpen(false);
+      fetchComputers();
     } catch (err) {
-      setError('Failed to create slot');
-      console.error('Error creating slot:', err);
+      setError('Failed to create computer');
+      console.error('Error creating computer:', err);
     }
   };
 
-  const handleDeleteSlot = async (slotId: string) => {
+  const handleDeleteComputer = async (computerId: string) => {
     try {
-      await slotsAPI.deleteSlot(slotId);
-      fetchSlots();
+      await computersAPI.deleteComputer(computerId);
+      fetchComputers();
     } catch (err) {
-      setError('Failed to delete slot');
-      console.error('Error deleting slot:', err);
+      setError('Failed to delete computer');
+      console.error('Error deleting computer:', err);
     }
   };
 
@@ -147,7 +150,7 @@ const AdminDashboard = () => {
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
           <Tab label="Bookings" />
-          <Tab label="Slots" />
+          <Tab label="Computers" />
         </Tabs>
       </Box>
 
@@ -157,7 +160,7 @@ const AdminDashboard = () => {
             <TableHead>
               <TableRow>
                 <TableCell>User</TableCell>
-                <TableCell>Lab</TableCell>
+                <TableCell>Computer</TableCell>
                 <TableCell>Date & Time</TableCell>
                 <TableCell>Purpose</TableCell>
                 <TableCell>Status</TableCell>
@@ -174,18 +177,18 @@ const AdminDashboard = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body1">{booking.slot.lab}</Typography>
+                    <Typography variant="body1">{booking.computer.name}</Typography>
                     <Typography variant="body2" color="textSecondary">
-                      {booking.slot.description}
+                      {booking.computer.description}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {format(new Date(booking.slot.startTime), 'PPP')}
+                      {format(new Date(booking.createdAt), 'PPP')}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
-                      {format(new Date(booking.slot.startTime), 'p')} -{' '}
-                      {format(new Date(booking.slot.endTime), 'p')}
+                      {format(new Date(booking.createdAt), 'p')} -{' '}
+                      {format(new Date(booking.createdAt), 'p')}
                     </Typography>
                   </TableCell>
                   <TableCell>{booking.purpose}</TableCell>
@@ -230,45 +233,34 @@ const AdminDashboard = () => {
             <Button
               variant="contained"
               color="primary"
-              onClick={() => setIsCreateSlotOpen(true)}
+              onClick={() => setIsCreateComputerOpen(true)}
             >
-              Create New Slot
+              Create New Computer
             </Button>
           </Box>
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Lab</TableCell>
-                  <TableCell>Date & Time</TableCell>
-                  <TableCell>Capacity</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Description</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {slots.map((slot) => (
-                  <TableRow key={slot._id}>
+                {computers.map((computer) => (
+                  <TableRow key={computer._id}>
                     <TableCell>
-                      <Typography variant="body1">{slot.lab}</Typography>
+                      <Typography variant="body1">{computer.name}</Typography>
                       <Typography variant="body2" color="textSecondary">
-                        {slot.description}
+                        {computer.description}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {format(new Date(slot.startTime), 'PPP')}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {format(new Date(slot.startTime), 'p')} -{' '}
-                        {format(new Date(slot.endTime), 'p')}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{slot.capacity}</TableCell>
                     <TableCell>
                       <Chip
-                        label={slot.isAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
-                        color={slot.isAvailable ? 'success' : 'error'}
+                        label={computer.isAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
+                        color={computer.isAvailable ? 'success' : 'error'}
                         size="small"
                       />
                     </TableCell>
@@ -277,7 +269,7 @@ const AdminDashboard = () => {
                         variant="outlined"
                         color="error"
                         size="small"
-                        onClick={() => handleDeleteSlot(slot._id)}
+                        onClick={() => handleDeleteComputer(computer._id)}
                       >
                         Delete
                       </Button>
@@ -290,56 +282,59 @@ const AdminDashboard = () => {
         </>
       )}
 
-      <Dialog open={isCreateSlotOpen} onClose={() => setIsCreateSlotOpen(false)}>
-        <DialogTitle>Create New Slot</DialogTitle>
+      <Dialog open={isCreateComputerOpen} onClose={() => setIsCreateComputerOpen(false)}>
+        <DialogTitle>Create New Computer</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
-            <DateTimePicker
-              label="Start Time"
-              value={newSlot.startTime}
-              onChange={(newValue) =>
-                setNewSlot({ ...newSlot, startTime: newValue || new Date() })
-              }
-              sx={{ mb: 2 }}
-            />
-            <DateTimePicker
-              label="End Time"
-              value={newSlot.endTime}
-              onChange={(newValue) =>
-                setNewSlot({ ...newSlot, endTime: newValue || new Date() })
-              }
-              sx={{ mb: 2 }}
-            />
             <TextField
               fullWidth
-              label="Lab"
-              value={newSlot.lab}
-              onChange={(e) => setNewSlot({ ...newSlot, lab: e.target.value })}
+              label="Name"
+              value={newComputer.name}
+              onChange={(e) => setNewComputer({ ...newComputer, name: e.target.value })}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
               label="Description"
-              value={newSlot.description}
+              value={newComputer.description}
               onChange={(e) =>
-                setNewSlot({ ...newSlot, description: e.target.value })
+                setNewComputer({ ...newComputer, description: e.target.value })
               }
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
-              type="number"
-              label="Capacity"
-              value={newSlot.capacity}
-              onChange={(e) =>
-                setNewSlot({ ...newSlot, capacity: parseInt(e.target.value) || 1 })
-              }
+              label="CPU"
+              value={newComputer.cpu}
+              onChange={(e) => setNewComputer({ ...newComputer, cpu: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="RAM"
+              value={newComputer.ram}
+              onChange={(e) => setNewComputer({ ...newComputer, ram: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Storage"
+              value={newComputer.storage}
+              onChange={(e) => setNewComputer({ ...newComputer, storage: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="OS"
+              value={newComputer.os}
+              onChange={(e) => setNewComputer({ ...newComputer, os: e.target.value })}
+              sx={{ mb: 2 }}
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsCreateSlotOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateSlot} variant="contained" color="primary">
+          <Button onClick={() => setIsCreateComputerOpen(false)}>Cancel</Button>
+          <Button onClick={handleCreateComputer} variant="contained" color="primary">
             Create
           </Button>
         </DialogActions>

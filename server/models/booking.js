@@ -6,23 +6,27 @@ const bookingSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  slot: {
+  computer: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Slot',
+    ref: 'Computer',
+    required: true
+  },
+  reason: {
+    type: String,
+    required: true
+  },
+  startTime: {
+    type: Date,
+    required: true
+  },
+  endTime: {
+    type: Date,
     required: true
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', 'cancelled'],
+    enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
-  },
-  bookingDate: {
-    type: Date,
-    required: true
-  },
-  purpose: {
-    type: String,
-    required: true
   },
   createdAt: {
     type: Date,

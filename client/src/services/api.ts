@@ -35,41 +35,22 @@ export const authAPI = {
     api.get('/auth/profile'),
 };
 
-export const bookingsAPI = {
-  getUserBookings: () => 
-    api.get('/bookings/user'),
-  createBooking: (data: { slotId: string; purpose: string }) => 
-    api.post('/bookings/user', data),
-  cancelBooking: (bookingId: string) => 
-    api.delete(`/bookings/user/${bookingId}`),
-  // Admin endpoints
-  getAllBookings: () => 
-    api.get('/bookings/admin'),
-  updateBookingStatus: (bookingId: string, status: string) => 
-    api.put(`/bookings/admin/${bookingId}`, { status }),
+export const computersAPI = {
+  getAllComputers: () => api.get('/computers'),
+  createComputer: (data: { name: string; config?: any; description?: string }) => api.post('/computers', data),
+  deleteComputer: (computerId: string) => api.delete(`/computers/${computerId}`),
 };
 
-export const slotsAPI = {
-  getAvailableSlots: () => 
-    api.get('/slots'),
+export const bookingsAPI = {
+  getUserBookings: () => 
+    api.get('/bookings/my'),
+  createBooking: (data: { computerId: string; reason: string; startTime: string; endTime: string }) => 
+    api.post('/bookings', data),
   // Admin endpoints
-  createSlot: (data: {
-    startTime: Date;
-    endTime: Date;
-    capacity: number;
-    lab: string;
-    description: string;
-  }) => api.post('/slots/admin', data),
-  updateSlot: (slotId: string, data: Partial<{
-    startTime: Date;
-    endTime: Date;
-    capacity: number;
-    isAvailable: boolean;
-    lab: string;
-    description: string;
-  }>) => api.put(`/slots/admin/${slotId}`, data),
-  deleteSlot: (slotId: string) => 
-    api.delete(`/slots/admin/${slotId}`),
+  getAllBookings: () => 
+    api.get('/bookings'),
+  updateBookingStatus: (bookingId: string, status: string) => 
+    api.put(`/bookings/${bookingId}`, { status }),
 };
 
 export default api; 

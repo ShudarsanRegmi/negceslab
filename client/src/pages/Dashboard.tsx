@@ -20,14 +20,14 @@ import { bookingsAPI } from '../services/api';
 
 interface Booking {
   _id: string;
-  slot: {
-    startTime: string;
-    endTime: string;
-    lab: string;
-    description: string;
+  computer: {
+    name: string;
+    config: any;
   };
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  purpose: string;
+  startTime: string;
+  endTime: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reason: string;
   createdAt: string;
 }
 
@@ -92,9 +92,9 @@ const Dashboard = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Lab</TableCell>
+              <TableCell>Computer</TableCell>
               <TableCell>Date & Time</TableCell>
-              <TableCell>Purpose</TableCell>
+              <TableCell>Reason</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
@@ -103,21 +103,21 @@ const Dashboard = () => {
             {bookings.map((booking) => (
               <TableRow key={booking._id}>
                 <TableCell>
-                  <Typography variant="body1">{booking.slot.lab}</Typography>
+                  <Typography variant="body1">{booking.computer.name}</Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {booking.slot.description}
+                    {JSON.stringify(booking.computer.config)}
                   </Typography>
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">
-                    {format(new Date(booking.slot.startTime), 'PPP')}
+                    {format(new Date(booking.startTime), 'PPP')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {format(new Date(booking.slot.startTime), 'p')} -{' '}
-                    {format(new Date(booking.slot.endTime), 'p')}
+                    {format(new Date(booking.startTime), 'p')} -{' '}
+                    {format(new Date(booking.endTime), 'p')}
                   </Typography>
                 </TableCell>
-                <TableCell>{booking.purpose}</TableCell>
+                <TableCell>{booking.reason}</TableCell>
                 <TableCell>
                   <Chip
                     label={booking.status.toUpperCase()}
@@ -126,16 +126,7 @@ const Dashboard = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  {booking.status === 'pending' && (
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      size="small"
-                      onClick={() => handleCancelBooking(booking._id)}
-                    >
-                      Cancel
-                    </Button>
-                  )}
+                  {/* Optionally add cancel logic here if needed */}
                 </TableCell>
               </TableRow>
             ))}

@@ -1,33 +1,38 @@
 const express = require('express');
 const router = express.Router();
 const Booking = require('../models/booking');
+const Computer = require('../models/slot'); // slot.js is now the Computer model
 const { verifyToken, isAdmin, isUser } = require('../middleware/auth');
 
-// Get user's bookings
-router.get('/user', [verifyToken, isUser], async (req, res) => {
+// User: Request a booking
+router.post('/', [verifyToken, isUser], async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user._id })
-      .populate('slot')
-      .sort('-createdAt');
-    res.json(bookings);
-  } catch (error) {
-    console.error('Get User Bookings Error:', error);
-    res.status(500).json({ message: 'Error fetching bookings' });
-  }
-});
-
-// Create new booking
-router.post('/user', [verifyToken, isUser], async (req, res) => {
-  try {
-    const { slotId, purpose } = req.body;
-    
+    const { computerId, reason, startTime, endTime } = req.body;
+    // Check if computer exists
+    const computer = await Computer.findById(computerId);
+    if (!computer) {
+      return res.status(404).json({ message: 'Computer not found' });
+    }
+    // Check for overlapping bookings (approved or pending)
+    const overlapping = await Booking.findOne({
+      computer: computerId,
+      status: { $in: ['pending', 'approved'] },
+      $or: [
+        { startTime: { $lt: new Date(endTime), $gte: new Date(startTime) } },
+        { endTime: { $gt: new Date(startTime), $lte: new Date(endTime) } },
+        { startTime: { $lte: new Date(startTime) }, endTime: { $gte: new Date(endTime) } }
+      ]
+    });
+    if (overlapping) {
+      return res.status(409).json({ message: 'Computer is already booked for the selected time' });
+    }
     const booking = new Booking({
       user: req.user._id,
-      slot: slotId,
-      purpose,
-      bookingDate: new Date()
+      computer: computerId,
+      reason,
+      startTime,
+      endTime
     });
-
     await booking.save();
     res.status(201).json(booking);
   } catch (error) {
@@ -36,36 +41,24 @@ router.post('/user', [verifyToken, isUser], async (req, res) => {
   }
 });
 
-// Cancel booking
-router.delete('/user/:id', [verifyToken, isUser], async (req, res) => {
+// User: View their bookings
+router.get('/my', [verifyToken, isUser], async (req, res) => {
   try {
-    const booking = await Booking.findOne({
-      _id: req.params.id,
-      user: req.user._id
-    });
-
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    booking.status = 'cancelled';
-    await booking.save();
-    res.json({ message: 'Booking cancelled successfully' });
+    const bookings = await Booking.find({ user: req.user._id })
+      .populate('computer');
+    res.json(bookings);
   } catch (error) {
-    console.error('Cancel Booking Error:', error);
-    res.status(500).json({ message: 'Error cancelling booking' });
+    console.error('Get My Bookings Error:', error);
+    res.status(500).json({ message: 'Error fetching bookings' });
   }
 });
 
-// Admin Routes
-
-// Get all bookings (admin only)
-router.get('/admin', [verifyToken, isAdmin], async (req, res) => {
+// Admin: View all bookings
+router.get('/', [verifyToken, isAdmin], async (req, res) => {
   try {
     const bookings = await Booking.find()
       .populate('user')
-      .populate('slot')
-      .sort('-createdAt');
+      .populate('computer');
     res.json(bookings);
   } catch (error) {
     console.error('Get All Bookings Error:', error);
@@ -73,18 +66,21 @@ router.get('/admin', [verifyToken, isAdmin], async (req, res) => {
   }
 });
 
-// Update booking status (admin only)
-router.put('/admin/:id', [verifyToken, isAdmin], async (req, res) => {
+// Admin: Approve or reject a booking
+router.put('/:id', [verifyToken, isAdmin], async (req, res) => {
   try {
     const { status } = req.body;
-    const booking = await Booking.findById(req.params.id);
-
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
-
-    booking.status = status;
-    await booking.save();
     res.json(booking);
   } catch (error) {
     console.error('Update Booking Status Error:', error);
