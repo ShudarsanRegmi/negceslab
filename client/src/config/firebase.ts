@@ -2,12 +2,12 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCCVEETr4pGtS1Oj_Hr3aMoYv114x00F8k",
-  authDomain: "negces-lab-dd56e.firebaseapp.com",
-  projectId: "negces-lab-dd56e",
-  storageBucket: "negces-lab-dd56e.firebasestorage.app",
-  messagingSenderId: "863017431581",
-  appId: "1:863017431581:web:07f564a3fc3f5bdd61ccf4"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
