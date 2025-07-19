@@ -1,45 +1,67 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import {
-  Container,
+  Box,
   Typography,
-  Paper,
-  Grid,
-  TextField,
-  Button,
-  Alert,
   Card,
   CardContent,
-  CardActions,
-  Box,
+  TextField,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  Grid,
+  Paper,
+  Stepper,
+  Step,
+  StepLabel,
+  useTheme,
+  useMediaQuery,
+  Divider,
   Chip,
 } from "@mui/material";
-import { format } from "date-fns";
-import { useFormik } from "formik";
-import * as yup from "yup";
+import { DatePicker, TimePicker } from "@mui/x-date-pickers";
+import {
+  format,
+  addDays,
+  isBefore,
+  startOfDay,
+  differenceInDays,
+  differenceInHours,
+  getDay,
+} from "date-fns";
 import { computersAPI, bookingsAPI } from "../services/api";
 
 interface Computer {
   _id: string;
   name: string;
-  config: any;
-  isAvailable: boolean;
+  location: string;
+  status: "available" | "maintenance" | "booked";
+  specifications: string;
 }
 
-const validationSchema = yup.object({
-  reason: yup
-    .string()
-    .required("Reason is required")
-    .min(10, "Reason should be at least 10 characters"),
-  startTime: yup.string().required("Start time is required"),
-  endTime: yup.string().required("End time is required"),
-});
+const steps = ["Select Computer", "Choose Dates & Times", "Review & Confirm"];
 
-const BookingForm = () => {
+const BookingForm: React.FC = () => {
+  const [activeStep, setActiveStep] = useState(0);
   const [computers, setComputers] = useState<Computer[]>([]);
-  const [error, setError] = useState("");
-  const [selectedComputer, setSelectedComputer] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [selectedComputer, setSelectedComputer] = useState<string>("");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  // Function to disable Sundays
+  const shouldDisableDate = (date: Date) => {
+    return getDay(date) === 0; // 0 = Sunday
+  };
 
   useEffect(() => {
     fetchComputers();
@@ -48,173 +70,496 @@ const BookingForm = () => {
   const fetchComputers = async () => {
     try {
       const response = await computersAPI.getAllComputers();
-      setComputers(response.data);
-    } catch (err) {
-      setError("Failed to fetch computers");
-      console.error("Error fetching computers:", err);
+      setComputers(
+        response.data.filter(
+          (computer: Computer) => computer.status === "available"
+        )
+      );
+    } catch (error) {
+      console.error("Error fetching computers:", error);
+      setError("Failed to load computers");
     }
   };
 
-  const formik = useFormik({
-    initialValues: {
-      reason: "",
-      startTime: "",
-      endTime: "",
-    },
-    validationSchema: yup.object({
-      reason: yup
-        .string()
-        .required("Reason is required")
-        .min(10, "Reason should be at least 10 characters"),
-      startTime: yup.string().required("Start time is required"),
-      endTime: yup.string().required("End time is required"),
-    }),
-    onSubmit: async (values) => {
-      if (!selectedComputer) {
-        setError("Please select a computer");
+  const handleNext = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+  };
+
+  const handleSubmit = async () => {
+    if (
+      !selectedComputer ||
+      !startDate ||
+      !endDate ||
+      !startTime ||
+      !endTime ||
+      !reason.trim()
+    ) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    // Check if start date is Sunday
+    if (getDay(startDate) === 0) {
+      setError(
+        "Lab is closed on Sundays. Please select a different start date."
+      );
+      return;
+    }
+
+    // Check if end date is Sunday
+    if (getDay(endDate) === 0) {
+      setError("Lab is closed on Sundays. Please select a different end date.");
+      return;
+    }
+
+    if (isBefore(endDate, startDate)) {
+      setError("End date must be after or equal to start date");
+      return;
+    }
+
+    // Check if duration exceeds 7 days
+    const durationInDays = differenceInDays(endDate, startDate) + 1; // +1 to include both start and end dates
+    if (durationInDays > 7) {
+      setError("Booking duration cannot exceed 7 days");
+      return;
+    }
+
+    if (isBefore(endTime!, startTime!)) {
+      setError("End time must be after start time");
+      return;
+    }
+
+    // Check minimum booking duration (1 hour) - only for same-day bookings
+    if (differenceInDays(endDate, startDate) === 0) {
+      const durationInHours = differenceInHours(endTime!, startTime!);
+      if (durationInHours < 1) {
+        setError("Minimum booking duration is 1 hour for same-day bookings");
         return;
       }
-      try {
-        await bookingsAPI.createBooking({
-          computerId: selectedComputer,
-          reason: values.reason,
-          startTime: new Date(values.startTime).toISOString(),
-          endTime: new Date(values.endTime).toISOString(),
-        });
-        navigate("/");
-      } catch (err) {
-        setError("Failed to create booking");
-        console.error("Error creating booking:", err);
-      }
-    },
-  });
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const bookingData = {
+        computerId: selectedComputer,
+        date: format(startDate, "yyyy-MM-dd"),
+        startTime: format(startTime, "HH:mm"),
+        endTime: format(endTime, "HH:mm"),
+        reason: `${reason.trim()}\n\nBooking Period: ${format(
+          startDate,
+          "MMM d, yyyy"
+        )} to ${format(endDate, "MMM d, yyyy")}`,
+      };
+
+      await bookingsAPI.createBooking(bookingData);
+      setSuccess("Booking request submitted successfully!");
+
+      // Reset form
+      setSelectedComputer("");
+      setStartDate(null);
+      setEndDate(null);
+      setStartTime(null);
+      setEndTime(null);
+      setReason("");
+      setActiveStep(0);
+    } catch (error: any) {
+      console.error("Error creating booking:", error);
+      setError(error.response?.data?.message || "Failed to create booking");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStepContent = (step: number) => {
+    switch (step) {
+      case 0:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Select a Computer
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Choose from the available computers in the lab
+            </Typography>
+
+            <FormControl fullWidth>
+              <InputLabel>Computer</InputLabel>
+              <Select
+                value={selectedComputer}
+                onChange={(e) => setSelectedComputer(e.target.value)}
+                label="Computer"
+              >
+                {computers.map((computer) => (
+                  <MenuItem key={computer._id} value={computer._id}>
+                    <Box>
+                      <Typography variant="body1" fontWeight="bold">
+                        {computer.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {computer.location} • {computer.specifications}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {selectedComputer && (
+              <Paper sx={{ p: 2, mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Selected Computer Details:
+                </Typography>
+                {computers.find((c) => c._id === selectedComputer) && (
+                  <Box>
+                    <Typography variant="body2">
+                      <strong>Name:</strong>{" "}
+                      {computers.find((c) => c._id === selectedComputer)?.name}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Location:</strong>{" "}
+                      {
+                        computers.find((c) => c._id === selectedComputer)
+                          ?.location
+                      }
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Specifications:</strong>{" "}
+                      {
+                        computers.find((c) => c._id === selectedComputer)
+                          ?.specifications
+                      }
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+            )}
+          </Box>
+        );
+
+      case 1:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Choose Dates & Times
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Select when you want to use the computer
+            </Typography>
+
+            {/* Booking Guidelines */}
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                <strong>Booking Guidelines:</strong>
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ mt: 1 }}>
+                • Lab is closed on Sundays • Maximum booking duration: 7 days •
+                Minimum booking duration: 1 hour • Bookings are subject to admin
+                approval
+              </Typography>
+            </Alert>
+
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                gap: 3,
+              }}
+            >
+              <DatePicker
+                label="Start Date"
+                value={startDate}
+                onChange={(newValue) => setStartDate(newValue)}
+                minDate={startOfDay(new Date())}
+                maxDate={addDays(new Date(), 30)}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    size: isMobile ? "small" : "medium",
+                  },
+                }}
+                shouldDisableDate={shouldDisableDate}
+              />
+
+              <DatePicker
+                label="End Date"
+                value={endDate}
+                onChange={(newValue) => setEndDate(newValue)}
+                minDate={startDate || startOfDay(new Date())}
+                maxDate={addDays(new Date(), 30)}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    size: isMobile ? "small" : "medium",
+                  },
+                }}
+                shouldDisableDate={shouldDisableDate}
+              />
+
+              <TimePicker
+                label="Start Time"
+                value={startTime}
+                onChange={(newValue) => setStartTime(newValue)}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    size: isMobile ? "small" : "medium",
+                  },
+                }}
+              />
+
+              <TimePicker
+                label="End Time"
+                value={endTime}
+                onChange={(newValue) => setEndTime(newValue)}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    size: isMobile ? "small" : "medium",
+                  },
+                }}
+              />
+            </Box>
+
+            {/* Duration Display */}
+            {startDate && endDate && startTime && endTime && (
+              <Paper sx={{ p: 2, mt: 2, bgcolor: "#f8f9fa" }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Booking Duration:
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {differenceInDays(endDate, startDate) + 1} day(s) •{" "}
+                  {differenceInHours(endTime, startTime)} hour(s)
+                </Typography>
+                {differenceInDays(endDate, startDate) + 1 > 7 && (
+                  <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                    ⚠️ Duration exceeds 7-day limit
+                  </Typography>
+                )}
+                {differenceInDays(endDate, startDate) === 0 &&
+                  differenceInHours(endTime, startTime) < 1 && (
+                    <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                      ⚠️ Duration is less than 1 hour
+                    </Typography>
+                  )}
+              </Paper>
+            )}
+
+            <TextField
+              fullWidth
+              label="Reason for Booking"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              multiline
+              rows={3}
+              sx={{ mt: 3 }}
+              size={isMobile ? "small" : "medium"}
+              placeholder="Please describe why you need to book this computer..."
+            />
+          </Box>
+        );
+
+      case 2:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Review & Confirm
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Please review your booking details before confirming
+            </Typography>
+
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Computer
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    {computers.find((c) => c._id === selectedComputer)?.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {
+                      computers.find((c) => c._id === selectedComputer)
+                        ?.location
+                    }
+                  </Typography>
+                </Box>
+
+                <Divider />
+
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Date & Time
+                  </Typography>
+                  <Typography variant="body1">
+                    {startDate &&
+                      endDate &&
+                      `${format(startDate, "MMM d, yyyy")} - ${format(
+                        endDate,
+                        "MMM d, yyyy"
+                      )}`}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {startTime &&
+                      endTime &&
+                      `${format(startTime, "h:mm a")} - ${format(
+                        endTime,
+                        "h:mm a"
+                      )}`}
+                  </Typography>
+                </Box>
+
+                <Divider />
+
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Reason
+                  </Typography>
+                  <Typography variant="body1">{reason}</Typography>
+                </Box>
+              </Box>
+            </Paper>
+
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Booking Guidelines:</strong>
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ mt: 1 }}>
+                • Bookings are subject to admin approval • Maximum booking
+                duration is 4 hours • You can cancel your booking anytime •
+                Please arrive on time for your scheduled slot
+              </Typography>
+            </Alert>
+          </Box>
+        );
+
+      default:
+        return "Unknown step";
+    }
+  };
 
   return (
-    <Container>
-      <Typography variant="h4" component="h1" sx={{ mb: 4 }}>
-        Book a Lab Slot
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        Book a Computer
       </Typography>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Available Computers
-          </Typography>
-          <Grid container spacing={2}>
-            {computers.map((computer) => (
-              <Grid key={computer._id} item xs={12} sm={6} md={4}>
-                <Card
-                  variant="outlined"
-                  sx={{
-                    border: selectedComputer === computer._id ? 2 : 1,
-                    borderColor:
-                      selectedComputer === computer._id
-                        ? "primary.main"
-                        : "divider",
-                  }}
-                  onClick={() => setSelectedComputer(computer._id)}
-                >
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {computer.name}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="textSecondary"
-                      gutterBottom
-                    >
-                      {JSON.stringify(computer.config)}
-                    </Typography>
-                    <Chip
-                      label={computer.isAvailable ? "Available" : "Booked"}
-                      color={computer.isAvailable ? "success" : "error"}
-                      size="small"
-                    />
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-            {computers.length === 0 && (
-              <Grid item xs={12}>
-                <Paper sx={{ p: 2, textAlign: "center" }}>
-                  <Typography variant="body1">
-                    No available computers found. Please check back later.
-                  </Typography>
-                </Paper>
-              </Grid>
-            )}
-          </Grid>
-        </Grid>
+      {success && (
+        <Alert
+          severity="success"
+          sx={{ mb: 3 }}
+          onClose={() => setSuccess(null)}
+        >
+          {success}
+        </Alert>
+      )}
 
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Booking Details
-            </Typography>
-            <Box component="form" onSubmit={formik.handleSubmit}>
-              <TextField
-                fullWidth
-                id="reason"
-                name="reason"
-                label="Reason for Booking"
-                multiline
-                rows={4}
-                value={formik.values.reason}
-                onChange={formik.handleChange}
-                error={formik.touched.reason && Boolean(formik.errors.reason)}
-                helperText={formik.touched.reason && formik.errors.reason}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                id="startTime"
-                name="startTime"
-                label="Start Time"
-                type="datetime-local"
-                value={formik.values.startTime}
-                onChange={formik.handleChange}
-                error={
-                  formik.touched.startTime && Boolean(formik.errors.startTime)
-                }
-                helperText={formik.touched.startTime && formik.errors.startTime}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                id="endTime"
-                name="endTime"
-                label="End Time"
-                type="datetime-local"
-                value={formik.values.endTime}
-                onChange={formik.handleChange}
-                error={formik.touched.endTime && Boolean(formik.errors.endTime)}
-                helperText={formik.touched.endTime && formik.errors.endTime}
-                sx={{ mb: 2 }}
-              />
-              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-                <Button onClick={() => navigate("/")} color="inherit">
-                  Cancel
-                </Button>
+      <Card>
+        <CardContent>
+          {/* Stepper */}
+          <Stepper
+            activeStep={activeStep}
+            sx={{
+              mb: 4,
+              display: { xs: "none", md: "flex" },
+            }}
+          >
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          {/* Mobile Step Indicator */}
+          <Box
+            sx={{
+              display: { xs: "flex", md: "none" },
+              justifyContent: "center",
+              mb: 3,
+            }}
+          >
+            <Chip
+              label={`Step ${activeStep + 1} of ${steps.length}: ${
+                steps[activeStep]
+              }`}
+              color="primary"
+              variant="outlined"
+            />
+          </Box>
+
+          {/* Step Content */}
+          <Box sx={{ mt: 2, mb: 4 }}>{getStepContent(activeStep)}</Box>
+
+          {/* Navigation Buttons */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 2,
+            }}
+          >
+            <Button
+              disabled={activeStep === 0}
+              onClick={handleBack}
+              variant="outlined"
+              fullWidth={isMobile}
+            >
+              Back
+            </Button>
+
+            <Box
+              sx={{
+                display: "flex",
+                gap: 2,
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              {activeStep === steps.length - 1 ? (
                 <Button
-                  type="submit"
                   variant="contained"
-                  color="primary"
-                  disabled={!selectedComputer}
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  fullWidth={isMobile}
                 >
-                  Submit Booking
+                  {loading ? "Submitting..." : "Submit Booking"}
                 </Button>
-              </Box>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={handleNext}
+                  disabled={
+                    (activeStep === 0 && !selectedComputer) ||
+                    (activeStep === 1 &&
+                      (!startDate ||
+                        !endDate ||
+                        !startTime ||
+                        !endTime ||
+                        !reason.trim()))
+                  }
+                  fullWidth={isMobile}
+                >
+                  Next
+                </Button>
+              )}
             </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Container>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 

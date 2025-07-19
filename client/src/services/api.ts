@@ -37,20 +37,36 @@ export const authAPI = {
 
 export const computersAPI = {
   getAllComputers: () => api.get('/computers'),
-  createComputer: (data: { name: string; config?: any; description?: string }) => api.post('/computers', data),
+  getComputersWithBookings: () => api.get('/computers/with-bookings'),
+  createComputer: (data: { name: string; location: string; specifications: string; status: string }) => api.post('/computers', data),
   deleteComputer: (computerId: string) => api.delete(`/computers/${computerId}`),
 };
 
 export const bookingsAPI = {
   getUserBookings: () => 
-    api.get('/bookings/my'),
-  createBooking: (data: { computerId: string; reason: string; startTime: string; endTime: string }) => 
+    api.get('/bookings'),
+  createBooking: (data: { computerId: string; date: string; startTime: string; endTime: string; reason: string }) => 
     api.post('/bookings', data),
+  cancelBooking: (bookingId: string) => 
+    api.delete(`/bookings/${bookingId}`),
   // Admin endpoints
   getAllBookings: () => 
     api.get('/bookings'),
   updateBookingStatus: (bookingId: string, status: string) => 
-    api.put(`/bookings/${bookingId}`, { status }),
+    api.put(`/bookings/${bookingId}/status`, { status }),
+};
+
+export const notificationsAPI = {
+  getNotifications: () => 
+    api.get('/notifications'),
+  markAsRead: (notificationId: string) => 
+    api.put(`/notifications/${notificationId}/read`),
+  markAllAsRead: () => 
+    api.put('/notifications/read-all'),
+  createNotification: (data: { userId?: string; title: string; message: string; type?: string; targetUsers?: string[] }) => 
+    api.post('/notifications', data),
+  getUsers: () => 
+    api.get('/notifications/users'),
 };
 
 export default api; 

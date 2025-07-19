@@ -10,13 +10,20 @@ const verifyToken = async (req, res, next) => {
     }
 
     const decodedToken = await admin.auth().verifyIdToken(token);
-    // req.user = decodedToken;
+
     // Get user role from MongoDB
     const userDoc = await User.findOne({ firebaseUid: decodedToken.uid });
     if (!userDoc) {
       return res.status(404).json({ message: "User not found" });
     }
-    req.user = userDoc; // Attach the full user document
+
+    // Combine Firebase user data with MongoDB user data
+    req.user = {
+      ...userDoc.toObject(),
+      firebaseUid: decodedToken.uid,
+      email: decodedToken.email,
+    };
+
     req.userRole = userDoc.role;
     next();
   } catch (error) {
