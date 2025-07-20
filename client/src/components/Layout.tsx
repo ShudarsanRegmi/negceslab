@@ -25,6 +25,7 @@ import {
   useMediaQuery,
   Divider,
   Chip,
+  Tooltip,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -49,6 +50,8 @@ import {
   LightMode,
   DarkMode,
   BrightnessAuto,
+  ChevronLeft,
+  ChevronRight,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -58,6 +61,7 @@ import HelpDialog from "./HelpDialog";
 import AboutDialog from "./AboutDialog";
 
 const drawerWidth = 280;
+const collapsedDrawerWidth = 64;
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -65,6 +69,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [notificationAnchor, setNotificationAnchor] =
     useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(
@@ -75,7 +80,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { userRole, currentUser, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
     useNotifications();
-  const { mode, toggleTheme, isDark } = useAppTheme();
+  const { mode, toggleTheme } = useAppTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const muiTheme = useTheme();
@@ -84,6 +89,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
+
+  const handleSidebarToggle = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
+  const currentDrawerWidth = sidebarCollapsed ? collapsedDrawerWidth : drawerWidth;
 
   const handleLogout = async () => {
     try {
@@ -203,13 +214,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const drawer = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Logo/Brand */}
-      <Box sx={{ p: 3, borderBottom: 1, borderColor: "divider" }}>
-        <Typography variant="h5" fontWeight="bold" color="primary">
-          NEGSUS Lab
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Computer Booking System
-        </Typography>
+      <Box sx={{ p: sidebarCollapsed ? 1 : 3, borderBottom: 1, borderColor: "divider" }}>
+        {!sidebarCollapsed ? (
+          <>
+            <Typography variant="h5" fontWeight="bold" color="primary">
+              NEGSUS Lab
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Computer Booking System
+            </Typography>
+          </>
+        ) : (
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Typography variant="h6" fontWeight="bold" color="primary">
+              NL
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       {/* Navigation Menu */}
@@ -218,62 +239,91 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           .filter((item) => item.roles.includes(userRole || ""))
           .map((item) => (
             <ListItem key={item.text} disablePadding>
-              <ListItemButton
-                selected={location.pathname === item.path}
-                onClick={() => {
-                  navigate(item.path);
-                  if (isMobile) setMobileOpen(false);
-                }}
-                sx={{
-                  mx: 1,
-                  borderRadius: 1,
-                  "&.Mui-selected": {
-                    backgroundColor: "primary.main",
-                    color: "primary.contrastText",
-                    "&:hover": {
-                      backgroundColor: "primary.dark",
-                    },
-                  },
-                }}
+              <Tooltip 
+                title={sidebarCollapsed ? item.text : ""} 
+                placement="right"
+                arrow
               >
-                <ListItemIcon
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => {
+                    navigate(item.path);
+                    if (isMobile) setMobileOpen(false);
+                  }}
                   sx={{
-                    color:
-                      location.pathname === item.path
-                        ? "inherit"
-                        : "text.secondary",
+                    mx: 1,
+                    borderRadius: 1,
+                    justifyContent: sidebarCollapsed ? 'center' : 'initial',
+                    px: sidebarCollapsed ? 1 : 2,
+                    "&.Mui-selected": {
+                      backgroundColor: "primary.main",
+                      color: "primary.contrastText",
+                      "&:hover": {
+                        backgroundColor: "primary.dark",
+                      },
+                    },
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItemButton>
+                  <ListItemIcon
+                    sx={{
+                      color:
+                        location.pathname === item.path
+                          ? "inherit"
+                          : "text.secondary",
+                      minWidth: sidebarCollapsed ? 'auto' : 40,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {!sidebarCollapsed && <ListItemText primary={item.text} />}
+                </ListItemButton>
+              </Tooltip>
             </ListItem>
           ))}
       </List>
 
+      {/* Collapse/Expand Button */}
+      <Box sx={{ p: 1, borderTop: 1, borderColor: "divider" }}>
+        <IconButton
+          onClick={handleSidebarToggle}
+          sx={{
+            width: '100%',
+            justifyContent: 'center',
+            borderRadius: 1,
+            '&:hover': {
+              backgroundColor: 'action.hover',
+            },
+          }}
+        >
+          {sidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
+        </IconButton>
+      </Box>
+
       {/* User Profile at Bottom */}
-      <Box
-        sx={{
-          p: 2,
-          borderTop: 1,
-          borderColor: "divider",
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Avatar sx={{ width: 32, height: 32 }}>
-            <Person />
-          </Avatar>
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Typography variant="body2" fontWeight="bold" noWrap>
-              {getUserDisplayName()}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {userRole === "admin" ? "Admin" : "User"}
-            </Typography>
+      {!sidebarCollapsed && (
+        <Box
+          sx={{
+            p: 2,
+            borderTop: 1,
+            borderColor: "divider",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Avatar sx={{ width: 32, height: 32 }}>
+              <Person />
+            </Avatar>
+            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+              <Typography variant="body2" fontWeight="bold" noWrap>
+                {getUserDisplayName()}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {userRole === "admin" ? "Admin" : "User"}
+              </Typography>
+            </Box>
           </Box>
         </Box>
-      </Box>
+      )}
     </Box>
   );
 
@@ -285,10 +335,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <AppBar
         position="fixed"
         sx={{
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          ml: { md: `${drawerWidth}px` },
+          width: { md: `calc(100% - ${currentDrawerWidth}px)` },
+          ml: { md: `${currentDrawerWidth}px` },
           zIndex: muiTheme.zIndex.drawer + 1,
-          borderRadius: 0
+          borderRadius: 0,
+          transition: muiTheme.transitions.create(['margin', 'width'], {
+            easing: muiTheme.transitions.easing.sharp,
+            duration: muiTheme.transitions.duration.leavingScreen,
+          }),
         }}
       >
         <Toolbar sx={{ justifyContent: "space-between"}}>
@@ -299,6 +353,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               edge="start"
               onClick={handleDrawerToggle}
               sx={{ mr: 2, display: { md: "none" } }}
+            >
+              <MenuIcon />
+            </IconButton>
+
+            {/* Desktop sidebar toggle */}
+            <IconButton
+              color="inherit"
+              aria-label="toggle sidebar"
+              onClick={handleSidebarToggle}
+              sx={{ mr: 2, display: { xs: "none", md: "flex" } }}
             >
               <MenuIcon />
             </IconButton>
@@ -679,7 +743,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <Box
         component="nav"
-        sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
+        sx={{ 
+          width: { md: currentDrawerWidth }, 
+          flexShrink: { md: 0 },
+          transition: muiTheme.transitions.create('width', {
+            easing: muiTheme.transitions.easing.sharp,
+            duration: muiTheme.transitions.duration.leavingScreen,
+          }),
+        }}
       >
         {/* Mobile drawer */}
         <Drawer
@@ -715,8 +786,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             display: { xs: "none", md: "block" },
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
-              width: drawerWidth,
+              width: currentDrawerWidth,
               borderRadius: 0,
+              transition: muiTheme.transitions.create('width', {
+                easing: muiTheme.transitions.easing.sharp,
+                duration: muiTheme.transitions.duration.leavingScreen,
+              }),
+              overflowX: 'hidden',
             },
           }}
           open
@@ -731,8 +807,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         sx={{
           flexGrow: 1,
           p: { xs: 1, sm: 2, md: 3 },
-          width: { md: `calc(100% - ${drawerWidth}px)` },
+          width: { md: `calc(100% - ${currentDrawerWidth}px)` },
           mt: { xs: 7, md: 8 },
+          transition: muiTheme.transitions.create(['margin', 'width'], {
+            easing: muiTheme.transitions.easing.sharp,
+            duration: muiTheme.transitions.duration.leavingScreen,
+          }),
         }}
       >
         {children}
