@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -69,6 +70,7 @@ interface Booking {
 }
 
 const ComputerGrid: React.FC = () => {
+  const navigate = useNavigate();
   const [computers, setComputers] = useState<Computer[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,7 +209,12 @@ const ComputerGrid: React.FC = () => {
         <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
           Monitor and manage lab computer status in real-time
         </Typography>
-        <Button variant="contained" startIcon={<BookIcon />} sx={{ mb: 3 }}>
+        <Button
+          variant="contained"
+          startIcon={<BookIcon />}
+          sx={{ mb: 3 }}
+          onClick={() => navigate("/book")}
+        >
           + Book Computer
         </Button>
       </Box>
@@ -864,7 +871,10 @@ const ComputerGrid: React.FC = () => {
       </Box>
 
       {/* Results Count */}
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold", color: "#212121" }}>
+      <Typography
+        variant="h5"
+        sx={{ mb: 3, fontWeight: "bold", color: "#212121" }}
+      >
         Lab Computer Status
       </Typography>
 

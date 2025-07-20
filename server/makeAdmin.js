@@ -28,7 +28,7 @@ async function makeAdmin() {
       // You'll need to provide the Firebase UID for your admin user
       // Get this from Firebase Console -> Authentication -> Users
       const adminUser = new User({
-        firebaseUid: "f8Y0GnDw66b4uFqGIevr1hvObz92", // Replace with actual UID from Firebase Console
+        firebaseUid: "2H4pe5MehzV25ova7zdMWiUevtf2", // Replace with actual UID from Firebase Console
         email: "admin@negsus.com",
         name: "Admin User",
         role: "admin",
