@@ -288,9 +288,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
           zIndex: muiTheme.zIndex.drawer + 1,
+          borderRadius: 0
         }}
       >
-        <Toolbar sx={{ justifyContent: "space-between" }}>
+        <Toolbar sx={{ justifyContent: "space-between"}}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <IconButton
               color="inherit"
@@ -694,6 +695,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               boxSizing: "border-box",
               width: drawerWidth,
               maxWidth: "85vw",
+              borderRadius: 0,
             },
           }}
         >
@@ -714,6 +716,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
+              borderRadius: 0,
             },
           }}
           open
