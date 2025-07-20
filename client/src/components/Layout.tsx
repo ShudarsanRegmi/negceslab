@@ -204,12 +204,39 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Logo/Brand */}
       <Box sx={{ p: 3, borderBottom: 1, borderColor: "divider" }}>
-        <Typography variant="h5" fontWeight="bold" color="primary">
-          NEGSUS Lab
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Computer Booking System
-        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            cursor: "pointer",
+            transition: "all 0.3s ease",
+            "&:hover": {
+              transform: "scale(1.05)",
+              "& .pc-icon": {
+                color: "primary.dark",
+              },
+            },
+          }}
+          onClick={() => navigate("/")}
+        >
+          <Computer
+            className="pc-icon"
+            sx={{
+              fontSize: 32,
+              color: "primary.main",
+              transition: "color 0.3s ease",
+            }}
+          />
+          <Box>
+            <Typography variant="h5" fontWeight="bold" color="primary">
+              NEGSUS Lab
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Computer Booking System
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* Navigation Menu */}
@@ -301,6 +328,43 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               <MenuIcon />
             </IconButton>
+
+            {/* PC Logo for Homepage Navigation */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "scale(1.05)",
+                  "& .pc-icon": {
+                    color: "rgba(255, 255, 255, 0.9)",
+                  },
+                },
+              }}
+              onClick={() => navigate("/")}
+            >
+              <Computer
+                className="pc-icon"
+                sx={{
+                  fontSize: 28,
+                  color: "rgba(255, 255, 255, 0.8)",
+                  transition: "color 0.3s ease",
+                }}
+              />
+              <Typography
+                variant="h6"
+                sx={{
+                  color: "rgba(255, 255, 255, 0.9)",
+                  fontWeight: 600,
+                  display: { xs: "none", sm: "block" },
+                }}
+              >
+                LabBook
+              </Typography>
+            </Box>
 
             <Box sx={{ display: { xs: "none", sm: "block" } }}>
               <Typography variant="h6" noWrap>

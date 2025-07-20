@@ -23,10 +23,11 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Layout from "./components/Layout";
 import ComputerGrid from "./pages/ComputerGrid";
+import HomePage from "./pages/HomePage";
 
 const AppContent = () => {
   const { theme } = useTheme();
-  
+
   return (
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
@@ -37,10 +38,7 @@ const AppContent = () => {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route
-                  path="/"
-                  element={<Navigate to="/dashboard" replace />}
-                />
+                <Route path="/" element={<HomePage />} />
                 <Route
                   path="/dashboard"
                   element={
