@@ -209,11 +209,11 @@ const ComputerGrid: React.FC = () => {
         <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
           Monitor and manage lab computer status in real-time
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<BookIcon />}
+        <Button 
+          variant="contained" 
+          startIcon={<BookIcon />} 
           sx={{ mb: 3 }}
-          onClick={() => navigate("/book")}
+          onClick={() => navigate('/book')}
         >
           + Book Computer
         </Button>

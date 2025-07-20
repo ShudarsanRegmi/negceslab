@@ -554,13 +554,14 @@ const Dashboard: React.FC = () => {
                         <TableCell>
                           <Box>
                             <Typography variant="body2" fontWeight="bold">
-                              {booking.computerId.name}
+                              {booking.computerId?.name || "Unknown Computer"}
                             </Typography>
                             <Typography
                               variant="caption"
                               color="text.secondary"
                             >
-                              {booking.computerId.location}
+                              {booking.computerId?.location ||
+                                "Unknown Location"}
                             </Typography>
                           </Box>
                         </TableCell>
