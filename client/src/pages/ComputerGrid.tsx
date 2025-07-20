@@ -4,9 +4,7 @@ import {
   Typography,
   Card,
   CardContent,
-  Chip,
   TextField,
-  InputAdornment,
   FormControl,
   InputLabel,
   Select,
@@ -18,27 +16,14 @@ import {
   Skeleton,
   useTheme,
   useMediaQuery,
-  ToggleButton,
-  ToggleButtonGroup,
   Button,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
 } from "@mui/material";
 import {
-  Search as SearchIcon,
-  ViewList as ViewListIcon,
-  ViewModule as ViewModuleIcon,
   Computer as ComputerIcon,
-  LocationOn as LocationIcon,
-  Info as InfoIcon,
   CheckCircle as CheckIcon,
   Person as PersonIcon,
   Build as BuildIcon,
   BookOnline as BookIcon,
-  Schedule as ScheduleIcon,
   TrendingUp as TrendingIcon,
   Cancel as CancelIcon,
   GridView as GridViewIcon,
@@ -214,16 +199,19 @@ const ComputerGrid: React.FC = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid xs={12} sm={6} md={4} lg={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
           <Card
             sx={{
-              bgcolor: "white",
-              borderRadius: 2,
-              border: "1px solid #e0e0e0",
-              boxShadow: "none",
               height: "100%",
               display: "flex",
               flexDirection: "column",
+              background: "linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(25, 118, 210, 0.01) 100%)",
+              border: "1px solid rgba(25, 118, 210, 0.12)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 8px 25px rgba(25, 118, 210, 0.15)",
+              },
             }}
           >
             <CardContent
@@ -245,21 +233,22 @@ const ComputerGrid: React.FC = () => {
               >
                 <Box
                   sx={{
-                    bgcolor: "rgba(33, 150, 243, 0.15)",
-                    borderRadius: 1.5,
-                    p: 1,
+                    bgcolor: "primary.main",
+                    borderRadius: 2,
+                    p: 1.5,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    minWidth: 44,
-                    height: 44,
+                    minWidth: 48,
+                    height: 48,
                     flexShrink: 0,
+                    boxShadow: "0 4px 12px rgba(25, 118, 210, 0.25)",
                   }}
                 >
                   <ComputerIcon
                     sx={{
-                      color: "#1976d2",
-                      fontSize: 22,
+                      fontSize: 24,
+                      color: "white",
                     }}
                   />
                 </Box>
@@ -267,7 +256,6 @@ const ComputerGrid: React.FC = () => {
                   <Typography
                     variant="h3"
                     sx={{
-                      color: "#212121",
                       fontWeight: 600,
                       lineHeight: 1.2,
                       mb: 0.5,
@@ -283,8 +271,8 @@ const ComputerGrid: React.FC = () => {
                   </Typography>
                   <Typography
                     variant="body1"
+                    color="text.secondary"
                     sx={{
-                      color: "#666666",
                       fontWeight: 400,
                       fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
                       lineHeight: 1.2,
@@ -297,16 +285,19 @@ const ComputerGrid: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid xs={12} sm={6} md={4} lg={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
           <Card
             sx={{
-              bgcolor: "white",
-              borderRadius: 2,
-              border: "1px solid #e0e0e0",
-              boxShadow: "none",
               height: "100%",
               display: "flex",
               flexDirection: "column",
+              background: "linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(76, 175, 80, 0.01) 100%)",
+              border: "1px solid rgba(76, 175, 80, 0.12)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 8px 25px rgba(76, 175, 80, 0.15)",
+              },
             }}
           >
             <CardContent
@@ -328,21 +319,22 @@ const ComputerGrid: React.FC = () => {
               >
                 <Box
                   sx={{
-                    bgcolor: "rgba(76, 175, 80, 0.15)",
-                    borderRadius: 1.5,
-                    p: 1,
+                    bgcolor: "success.main",
+                    borderRadius: 2,
+                    p: 1.5,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    minWidth: 44,
-                    height: 44,
+                    minWidth: 48,
+                    height: 48,
                     flexShrink: 0,
+                    boxShadow: "0 4px 12px rgba(46, 125, 50, 0.25)",
                   }}
                 >
-                  <ComputerIcon
+                  <CheckIcon
                     sx={{
-                      color: "#2e7d32",
-                      fontSize: 22,
+                      fontSize: 24,
+                      color: "white",
                     }}
                   />
                 </Box>
@@ -350,7 +342,6 @@ const ComputerGrid: React.FC = () => {
                   <Typography
                     variant="h3"
                     sx={{
-                      color: "#212121",
                       fontWeight: 600,
                       lineHeight: 1.2,
                       mb: 0.5,
@@ -366,8 +357,8 @@ const ComputerGrid: React.FC = () => {
                   </Typography>
                   <Typography
                     variant="body1"
+                    color="text.secondary"
                     sx={{
-                      color: "#666666",
                       fontWeight: 400,
                       fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
                       lineHeight: 1.2,
@@ -380,16 +371,19 @@ const ComputerGrid: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid xs={12} sm={6} md={4} lg={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
           <Card
             sx={{
-              bgcolor: "white",
-              borderRadius: 2,
-              border: "1px solid #e0e0e0",
-              boxShadow: "none",
               height: "100%",
               display: "flex",
               flexDirection: "column",
+              background: "linear-gradient(135deg, rgba(2, 136, 209, 0.05) 0%, rgba(2, 136, 209, 0.01) 100%)",
+              border: "1px solid rgba(2, 136, 209, 0.12)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 8px 25px rgba(2, 136, 209, 0.15)",
+              },
             }}
           >
             <CardContent
@@ -411,21 +405,22 @@ const ComputerGrid: React.FC = () => {
               >
                 <Box
                   sx={{
-                    bgcolor: "rgba(33, 150, 243, 0.15)",
-                    borderRadius: 1.5,
-                    p: 1,
+                    bgcolor: "info.main",
+                    borderRadius: 2,
+                    p: 1.5,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    minWidth: 44,
-                    height: 44,
+                    minWidth: 48,
+                    height: 48,
                     flexShrink: 0,
+                    boxShadow: "0 4px 12px rgba(2, 136, 209, 0.25)",
                   }}
                 >
                   <BookIcon
                     sx={{
-                      color: "#1976d2",
-                      fontSize: 22,
+                      fontSize: 24,
+                      color: "white",
                     }}
                   />
                 </Box>
@@ -433,7 +428,6 @@ const ComputerGrid: React.FC = () => {
                   <Typography
                     variant="h3"
                     sx={{
-                      color: "#212121",
                       fontWeight: 600,
                       lineHeight: 1.2,
                       mb: 0.5,
@@ -449,8 +443,8 @@ const ComputerGrid: React.FC = () => {
                   </Typography>
                   <Typography
                     variant="body1"
+                    color="text.secondary"
                     sx={{
-                      color: "#666666",
                       fontWeight: 400,
                       fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
                       lineHeight: 1.2,
@@ -463,16 +457,19 @@ const ComputerGrid: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={4} lg={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
           <Card
             sx={{
-              bgcolor: "white",
-              borderRadius: 2,
-              border: "1px solid #e0e0e0",
-              boxShadow: "none",
               height: "100%",
               display: "flex",
               flexDirection: "column",
+              background: "linear-gradient(135deg, rgba(245, 124, 0, 0.05) 0%, rgba(245, 124, 0, 0.01) 100%)",
+              border: "1px solid rgba(245, 124, 0, 0.12)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 8px 25px rgba(245, 124, 0, 0.15)",
+              },
             }}
           >
             <CardContent
@@ -494,21 +491,22 @@ const ComputerGrid: React.FC = () => {
               >
                 <Box
                   sx={{
-                    bgcolor: "rgba(255, 152, 0, 0.15)",
-                    borderRadius: 1.5,
-                    p: 1,
+                    bgcolor: "warning.main",
+                    borderRadius: 2,
+                    p: 1.5,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    minWidth: 44,
-                    height: 44,
+                    minWidth: 48,
+                    height: 48,
                     flexShrink: 0,
+                    boxShadow: "0 4px 12px rgba(245, 124, 0, 0.25)",
                   }}
                 >
-                  <ComputerIcon
+                  <BuildIcon
                     sx={{
-                      color: "#f57c00",
-                      fontSize: 22,
+                      fontSize: 24,
+                      color: "white",
                     }}
                   />
                 </Box>
@@ -516,7 +514,6 @@ const ComputerGrid: React.FC = () => {
                   <Typography
                     variant="h3"
                     sx={{
-                      color: "#212121",
                       fontWeight: 600,
                       lineHeight: 1.2,
                       mb: 0.5,
@@ -532,8 +529,8 @@ const ComputerGrid: React.FC = () => {
                   </Typography>
                   <Typography
                     variant="body1"
+                    color="text.secondary"
                     sx={{
-                      color: "#666666",
                       fontWeight: 400,
                       fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
                       lineHeight: 1.2,
@@ -546,16 +543,19 @@ const ComputerGrid: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={4} lg={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
           <Card
             sx={{
-              bgcolor: "white",
-              borderRadius: 2,
-              border: "1px solid #e0e0e0",
-              boxShadow: "none",
               height: "100%",
               display: "flex",
               flexDirection: "column",
+              background: "linear-gradient(135deg, rgba(251, 146, 60, 0.05) 0%, rgba(251, 146, 60, 0.01) 100%)",
+              border: "1px solid rgba(251, 146, 60, 0.12)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 8px 25px rgba(251, 146, 60, 0.15)",
+              },
             }}
           >
             <CardContent
@@ -577,21 +577,22 @@ const ComputerGrid: React.FC = () => {
               >
                 <Box
                   sx={{
-                    bgcolor: "rgba(255, 152, 0, 0.15)",
-                    borderRadius: 1.5,
-                    p: 1,
+                    bgcolor: "secondary.main",
+                    borderRadius: 2,
+                    p: 1.5,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    minWidth: 44,
-                    height: 44,
+                    minWidth: 48,
+                    height: 48,
                     flexShrink: 0,
+                    boxShadow: "0 4px 12px rgba(251, 146, 60, 0.25)",
                   }}
                 >
                   <NotificationIcon
                     sx={{
-                      color: "#f57c00",
-                      fontSize: 22,
+                      fontSize: 24,
+                      color: "white",
                     }}
                   />
                 </Box>
@@ -599,7 +600,6 @@ const ComputerGrid: React.FC = () => {
                   <Typography
                     variant="h3"
                     sx={{
-                      color: "#212121",
                       fontWeight: 600,
                       lineHeight: 1.2,
                       mb: 0.5,
@@ -615,8 +615,8 @@ const ComputerGrid: React.FC = () => {
                   </Typography>
                   <Typography
                     variant="body1"
+                    color="text.secondary"
                     sx={{
-                      color: "#666666",
                       fontWeight: 400,
                       fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
                       lineHeight: 1.2,
@@ -629,16 +629,19 @@ const ComputerGrid: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={4} lg={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
           <Card
             sx={{
-              bgcolor: "white",
-              borderRadius: 2,
-              border: "1px solid #e0e0e0",
-              boxShadow: "none",
               height: "100%",
               display: "flex",
               flexDirection: "column",
+              background: "linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, rgba(46, 125, 50, 0.01) 100%)",
+              border: "1px solid rgba(46, 125, 50, 0.12)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 8px 25px rgba(46, 125, 50, 0.15)",
+              },
             }}
           >
             <CardContent
@@ -660,21 +663,22 @@ const ComputerGrid: React.FC = () => {
               >
                 <Box
                   sx={{
-                    bgcolor: "rgba(76, 175, 80, 0.15)",
-                    borderRadius: 1.5,
-                    p: 1,
+                    bgcolor: "success.main",
+                    borderRadius: 2,
+                    p: 1.5,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    minWidth: 44,
-                    height: 44,
+                    minWidth: 48,
+                    height: 48,
                     flexShrink: 0,
+                    boxShadow: "0 4px 12px rgba(46, 125, 50, 0.25)",
                   }}
                 >
                   <TrendingIcon
                     sx={{
-                      color: "#2e7d32",
-                      fontSize: 22,
+                      fontSize: 24,
+                      color: "white",
                     }}
                   />
                 </Box>
@@ -682,7 +686,6 @@ const ComputerGrid: React.FC = () => {
                   <Typography
                     variant="h3"
                     sx={{
-                      color: "#212121",
                       fontWeight: 600,
                       lineHeight: 1.2,
                       mb: 0.5,
@@ -698,8 +701,8 @@ const ComputerGrid: React.FC = () => {
                   </Typography>
                   <Typography
                     variant="body1"
+                    color="text.secondary"
                     sx={{
-                      color: "#666666",
                       fontWeight: 400,
                       fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
                       lineHeight: 1.2,
@@ -712,16 +715,19 @@ const ComputerGrid: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={4} lg={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
           <Card
             sx={{
-              bgcolor: "white",
-              borderRadius: 2,
-              border: "1px solid #e0e0e0",
-              boxShadow: "none",
               height: "100%",
               display: "flex",
               flexDirection: "column",
+              background: "linear-gradient(135deg, rgba(211, 47, 47, 0.05) 0%, rgba(211, 47, 47, 0.01) 100%)",
+              border: "1px solid rgba(211, 47, 47, 0.12)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 8px 25px rgba(211, 47, 47, 0.15)",
+              },
             }}
           >
             <CardContent
@@ -743,21 +749,22 @@ const ComputerGrid: React.FC = () => {
               >
                 <Box
                   sx={{
-                    bgcolor: "rgba(244, 67, 54, 0.15)",
-                    borderRadius: 1.5,
-                    p: 1,
+                    bgcolor: "error.main",
+                    borderRadius: 2,
+                    p: 1.5,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    minWidth: 44,
-                    height: 44,
+                    minWidth: 48,
+                    height: 48,
                     flexShrink: 0,
+                    boxShadow: "0 4px 12px rgba(211, 47, 47, 0.25)",
                   }}
                 >
                   <CancelIcon
                     sx={{
-                      color: "#d32f2f",
-                      fontSize: 22,
+                      fontSize: 24,
+                      color: "white",
                     }}
                   />
                 </Box>
@@ -765,7 +772,6 @@ const ComputerGrid: React.FC = () => {
                   <Typography
                     variant="h3"
                     sx={{
-                      color: "#212121",
                       fontWeight: 600,
                       lineHeight: 1.2,
                       mb: 0.5,
@@ -781,8 +787,8 @@ const ComputerGrid: React.FC = () => {
                   </Typography>
                   <Typography
                     variant="body1"
+                    color="text.secondary"
                     sx={{
-                      color: "#666666",
                       fontWeight: 400,
                       fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
                       lineHeight: 1.2,
@@ -844,7 +850,8 @@ const ComputerGrid: React.FC = () => {
             onClick={() => setViewMode("grid")}
             color={viewMode === "grid" ? "primary" : "default"}
             sx={{
-              border: viewMode === "grid" ? "2px solid" : "1px solid #e0e0e0",
+              border: viewMode === "grid" ? "2px solid" : "1px solid",
+              borderColor: viewMode === "grid" ? "primary.main" : "divider",
               borderRadius: 1,
             }}
           >
@@ -854,7 +861,8 @@ const ComputerGrid: React.FC = () => {
             onClick={() => setViewMode("list")}
             color={viewMode === "list" ? "primary" : "default"}
             sx={{
-              border: viewMode === "list" ? "2px solid" : "1px solid #e0e0e0",
+              border: viewMode === "list" ? "2px solid" : "1px solid",
+              borderColor: viewMode === "list" ? "primary.main" : "divider",
               borderRadius: 1,
             }}
           >
@@ -864,7 +872,7 @@ const ComputerGrid: React.FC = () => {
       </Box>
 
       {/* Results Count */}
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold", color: "#212121" }}>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>
         Lab Computer Status
       </Typography>
 
@@ -872,11 +880,9 @@ const ComputerGrid: React.FC = () => {
       <Paper
         elevation={1}
         sx={{
-          bgcolor: "white",
           borderRadius: 3,
           p: { xs: 2, sm: 3, md: 4 },
           mb: 4,
-          border: "1px solid #e0e0e0",
         }}
       >
         {/* Status Legend */}
@@ -895,7 +901,7 @@ const ComputerGrid: React.FC = () => {
                 width: 12,
                 height: 12,
                 borderRadius: "50%",
-                bgcolor: "#4caf50",
+                bgcolor: "success.main",
               }}
             />
             <Typography variant="body2" color="text.secondary">
@@ -908,7 +914,7 @@ const ComputerGrid: React.FC = () => {
                 width: 12,
                 height: 12,
                 borderRadius: "50%",
-                bgcolor: "#f44336",
+                bgcolor: "error.main",
               }}
             />
             <Typography variant="body2" color="text.secondary">
@@ -921,7 +927,7 @@ const ComputerGrid: React.FC = () => {
                 width: 12,
                 height: 12,
                 borderRadius: "50%",
-                bgcolor: "#ff9800",
+                bgcolor: "warning.main",
               }}
             />
             <Typography variant="body2" color="text.secondary">
@@ -952,19 +958,9 @@ const ComputerGrid: React.FC = () => {
                 display: "flex",
                 flexDirection: "column",
                 borderRadius: 3,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                bgcolor:
-                  computer.status === "available"
-                    ? "#e8f5e8"
-                    : computer.status === "maintenance"
-                    ? "#fff8e1"
-                    : computer.status === "booked"
-                    ? "#ffebee"
-                    : "#f5f5f5",
                 transition: "transform 0.2s, box-shadow 0.2s",
                 "&:hover": {
                   transform: "translateY(-2px)",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                 },
               }}
             >
@@ -984,12 +980,12 @@ const ComputerGrid: React.FC = () => {
                     sx={{
                       color:
                         computer.status === "available"
-                          ? "#4caf50"
+                          ? "success.main"
                           : computer.status === "maintenance"
-                          ? "#ff9800"
+                          ? "warning.main"
                           : computer.status === "booked"
-                          ? "#f44336"
-                          : "#9e9e9e",
+                          ? "error.main"
+                          : "text.secondary",
                       fontSize: { xs: 36, sm: 40, md: 44 },
                     }}
                   />
@@ -1000,7 +996,6 @@ const ComputerGrid: React.FC = () => {
                   variant="h6"
                   sx={{
                     fontWeight: 600,
-                    color: "#212121",
                     fontSize: { xs: "1rem", sm: "1.125rem" },
                     mb: 1.5,
                   }}
@@ -1013,7 +1008,6 @@ const ComputerGrid: React.FC = () => {
                   variant="body1"
                   sx={{
                     fontWeight: "bold",
-                    color: "#212121",
                     fontSize: { xs: "0.875rem", sm: "1rem" },
                   }}
                 >
