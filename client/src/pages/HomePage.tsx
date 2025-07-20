@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AppBar,
@@ -18,13 +18,20 @@ import {
 import ComputerIcon from "@mui/icons-material/Computer";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import MenuIcon from "@mui/icons-material/Menu";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import PeopleIcon from "@mui/icons-material/People";
+import MonitorIcon from "@mui/icons-material/Monitor";
+import PrintIcon from "@mui/icons-material/Print";
+import WifiIcon from "@mui/icons-material/Wifi";
+import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
 import { motion, AnimatePresence } from "framer-motion";
 import Lottie from "lottie-react";
 
 const navLinks = [
   { label: "Home", href: "#home" },
   { label: "Booking", href: "/dashboard" },
-  { label: "Rules", href: "#rules" },
+  { label: "Rules", href: "/rules" },
   { label: "Team", href: "#team" },
   { label: "Contact", href: "#contact" },
 ];
@@ -212,7 +219,7 @@ export default function HomePage() {
 
       {/* Navbar */}
       <AppBar
-        position="static"
+        position="fixed"
         elevation={0}
         sx={{
           background: "rgba(255, 255, 255, 0.95)",
@@ -222,6 +229,7 @@ export default function HomePage() {
           boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
           zIndex: 10,
           borderBottom: "1px solid rgba(255,255,255,0.2)",
+          top: 0,
         }}
       >
         <Toolbar
@@ -389,6 +397,7 @@ export default function HomePage() {
           px: 2,
           position: "relative",
           zIndex: 2,
+          pt: { xs: 8, md: 10 }, // Add top padding to account for fixed header
         }}
       >
         <Container maxWidth="lg">
@@ -560,6 +569,397 @@ export default function HomePage() {
               </motion.div>
             </Box>
           </Box>
+        </Container>
+      </Box>
+
+      {/* Lab Overview Section */}
+      <Box
+        sx={{
+          py: { xs: 8, md: 12 },
+          background:
+            "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%)",
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <Container maxWidth="lg">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <Typography
+              variant="h2"
+              fontWeight={800}
+              sx={{
+                textAlign: "center",
+                mb: 2,
+                fontSize: { xs: "2.5rem", md: "3.5rem" },
+                background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                textShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+            >
+              Lab Overview
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{
+                textAlign: "center",
+                mb: 6,
+                color: "#64748b",
+                fontWeight: 400,
+                fontSize: { xs: "1.1rem", md: "1.3rem" },
+                maxWidth: 800,
+                mx: "auto",
+                lineHeight: 1.6,
+              }}
+            >
+              State-of-the-art computer lab facility designed for students and
+              faculty to enhance their learning and research experience.
+            </Typography>
+          </motion.div>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
+              gap: 4,
+              mb: 6,
+            }}
+          >
+            {/* Location */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              viewport={{ once: true }}
+            >
+              <Box
+                sx={{
+                  p: 4,
+                  borderRadius: 3,
+                  background: "rgba(255, 255, 255, 0.8)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
+                    transform: "translateY(-8px)",
+                    boxShadow: "0 16px 48px rgba(0, 0, 0, 0.15)",
+                    background: "rgba(255, 255, 255, 0.95)",
+                  },
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      background:
+                        "linear-gradient(135deg, #2563eb 0%, #1de9b6 100%)",
+                      mr: 2,
+                      boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)",
+                    }}
+                  >
+                    <LocationOnIcon sx={{ color: "#fff", fontSize: 28 }} />
+                  </Box>
+                  <Typography
+                    variant="h6"
+                    fontWeight={700}
+                    sx={{ color: "#1e293b", fontSize: "1.3rem" }}
+                  >
+                    Location
+                  </Typography>
+                </Box>
+                <Typography
+                  sx={{
+                    color: "#64748b",
+                    fontSize: "1.1rem",
+                    lineHeight: 1.6,
+                    fontWeight: 500,
+                  }}
+                >
+                  Block C, 3rd Floor, Room 301
+                </Typography>
+              </Box>
+            </motion.div>
+
+            {/* Working Hours */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              <Box
+                sx={{
+                  p: 4,
+                  borderRadius: 3,
+                  background: "rgba(255, 255, 255, 0.8)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
+                    transform: "translateY(-8px)",
+                    boxShadow: "0 16px 48px rgba(0, 0, 0, 0.15)",
+                    background: "rgba(255, 255, 255, 0.95)",
+                  },
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      background:
+                        "linear-gradient(135deg, #2563eb 0%, #1de9b6 100%)",
+                      mr: 2,
+                      boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)",
+                    }}
+                  >
+                    <AccessTimeIcon sx={{ color: "#fff", fontSize: 28 }} />
+                  </Box>
+                  <Typography
+                    variant="h6"
+                    fontWeight={700}
+                    sx={{ color: "#1e293b", fontSize: "1.3rem" }}
+                  >
+                    Working Hours
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{ color: "#64748b", fontSize: "1rem", lineHeight: 1.8 }}
+                >
+                  <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Monday - Friday: 8:00 AM - 6:00 PM
+                  </Typography>
+                  <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Saturday: 9:00 AM - 4:00 PM
+                  </Typography>
+                  <Typography sx={{ fontWeight: 500, color: "#94a3b8" }}>
+                    Break: 12:00 PM - 1:00 PM
+                  </Typography>
+                </Box>
+              </Box>
+            </motion.div>
+
+            {/* Eligible Users */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              viewport={{ once: true }}
+            >
+              <Box
+                sx={{
+                  p: 4,
+                  borderRadius: 3,
+                  background: "rgba(255, 255, 255, 0.8)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
+                    transform: "translateY(-8px)",
+                    boxShadow: "0 16px 48px rgba(0, 0, 0, 0.15)",
+                    background: "rgba(255, 255, 255, 0.95)",
+                  },
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      background:
+                        "linear-gradient(135deg, #2563eb 0%, #1de9b6 100%)",
+                      mr: 2,
+                      boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)",
+                    }}
+                  >
+                    <PeopleIcon sx={{ color: "#fff", fontSize: 28 }} />
+                  </Box>
+                  <Typography
+                    variant="h6"
+                    fontWeight={700}
+                    sx={{ color: "#1e293b", fontSize: "1.3rem" }}
+                  >
+                    Eligible Users
+                  </Typography>
+                </Box>
+                <Typography
+                  sx={{
+                    color: "#64748b",
+                    fontSize: "1.1rem",
+                    lineHeight: 1.6,
+                    fontWeight: 500,
+                  }}
+                >
+                  Students, Faculty, and Research Staff
+                </Typography>
+              </Box>
+            </motion.div>
+          </Box>
+
+          {/* Equipment & Facilities Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            viewport={{ once: true }}
+          >
+            <Box
+              sx={{
+                p: 5,
+                borderRadius: 4,
+                background:
+                  "linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(29, 233, 182, 0.05) 100%)",
+                border: "2px solid rgba(37, 99, 235, 0.1)",
+                boxShadow: "0 12px 40px rgba(0, 0, 0, 0.1)",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mb: 4,
+                  justifyContent: "center",
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    background:
+                      "linear-gradient(135deg, #2563eb 0%, #1de9b6 100%)",
+                    mr: 3,
+                    boxShadow: "0 8px 24px rgba(37, 99, 235, 0.4)",
+                  }}
+                >
+                  <ComputerIcon sx={{ color: "#fff", fontSize: 36 }} />
+                </Box>
+                <Typography
+                  variant="h4"
+                  fontWeight={800}
+                  sx={{
+                    color: "#1e293b",
+                    fontSize: { xs: "1.8rem", md: "2.2rem" },
+                    textAlign: "center",
+                  }}
+                >
+                  Equipment & Facilities
+                </Typography>
+              </Box>
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" },
+                  gap: 4,
+                }}
+              >
+                {/* Left Column */}
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        background: "rgba(37, 99, 235, 0.1)",
+                        mr: 2,
+                      }}
+                    >
+                      <MonitorIcon sx={{ color: "#2563eb", fontSize: 24 }} />
+                    </Box>
+                    <Typography
+                      sx={{
+                        color: "#1e293b",
+                        fontSize: "1.2rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      50 Dell i7 PCs
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        background: "rgba(37, 99, 235, 0.1)",
+                        mr: 2,
+                      }}
+                    >
+                      <PrintIcon sx={{ color: "#2563eb", fontSize: 24 }} />
+                    </Box>
+                    <Typography
+                      sx={{
+                        color: "#1e293b",
+                        fontSize: "1.2rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Printer Access
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Right Column */}
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        background: "rgba(37, 99, 235, 0.1)",
+                        mr: 2,
+                      }}
+                    >
+                      <WifiIcon sx={{ color: "#2563eb", fontSize: 24 }} />
+                    </Box>
+                    <Typography
+                      sx={{
+                        color: "#1e293b",
+                        fontSize: "1.2rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      High-speed Wi-Fi
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        background: "rgba(37, 99, 235, 0.1)",
+                        mr: 2,
+                      }}
+                    >
+                      <LibraryBooksIcon
+                        sx={{ color: "#2563eb", fontSize: 24 }}
+                      />
+                    </Box>
+                    <Typography
+                      sx={{
+                        color: "#1e293b",
+                        fontSize: "1.2rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Software Library
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          </motion.div>
         </Container>
       </Box>
     </Box>

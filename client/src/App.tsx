@@ -24,6 +24,7 @@ import Settings from "./pages/Settings";
 import Layout from "./components/Layout";
 import ComputerGrid from "./pages/ComputerGrid";
 import HomePage from "./pages/HomePage";
+import Rules from "./pages/Rules";
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -39,6 +40,7 @@ const AppContent = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/" element={<HomePage />} />
+                <Route path="/rules" element={<Rules />} />
                 <Route
                   path="/dashboard"
                   element={
