@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import type { ReactElement } from 'react';
 import {
   Box,
   Typography,
@@ -11,7 +12,6 @@ import {
   Select,
   MenuItem,
   Alert,
-  Grid,
   Paper,
   Stepper,
   Step,
@@ -41,9 +41,22 @@ interface Computer {
   specifications: string;
 }
 
-const steps = ["Select Computer", "Choose Dates & Times", "Review & Confirm"];
+const steps = ["Select Computer", "Choose Dates & Times", "Project Details", "Review & Confirm"];
 
-const BookingForm: React.FC = () => {
+const datasetTypes = [
+  'Image',
+  'Video',
+  'Audio',
+  'Satellite',
+  'Text',
+  'Tabular',
+  'Time Series',
+  'Other'
+];
+
+const datasetSizeUnits = ['MB', 'GB', 'TB'];
+
+const BookingForm: React.FC = (): ReactElement => {
   const [activeStep, setActiveStep] = useState(0);
   const [computers, setComputers] = useState<Computer[]>([]);
   const [selectedComputer, setSelectedComputer] = useState<string>("");
@@ -55,6 +68,14 @@ const BookingForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [hasGPU, setHasGPU] = useState(false);
+  const [currentGPUMemory, setCurrentGPUMemory] = useState<number>(0);
+  const [bottleneckExplanation, setBottleneckExplanation] = useState("");
+  const [problemStatement, setProblemStatement] = useState("");
+  const [datasetType, setDatasetType] = useState("");
+  const [datasetLink, setDatasetLink] = useState("");
+  const [datasetSize, setDatasetSize] = useState<number>(0);
+  const [datasetSizeUnit, setDatasetSizeUnit] = useState<string>('GB');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -96,9 +117,14 @@ const BookingForm: React.FC = () => {
       !endDate ||
       !startTime ||
       !endTime ||
-      !reason.trim()
+      !reason.trim() ||
+      !problemStatement.trim() ||
+      !datasetType ||
+      !datasetLink.trim() ||
+      !bottleneckExplanation.trim() ||
+      !datasetSize
     ) {
-      setError("Please fill in all fields");
+      setError("Please fill in all required fields");
       return;
     }
 
@@ -151,10 +177,17 @@ const BookingForm: React.FC = () => {
         date: format(startDate, "yyyy-MM-dd"),
         startTime: format(startTime, "HH:mm"),
         endTime: format(endTime, "HH:mm"),
-        reason: `${reason.trim()}\n\nBooking Period: ${format(
-          startDate,
-          "MMM d, yyyy"
-        )} to ${format(endDate, "MMM d, yyyy")}`,
+        reason: reason.trim(),
+        requiresGPU: hasGPU,
+        gpuMemoryRequired: currentGPUMemory,
+        problemStatement: problemStatement.trim(),
+        datasetType,
+        datasetSize: {
+          value: datasetSize,
+          unit: datasetSizeUnit
+        },
+        datasetLink: datasetLink.trim(),
+        bottleneckExplanation: bottleneckExplanation.trim()
       };
 
       await bookingsAPI.createBooking(bookingData);
@@ -167,6 +200,14 @@ const BookingForm: React.FC = () => {
       setStartTime(null);
       setEndTime(null);
       setReason("");
+      setHasGPU(false);
+      setCurrentGPUMemory(0);
+      setProblemStatement("");
+      setDatasetType("");
+      setDatasetSize(0);
+      setDatasetSizeUnit('GB');
+      setDatasetLink("");
+      setBottleneckExplanation("");
       setActiveStep(0);
     } catch (error: any) {
       console.error("Error creating booking:", error);
@@ -368,6 +409,142 @@ const BookingForm: React.FC = () => {
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
+              Project Details
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Please provide details about your project and computational requirements
+            </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box>
+                <TextField
+                  fullWidth
+                  label="Problem Statement"
+                  value={problemStatement}
+                  onChange={(e) => setProblemStatement(e.target.value)}
+                  multiline
+                  rows={3}
+                  required
+                  placeholder="Describe your research problem or project objective..."
+                />
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                <FormControl fullWidth required>
+                  <InputLabel>Dataset Type</InputLabel>
+                  <Select
+                    value={datasetType}
+                    onChange={(e) => setDatasetType(e.target.value)}
+                    label="Dataset Type"
+                  >
+                    {datasetTypes.map((type) => (
+                      <MenuItem key={type} value={type}>
+                        {type}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    sx={{ flex: 1 }}
+                    type="number"
+                    label="Dataset Size"
+                    value={datasetSize}
+                    onChange={(e) => setDatasetSize(Number(e.target.value))}
+                    required
+                    inputProps={{ min: 0 }}
+                  />
+                  <FormControl sx={{ minWidth: 100 }}>
+                    <InputLabel>Unit</InputLabel>
+                    <Select
+                      value={datasetSizeUnit}
+                      onChange={(e) => setDatasetSizeUnit(e.target.value)}
+                      label="Unit"
+                    >
+                      {datasetSizeUnits.map((unit) => (
+                        <MenuItem key={unit} value={unit}>
+                          {unit}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Box>
+
+              <TextField
+                fullWidth
+                label="Dataset Link"
+                value={datasetLink}
+                onChange={(e) => setDatasetLink(e.target.value)}
+                required
+                placeholder="Provide a link to your dataset or its location..."
+              />
+
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Current Hardware Configuration
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <FormControl component="fieldset">
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Do you have a GPU in your current setup?
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Button
+                        variant={hasGPU ? "contained" : "outlined"}
+                        onClick={() => setHasGPU(true)}
+                        color={hasGPU ? "primary" : "inherit"}
+                      >
+                        Yes, I have a GPU
+                      </Button>
+                      <Button
+                        variant={!hasGPU ? "contained" : "outlined"}
+                        onClick={() => setHasGPU(false)}
+                        color={!hasGPU ? "primary" : "inherit"}
+                      >
+                        No GPU
+                      </Button>
+                    </Box>
+                  </FormControl>
+
+                  {hasGPU && (
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="What is your current GPU Memory (GB)?"
+                      value={currentGPUMemory}
+                      onChange={(e) => setCurrentGPUMemory(Number(e.target.value))}
+                      required
+                      inputProps={{ min: 0, max: 48 }}
+                      helperText="Enter the memory capacity of your current GPU in gigabytes"
+                    />
+                  )}
+
+                  <TextField
+                    fullWidth
+                    label="Explain your computational bottleneck"
+                    value={bottleneckExplanation}
+                    onChange={(e) => setBottleneckExplanation(e.target.value)}
+                    multiline
+                    rows={4}
+                    required
+                    placeholder="Describe why your current setup is insufficient. For example:
+- What are the limitations you're facing?
+- How long does your current computation take?
+- What performance improvements do you need?
+- Why do you need the lab's computational resources?"
+                  />
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        );
+
+      case 3:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
               Review & Confirm
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -423,6 +600,48 @@ const BookingForm: React.FC = () => {
                   </Typography>
                   <Typography variant="body1">{reason}</Typography>
                 </Box>
+
+                <Divider />
+
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Project Details
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    Problem Statement
+                  </Typography>
+                  <Typography variant="body2" paragraph>
+                    {problemStatement}
+                  </Typography>
+
+                  <Typography variant="body1" fontWeight="bold">
+                    Dataset Information
+                  </Typography>
+                  <Typography variant="body2">
+                    Type: {datasetType}
+                  </Typography>
+                  <Typography variant="body2">
+                    Size: {datasetSize} {datasetSizeUnit}
+                  </Typography>
+                  <Typography variant="body2" paragraph>
+                    Link: {datasetLink}
+                  </Typography>
+
+                  <Typography variant="body1" fontWeight="bold">
+                    Current Hardware Configuration
+                  </Typography>
+                  <Typography variant="body2">
+                    Has GPU: {hasGPU ? 'Yes' : 'No'}
+                  </Typography>
+                  {hasGPU && (
+                    <Typography variant="body2">
+                      Current GPU Memory: {currentGPUMemory} GB
+                    </Typography>
+                  )}
+                  <Typography variant="body2" paragraph>
+                    Bottleneck Explanation: {bottleneckExplanation}
+                  </Typography>
+                </Box>
               </Box>
             </Paper>
 
@@ -431,9 +650,10 @@ const BookingForm: React.FC = () => {
                 <strong>Booking Guidelines:</strong>
               </Typography>
               <Typography variant="body2" component="div" sx={{ mt: 1 }}>
-                • Bookings are subject to admin approval • Maximum booking
-                duration is 4 hours • You can cancel your booking anytime •
-                Please arrive on time for your scheduled slot
+                • Bookings are subject to admin approval
+                • Maximum booking duration is 7 days
+                • Resource allocation will be based on your computational needs
+                • Please arrive on time for your scheduled slot
               </Typography>
             </Alert>
           </Box>
