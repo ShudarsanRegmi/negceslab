@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -27,6 +27,7 @@ const validationSchema = yup.object({
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [error, setError] = useState('');
 
@@ -40,7 +41,8 @@ const Login = () => {
       try {
         setError('');
         await login(values.email, values.password);
-        navigate('/');
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
       } catch (err) {
         setError('Failed to sign in. Please check your credentials.');
         console.error('Login error:', err);
