@@ -265,7 +265,7 @@ export default function HomePage() {
                   }}
                 >
                   Welcome to
-                  <br />
+            <br />
                   <span
                     style={{
                       background:
@@ -790,6 +790,137 @@ export default function HomePage() {
               </Box>
             </Box>
           </motion.div>
+        </Container>
+      </Box>
+      {/* FAQ + Notices Grid Section */}
+      <Box sx={{
+        py: { xs: 6, md: 8 },
+        background: 'linear-gradient(135deg, #fff 0%, #f8fafc 100%)',
+        position: 'relative',
+        zIndex: 2,
+      }}>
+        <Container maxWidth="lg">
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: { xs: 4, md: 6 },
+              alignItems: 'start',
+            }}
+          >
+            {/* FAQ Section (Left) */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+            >
+              <Typography variant="h3" fontWeight={800} sx={{ textAlign: 'left', mb: 3, fontSize: { xs: '2rem', md: '2.1rem' }, color: '#18181b' }}>
+                Frequently Asked Questions
+              </Typography>
+              {[
+                {
+                  q: 'How far in advance can I book?',
+                  a: 'You can book lab sessions up to 7 days in advance.'
+                },
+                {
+                  q: 'Can I modify my booking?',
+                  a: 'Yes, you can modify or cancel your booking up to 1 hour before the scheduled time.'
+                },
+                {
+                  q: "What if I'm late for my booking?",
+                  a: 'A 15-minute grace period is provided. After that, the booking may be released to others.'
+                }
+              ].map((faq, i) => (
+                <Box
+                  key={faq.q}
+                  sx={{
+                    background: '#fff',
+                    borderRadius: 2,
+                    boxShadow: '0 2px 12px #2563eb0a',
+                    p: 3,
+                    mb: 2.5,
+                    border: '1.5px solid #f1f5f9',
+                    transition: 'box-shadow 0.2s',
+                    '&:hover': {
+                      boxShadow: '0 6px 24px #2563eb22',
+                    },
+                  }}
+                >
+                  <Typography fontWeight={700} fontSize="1.13rem" sx={{ mb: 1, color: '#18181b' }}>{faq.q}</Typography>
+                  <Typography sx={{ color: '#374151', fontSize: '1.05rem' }}>{faq.a}</Typography>
+                </Box>
+              ))}
+            </motion.div>
+            {/* Latest Notices Section (Right) */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+            >
+              <Typography variant="h3" fontWeight={800} sx={{ textAlign: 'left', mb: 2, fontSize: { xs: '2rem', md: '2.1rem' }, color: '#18181b' }}>
+                Latest Notices
+              </Typography>
+              <Typography sx={{ textAlign: 'left', color: '#64748b', mb: 5, fontSize: '1.13rem' }}>
+                Stay updated with the latest announcements and important information.
+              </Typography>
+              {[
+                {
+                  icon: <span style={{ color: '#2563eb', fontSize: 22, marginRight: 8 }}>★</span>,
+                  title: 'New Software Installation',
+                  desc: 'Latest version of Visual Studio Code and Python 3.11 have been installed on all machines. Available from Monday, January 15th.',
+                  date: 'January 12, 2025',
+                  color: '#e0edff',
+                  border: '3px solid #2563eb',
+                  text: '#2563eb',
+                },
+                {
+                  icon: <span style={{ color: '#f59e42', fontSize: 22, marginRight: 8 }}>⏰</span>,
+                  title: 'Extended Hours During Exam Week',
+                  desc: 'Lab will be open until 8:00 PM during final exam week (January 20-26) to accommodate increased usage.',
+                  date: 'January 10, 2025',
+                  color: '#fffbe7',
+                  border: '3px solid #facc15',
+                  text: '#b45309',
+                },
+                {
+                  icon: <span style={{ color: '#22c55e', fontSize: 22, marginRight: 8 }}>✔</span>,
+                  title: 'Network Upgrade Complete',
+                  desc: 'High-speed internet upgrade has been successfully completed. Enjoy faster browsing and downloads!',
+                  date: 'January 8, 2025',
+                  color: '#e7fbee',
+                  border: '3px solid #22c55e',
+                  text: '#15803d',
+                },
+              ].map((notice, i) => (
+                <Box
+                  key={notice.title}
+                  sx={{
+                    background: notice.color,
+                    borderLeft: notice.border,
+                    borderRadius: 2,
+                    boxShadow: '0 2px 12px #2563eb0a',
+                    p: 3,
+                    mb: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'box-shadow 0.2s',
+                    '&:hover': {
+                      boxShadow: '0 6px 24px #2563eb22',
+                    },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    {notice.icon}
+                    <Typography fontWeight={700} fontSize="1.13rem" sx={{ color: notice.text }}>{notice.title}</Typography>
+                  </Box>
+                  <Typography sx={{ color: notice.text, fontSize: '1.05rem', mb: 1 }}>{notice.desc}</Typography>
+                  <Typography sx={{ color: '#64748b', fontSize: '0.98rem' }}>Posted: {notice.date}</Typography>
+                </Box>
+              ))}
+            </motion.div>
+          </Box>
         </Container>
       </Box>
     </Box>
