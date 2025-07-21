@@ -33,8 +33,9 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Divider,
-  Grid,
+  Link,
 } from "@mui/material";
+import Grid from '@mui/material/Grid';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -58,6 +59,7 @@ interface Computer {
   nextAvailableDate?: string;
 }
 
+// Update the Booking interface to include new fields
 interface Booking {
   _id: string;
   userId: string;
@@ -69,6 +71,7 @@ interface Booking {
     _id: string;
     name: string;
     location: string;
+    specifications: string;
   };
   date: string;
   startTime: string;
@@ -76,6 +79,17 @@ interface Booking {
   reason: string;
   status: "pending" | "approved" | "rejected" | "cancelled";
   createdAt: string;
+  // New fields
+  requiresGPU: boolean;
+  gpuMemoryRequired?: number;
+  problemStatement?: string;
+  datasetType?: string;
+  datasetSize?: {
+    value: number;
+    unit: string;
+  };
+  datasetLink?: string;
+  bottleneckExplanation?: string;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -107,6 +121,8 @@ const AdminDashboard: React.FC = () => {
   const [statusUpdateSuccess, setStatusUpdateSuccess] = useState<string | null>(
     null
   );
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -184,6 +200,11 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleViewDetails = (booking: Booking) => {
+    setSelectedBookingDetails(booking);
+    setDetailsDialogOpen(true);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved":
@@ -259,9 +280,9 @@ const AdminDashboard: React.FC = () => {
       {activeTab === 0 && (
         <Box>
           {/* Summary Cards */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, mb: 4 }}>
             {/* Pending Approvals */}
-            <Grid xs={12} sm={6} md={4} lg={3}>
+            <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 33.33%" } }}>
               <Card
                 sx={{
                   height: "100%",
@@ -330,8 +351,8 @@ const AdminDashboard: React.FC = () => {
                   </Box>
                 </CardContent>
               </Card>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </Box>
       )}
 
@@ -589,26 +610,27 @@ const AdminDashboard: React.FC = () => {
                     <TableCell>Computer</TableCell>
                     <TableCell>Date</TableCell>
                     <TableCell>Time</TableCell>
-                    <TableCell>Reason</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {bookings.map((booking) => (
-                    <TableRow key={booking._id}>
-                      <TableCell>
-                        {booking.userInfo?.name || "Unknown User"}
-                      </TableCell>
-                      <TableCell>
-                        {booking.userInfo?.email || booking.userId}
-                      </TableCell>
+                    <TableRow
+                      key={booking._id}
+                      onClick={() => handleViewDetails(booking)}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        }
+                      }}
+                    >
+                      <TableCell>{booking.userInfo?.name || "Unknown User"}</TableCell>
+                      <TableCell>{booking.userInfo?.email || booking.userId}</TableCell>
                       <TableCell>{booking.computerId.name}</TableCell>
-                      <TableCell>
-                        {new Date(booking.date).toLocaleDateString()}
-                      </TableCell>
+                      <TableCell>{new Date(booking.date).toLocaleDateString()}</TableCell>
                       <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
-                      <TableCell>{booking.reason}</TableCell>
                       <TableCell>
                         <Chip
                           label={booking.status}
@@ -621,7 +643,8 @@ const AdminDashboard: React.FC = () => {
                           <Box>
                             <IconButton
                               color="success"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent row click
                                 setSelectedBooking(booking);
                                 setNewStatus("approved");
                                 setStatusDialogOpen(true);
@@ -631,7 +654,8 @@ const AdminDashboard: React.FC = () => {
                             </IconButton>
                             <IconButton
                               color="error"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent row click
                                 setSelectedBooking(booking);
                                 setNewStatus("rejected");
                                 setStatusDialogOpen(true);
@@ -808,6 +832,253 @@ const AdminDashboard: React.FC = () => {
           >
             {newStatus === "approved" ? "Approve" : "Reject"} Booking
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Booking Details Dialog */}
+      <Dialog
+        open={detailsDialogOpen}
+        onClose={() => setDetailsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            Booking Request Details
+            <Chip
+              label={selectedBookingDetails?.status}
+              color={getStatusColor(selectedBookingDetails?.status || '') as any}
+              size="small"
+            />
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedBookingDetails && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* User Information */}
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  User Information
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                  <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)' } }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Name
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBookingDetails.userInfo?.name || "Unknown User"}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)' } }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Email
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBookingDetails.userInfo?.email || selectedBookingDetails.userId}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+
+              {/* Computer Information */}
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Computer Details
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                  <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)' } }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Computer Name
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBookingDetails.computerId.name}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)' } }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Location
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBookingDetails.computerId.location}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: '1 1 100%' }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Specifications
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBookingDetails.computerId.specifications}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+
+              {/* Booking Schedule */}
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Booking Schedule
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                  <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)' } }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Date
+                    </Typography>
+                    <Typography variant="body1">
+                      {new Date(selectedBookingDetails.date).toLocaleDateString()}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)' } }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Time
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedBookingDetails.startTime} - {selectedBookingDetails.endTime}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+
+              {/* Request Details */}
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Request Details
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Reason for Request
+                    </Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {selectedBookingDetails.reason}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Request Status
+                    </Typography>
+                    <Box sx={{ mt: 1 }}>
+                      <Chip
+                        label={selectedBookingDetails.status}
+                        color={getStatusColor(selectedBookingDetails.status) as any}
+                      />
+                    </Box>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Request Date
+                    </Typography>
+                    <Typography variant="body1">
+                      {new Date(selectedBookingDetails.createdAt).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+
+              {/* Project Details Section */}
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Project Details
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {selectedBookingDetails.problemStatement && (
+                    <Box>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Problem Statement
+                      </Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {selectedBookingDetails.problemStatement}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Dataset Information */}
+                  {(selectedBookingDetails.datasetType || selectedBookingDetails.datasetLink || selectedBookingDetails.datasetSize) && (
+                    <Box>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Dataset Information
+                      </Typography>
+                      {selectedBookingDetails.datasetType && (
+                        <Typography variant="body1">
+                          Type: {selectedBookingDetails.datasetType}
+                        </Typography>
+                      )}
+                      {selectedBookingDetails.datasetSize && (
+                        <Typography variant="body1">
+                          Size: {selectedBookingDetails.datasetSize.value} {selectedBookingDetails.datasetSize.unit}
+                        </Typography>
+                      )}
+                      {selectedBookingDetails.datasetLink && (
+                        <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>
+                          Link: <Link href={selectedBookingDetails.datasetLink} target="_blank" rel="noopener noreferrer">
+                            {selectedBookingDetails.datasetLink}
+                          </Link>
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* GPU Requirements */}
+                  {selectedBookingDetails.requiresGPU && (
+                    <Box>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        GPU Requirements
+                      </Typography>
+                      <Typography variant="body1">
+                        Memory Required: {selectedBookingDetails.gpuMemoryRequired}GB
+                      </Typography>
+                      {selectedBookingDetails.bottleneckExplanation && (
+                        <>
+                          <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
+                            Bottleneck Explanation
+                          </Typography>
+                          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {selectedBookingDetails.bottleneckExplanation}
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              </Paper>
+
+              {/* Action Buttons for Pending Requests */}
+              {selectedBookingDetails.status === "pending" && (
+                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    startIcon={<CheckIcon />}
+                    onClick={() => {
+                      setSelectedBooking(selectedBookingDetails);
+                      setNewStatus("approved");
+                      setStatusDialogOpen(true);
+                      setDetailsDialogOpen(false);
+                    }}
+                    fullWidth
+                  >
+                    Approve Request
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    startIcon={<CancelIcon />}
+                    onClick={() => {
+                      setSelectedBooking(selectedBookingDetails);
+                      setNewStatus("rejected");
+                      setStatusDialogOpen(true);
+                      setDetailsDialogOpen(false);
+                    }}
+                    fullWidth
+                  >
+                    Reject Request
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 
