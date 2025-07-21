@@ -1034,7 +1034,7 @@ const ComputerGrid: React.FC = () => {
                       mt: 1,
                     }}
                   >
-                    Until {computer.nextAvailable}
+                    Until {computer.nextAvailableDate ? `${computer.nextAvailableDate} ${computer.nextAvailable}` : computer.nextAvailable}
                   </Typography>
                 )}
               </CardContent>

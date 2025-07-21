@@ -542,7 +542,7 @@ const AdminDashboard: React.FC = () => {
                 <React.Fragment key={booking._id}>
                   <ListItem>
                     <ListItemText
-                      primary={booking.computerId.name}
+                      primary={booking.computerId?.name || "Unknown Computer"}
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.secondary">
@@ -628,7 +628,7 @@ const AdminDashboard: React.FC = () => {
                     >
                       <TableCell>{booking.userInfo?.name || "Unknown User"}</TableCell>
                       <TableCell>{booking.userInfo?.email || booking.userId}</TableCell>
-                      <TableCell>{booking.computerId.name}</TableCell>
+                      <TableCell>{booking.computerId?.name || "Unknown Computer"}</TableCell>
                       <TableCell>{new Date(booking.date).toLocaleDateString()}</TableCell>
                       <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
                       <TableCell>

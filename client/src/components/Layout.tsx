@@ -94,7 +94,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  const currentDrawerWidth = sidebarCollapsed ? collapsedDrawerWidth : drawerWidth;
+  const currentDrawerWidth = sidebarCollapsed
+    ? collapsedDrawerWidth
+    : drawerWidth;
 
   const handleLogout = async () => {
     try {
@@ -256,8 +258,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           .filter((item) => item.roles.includes(userRole || ""))
           .map((item) => (
             <ListItem key={item.text} disablePadding>
-              <Tooltip 
-                title={sidebarCollapsed ? item.text : ""} 
+              <Tooltip
+                title={sidebarCollapsed ? item.text : ""}
                 placement="right"
                 arrow
               >
@@ -270,7 +272,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   sx={{
                     mx: 1,
                     borderRadius: 1,
-                    justifyContent: sidebarCollapsed ? 'center' : 'initial',
+                    justifyContent: sidebarCollapsed ? "center" : "initial",
                     px: sidebarCollapsed ? 1 : 2,
                     "&.Mui-selected": {
                       backgroundColor: "primary.main",
@@ -287,8 +289,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         location.pathname === item.path
                           ? "inherit"
                           : "text.secondary",
-                      minWidth: sidebarCollapsed ? 'auto' : 40,
-                      justifyContent: 'center',
+                      minWidth: sidebarCollapsed ? "auto" : 40,
+                      justifyContent: "center",
                     }}
                   >
                     {item.icon}
@@ -305,11 +307,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <IconButton
           onClick={handleSidebarToggle}
           sx={{
-            width: '100%',
-            justifyContent: 'center',
+            width: "100%",
+            justifyContent: "center",
             borderRadius: 1,
-            '&:hover': {
-              backgroundColor: 'action.hover',
+            "&:hover": {
+              backgroundColor: "action.hover",
             },
           }}
         >
@@ -356,13 +358,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           ml: { md: `${currentDrawerWidth}px` },
           zIndex: muiTheme.zIndex.drawer + 1,
           borderRadius: 0,
-          transition: muiTheme.transitions.create(['margin', 'width'], {
+          transition: muiTheme.transitions.create(["margin", "width"], {
             easing: muiTheme.transitions.easing.sharp,
             duration: muiTheme.transitions.duration.leavingScreen,
           }),
         }}
       >
-        <Toolbar sx={{ justifyContent: "space-between"}}>
+        <Toolbar sx={{ justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <IconButton
               color="inherit"
@@ -375,42 +377,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </IconButton>
 
             {/* PC Logo for Homepage Navigation */}
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  transform: "scale(1.05)",
-                  "& .pc-icon": {
-                    color: "rgba(255, 255, 255, 0.9)",
-                  },
-                },
-              }}
-              onClick={() => navigate("/")}
-            >
-              <Computer
-                className="pc-icon"
-                sx={{
-                  fontSize: 28,
-                  color: "rgba(255, 255, 255, 0.8)",
-                  transition: "color 0.3s ease",
-                }}
-              />
-              <Typography
-                variant="h6"
-                sx={{
-                  color: "rgba(255, 255, 255, 0.9)",
-                  fontWeight: 600,
-                  display: { xs: "none", sm: "block" },
-                }}
-              >
-                LabBook
-              </Typography>
-            </Box>
-
             <Box sx={{ display: { xs: "none", sm: "block" } }}>
               <Typography variant="h6" noWrap>
                 {getPageTitle()}
@@ -787,10 +753,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <Box
         component="nav"
-        sx={{ 
-          width: { md: currentDrawerWidth }, 
+        sx={{
+          width: { md: currentDrawerWidth },
           flexShrink: { md: 0 },
-          transition: muiTheme.transitions.create('width', {
+          transition: muiTheme.transitions.create("width", {
             easing: muiTheme.transitions.easing.sharp,
             duration: muiTheme.transitions.duration.leavingScreen,
           }),
@@ -832,11 +798,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               boxSizing: "border-box",
               width: currentDrawerWidth,
               borderRadius: 0,
-              transition: muiTheme.transitions.create('width', {
+              transition: muiTheme.transitions.create("width", {
                 easing: muiTheme.transitions.easing.sharp,
                 duration: muiTheme.transitions.duration.leavingScreen,
               }),
-              overflowX: 'hidden',
+              overflowX: "hidden",
             },
           }}
           open
@@ -853,7 +819,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           p: { xs: 1, sm: 2, md: 3 },
           width: { md: `calc(100% - ${currentDrawerWidth}px)` },
           mt: { xs: 7, md: 8 },
-          transition: muiTheme.transitions.create(['margin', 'width'], {
+          transition: muiTheme.transitions.create(["margin", "width"], {
             easing: muiTheme.transitions.easing.sharp,
             duration: muiTheme.transitions.duration.leavingScreen,
           }),

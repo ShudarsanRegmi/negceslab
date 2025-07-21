@@ -133,6 +133,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                   minWidth: 200,
                   bgcolor: "#fff",
                   pt: 2,
+                  zIndex: 1300,
                 },
               }}
             >
