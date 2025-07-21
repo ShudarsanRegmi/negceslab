@@ -1,0 +1,169 @@
+.contactPage {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 16px 64px 16px;
+}
+.heading {
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: #222;
+}
+.subheading {
+  text-align: center;
+  font-size: 1.15rem;
+  color: #4b5563;
+  margin-bottom: 40px;
+}
+.contentRow {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.infoCol {
+  flex: 1 1 320px;
+  min-width: 300px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.infoSection {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 28px 28px 18px 28px;
+}
+.infoTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #222;
+}
+.infoItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.infoIcon {
+  font-size: 1.5rem !important;
+  margin-top: 2px;
+}
+.infoLabel {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2563eb;
+}
+.infoValue {
+  font-size: 1rem;
+  color: #222;
+}
+.officeHoursBox {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 18px 24px;
+  margin-top: 8px;
+}
+.officeTitle {
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #222;
+}
+.officeHours {
+  font-size: 1rem;
+  color: #374151;
+  line-height: 1.6;
+}
+.formCol {
+  flex: 1 1 400px;
+  min-width: 340px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+}
+.formBox {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+  padding: 32px 32px 24px 32px;
+}
+.formTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #222;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 2px;
+}
+.input {
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1.5px solid #e5e7eb;
+  font-size: 1rem;
+  background: #f9fafb;
+  color: #222;
+  outline: none;
+  transition: border 0.2s;
+}
+.input:focus {
+  border: 1.5px solid #2563eb;
+  background: #fff;
+}
+.textarea {
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1.5px solid #e5e7eb;
+  font-size: 1rem;
+  background: #f9fafb;
+  color: #222;
+  outline: none;
+  min-height: 90px;
+  resize: vertical;
+  transition: border 0.2s;
+}
+.textarea:focus {
+  border: 1.5px solid #2563eb;
+  background: #fff;
+}
+.button {
+  margin-top: 10px;
+  padding: 12px 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.10);
+}
+.button:hover {
+  background: #1d4ed8;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.13);
+}
+@media (max-width: 900px) {
+  .contentRow {
+    flex-direction: column;
+    gap: 32px;
+    align-items: stretch;
+  }
+  .infoCol, .formCol {
+    max-width: 100%;
+  }
+} 

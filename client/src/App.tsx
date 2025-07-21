@@ -12,6 +12,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import MainLayout from "./components/MainLayout";
 
 // Pages (to be created)
 import Login from "./pages/Login";
@@ -25,6 +26,8 @@ import Layout from "./components/Layout";
 import ComputerGrid from "./pages/ComputerGrid";
 import HomePage from "./pages/HomePage";
 import Rules from "./pages/Rules";
+import Team from "./pages/Team";
+import Contact from "./pages/Contact";
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -37,10 +40,54 @@ const AppContent = () => {
           <NotificationProvider>
             <Router>
               <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/" element={<HomePage />} />
-                <Route path="/rules" element={<Rules />} />
+                <Route
+                  path="/login"
+                  element={
+                    <MainLayout>
+                      <Login />
+                    </MainLayout>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <MainLayout>
+                      <Register />
+                    </MainLayout>
+                  }
+                />
+                <Route
+                  path="/"
+                  element={
+                    <MainLayout>
+                      <HomePage />
+                    </MainLayout>
+                  }
+                />
+                <Route
+                  path="/rules"
+                  element={
+                    <MainLayout>
+                      <Rules />
+                    </MainLayout>
+                  }
+                />
+                <Route
+                  path="/team"
+                  element={
+                    <MainLayout>
+                      <Team />
+                    </MainLayout>
+                  }
+                />
+                <Route
+                  path="/contact"
+                  element={
+                    <MainLayout>
+                      <Contact />
+                    </MainLayout>
+                  }
+                />
                 <Route
                   path="/dashboard"
                   element={

@@ -1,0 +1,266 @@
+.timelineContainer {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.timelineWrapper {
+  position: relative;
+  display: flex;
+}
+.timelineLine {
+  display: block;
+  position: absolute;
+  left: 32px;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background: #fff;
+  z-index: 0;
+}
+.timelineProgress {
+  display: block;
+  position: absolute;
+  left: 32px;
+  top: 0;
+  width: 2px;
+  background: #2563eb;
+  z-index: 1;
+  transition: height 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.stepsColumn {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 32px;
+}
+.stepRow {
+  display: flex;
+  align-items: flex-start;
+}
+.stepCircleWrapper {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.stepCircle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: #f3f4f6;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #6b7280;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.pendingCircle {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.activeCircle {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #2563eb;
+  box-shadow: 0 4px 24px rgba(37,99,235,0.15);
+  transform: scale(1.05);
+}
+.completedCircle {
+  border-color: #059669;
+  background: #d1fae5;
+  color: #059669;
+  box-shadow: 0 4px 24px rgba(16,185,129,0.15);
+}
+.checkIcon {
+  width: 32px;
+  height: 32px;
+  color: #059669;
+  transition: color 0.3s;
+}
+.stepNum {
+  color: #6b7280;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+.activeStepNum {
+  color: #2563eb;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+.mobileLine {
+  display: none;
+}
+@media (max-width: 767px) {
+  .mobileLine {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    width: 2px;
+    height: 32px;
+    background: #e5e7eb;
+    transform: translateX(-50%);
+  }
+}
+.stepCard {
+  flex: 1;
+  margin-left: 16px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1.5px solid #d1d5db;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 14px 120px;
+  min-width: 650px;
+  max-width: 900px;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  cursor: pointer;
+  outline: none;
+}
+@media (max-width: 900px) {
+  .stepCard {
+    min-width: 0;
+    max-width: 100%;
+    padding: 14px 8px;
+  }
+}
+.pendingCard {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #6b7280;
+}
+.activeCard {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
+  box-shadow: 0 8px 32px rgba(37,99,235,0.10);
+  transform: scale(1.02);
+}
+.completedCard {
+  border-color: #059669;
+  background: #ecfdf5;
+  color: #222;
+  box-shadow: 0 8px 32px rgba(16,185,129,0.10);
+}
+/* Ensure completed card title and description text is black */
+.completedCard .cardTitle,
+.completedCard .cardDesc {
+  color: #222 !important;
+}
+/* Ensure active (blue) card title and description text is black */
+.activeCard .cardTitle,
+.activeCard .cardDesc {
+  color: #222 !important;
+}
+.cardHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.cardIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 8px;
+  margin-right: 12px;
+  font-size: 1.25rem;
+  background: #f3f4f6;
+  color: #6b7280;
+  transition: all 0.3s;
+}
+.pendingIcon {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.activeIcon {
+  background: #dbeafe;
+  color: #2563eb;
+}
+.completedIcon {
+  background: #d1fae5;
+  color: #059669;
+}
+.cardTitle {
+  font-weight: bold;
+  font-size: 1.1rem;
+  flex: 1;
+  margin-right: 8px;
+}
+.cardDesc {
+  font-size: 1rem;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.progressBarBg {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+.progressBar {
+  height: 8px;
+  border-radius: 4px;
+  transition: width 0.3s cubic-bezier(0.4,0,0.2,1), background 0.3s;
+  background: transparent;
+}
+.activeProgress {
+  background: #2563eb;
+}
+.completedProgress {
+  background: #059669;
+}
+.status {
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: color 0.3s;
+}
+.pendingStatus {
+  color: #6b7280;
+}
+.activeStatus {
+  color: #2563eb;
+}
+.completedStatus {
+  color: #059669;
+}
+.cardTitle, .cardDesc, .status {
+  transition: color 0.3s;
+}
+.cardTitle {
+  font-size: 1.1rem;
+}
+.cardDesc {
+  font-size: 1rem;
+}
+.chevron {
+  margin-left: auto;
+  font-size: 1.3rem;
+  color: #a1a1aa;
+  transition: transform 0.3s, color 0.3s;
+}
+.activeChevron {
+  transform: translateX(4px);
+  color: #2563eb;
+}
+.pendingChevron {
+  color: #a1a1aa;
+}
+.activeChevron {
+  color: #2563eb;
+}
+.completedChevron {
+  color: #059669;
+} 
