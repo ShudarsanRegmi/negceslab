@@ -131,59 +131,9 @@ const Profile: React.FC = () => {
 
               <Divider sx={{ mb: 4 }} />
 
-              {/* Edit Form */}
-              <Box>
-                <Typography variant="h6" fontWeight="600" gutterBottom>
-                  Personal Information
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, mt: 3 }}>
-                  <TextField
-                    label="Display Name"
-                    value={formData.displayName}
-                    onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                    fullWidth
-                    disabled={!isEditing}
-                    variant="outlined"
-                  />
-                  <TextField
-                    label="Email Address"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    fullWidth
-                    disabled={!isEditing}
-                    variant="outlined"
-                  />
-                </Box>
-
-                {isEditing && (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      gap: 2,
-                      mt: 4,
-                      justifyContent: 'flex-end',
-                      flexDirection: { xs: 'column', sm: 'row' },
-                    }}
-                  >
-                    <Button
-                      startIcon={<Cancel />}
-                      onClick={handleCancel}
-                      variant="outlined"
-                      size="large"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      startIcon={<Save />}
-                      onClick={handleSave}
-                      variant="contained"
-                      size="large"
-                    >
-                      Save Changes
-                    </Button>
-                  </Box>
-                )}
-              </Box>
+              {/* Removed Personal Information Edit Form as it is unnecessary */}
+              
+              {/* You may add other profile-related content here if needed */}
             </CardContent>
           </Card>
         </Box>
