@@ -5,6 +5,9 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  OAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { authAPI } from "../services/api";
@@ -14,6 +17,8 @@ interface AuthContextType {
   userRole: string | null;
   login: (email: string, password: string) => Promise<UserCredential>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  loginWithMicrosoft: () => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
 }
@@ -46,12 +51,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error: any) {
       console.error("Error fetching user role:", error);
       console.error("Error response:", error.response?.data);
-      // If user is not found (404), they might not be registered yet
       if (error.response?.status === 404) {
         console.log("User not registered in backend yet");
         setUserRole(null);
       } else {
-        // For other errors, don't set role to null as it might be a temporary issue
         console.error("Unexpected error fetching user profile:", error);
       }
     }
@@ -77,18 +80,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const { user } = await createUserWithEmailAndPassword(auth, email, password);
       console.log('Firebase user created:', user.uid);
 
-      // Wait a moment for Firebase to fully set the user
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const token = await user.getIdToken();
       console.log('Got Firebase token, length:', token.length);
 
-      // Register user in our backend
-      console.log('Calling backend registration...');
       await authAPI.register({ name, email });
       console.log('Backend registration successful');
 
-      // Fetch user profile to get role
       await fetchUserProfile(user);
     } catch (error) {
       console.error('Registration error:', error);
@@ -100,6 +99,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return signInWithEmailAndPassword(auth, email, password);
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const { user } = await signInWithPopup(auth, provider);
+      
+      // Extract name from Google profile
+      const name = user.displayName || user.email?.split('@')[0] || '';
+      
+      // Register in backend if needed
+      try {
+        await authAPI.register({ name, email: user.email || '' });
+      } catch (error: any) {
+        // Ignore if user already exists
+        if (error.response?.status !== 400) {
+          throw error;
+        }
+      }
+      
+      await fetchUserProfile(user);
+    } catch (error) {
+      console.error('Google login error:', error);
+      throw error;
+    }
+  };
+
+  const loginWithMicrosoft = async () => {
+    try {
+      const provider = new OAuthProvider('microsoft.com');
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      const { user } = await signInWithPopup(auth, provider);
+      
+      // Extract name from Microsoft profile
+      const name = user.displayName || user.email?.split('@')[0] || '';
+      
+      // Register in backend if needed
+      try {
+        await authAPI.register({ name, email: user.email || '' });
+      } catch (error: any) {
+        // Ignore if user already exists
+        if (error.response?.status !== 400) {
+          throw error;
+        }
+      }
+      
+      await fetchUserProfile(user);
+    } catch (error) {
+      console.error('Microsoft login error:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
@@ -109,6 +161,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     userRole,
     login,
     register,
+    loginWithGoogle,
+    loginWithMicrosoft,
     logout,
     loading,
   };

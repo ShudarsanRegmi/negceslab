@@ -13,6 +13,7 @@ import {
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { useAuth } from '../contexts/AuthContext';
+import SocialLoginButtons from '../components/SocialLoginButtons';
 
 const validationSchema = yup.object({
   email: yup
@@ -28,8 +29,9 @@ const validationSchema = yup.object({
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, loginWithGoogle, loginWithMicrosoft } = useAuth();
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -40,15 +42,48 @@ const Login = () => {
     onSubmit: async (values) => {
       try {
         setError('');
+        setIsLoading(true);
         await login(values.email, values.password);
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
       } catch (err) {
         setError('Failed to sign in. Please check your credentials.');
         console.error('Login error:', err);
+      } finally {
+        setIsLoading(false);
       }
     },
   });
+
+  const handleGoogleLogin = async () => {
+    try {
+      setError('');
+      setIsLoading(true);
+      await loginWithGoogle();
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError('Failed to sign in with Google.');
+      console.error('Google login error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    try {
+      setError('');
+      setIsLoading(true);
+      await loginWithMicrosoft();
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError('Failed to sign in with Microsoft.');
+      console.error('Microsoft login error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -70,7 +105,7 @@ const Login = () => {
             width: '100%',
           }}
         >
-          <Typography component="h1" variant="h5">
+          <Typography component="h1" variant="h5" gutterBottom>
             Sign in
           </Typography>
           {error && (
@@ -95,6 +130,7 @@ const Login = () => {
               onChange={formik.handleChange}
               error={formik.touched.email && Boolean(formik.errors.email)}
               helperText={formik.touched.email && formik.errors.email}
+              disabled={isLoading}
             />
             <TextField
               margin="normal"
@@ -108,16 +144,25 @@ const Login = () => {
               onChange={formik.handleChange}
               error={formik.touched.password && Boolean(formik.errors.password)}
               helperText={formik.touched.password && formik.errors.password}
+              disabled={isLoading}
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{ mt: 3 }}
+              disabled={isLoading}
             >
               Sign In
             </Button>
-            <Box sx={{ textAlign: 'center' }}>
+
+            <SocialLoginButtons
+              onGoogleClick={handleGoogleLogin}
+              onMicrosoftClick={handleMicrosoftLogin}
+              isLoading={isLoading}
+            />
+
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Link component={RouterLink} to="/register" variant="body2">
                 {"Don't have an account? Sign Up"}
               </Link>

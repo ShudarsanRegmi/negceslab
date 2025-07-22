@@ -13,6 +13,7 @@ import {
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { useAuth } from '../contexts/AuthContext';
+import SocialLoginButtons from '../components/SocialLoginButtons';
 
 const validationSchema = yup.object({
   name: yup
@@ -35,8 +36,9 @@ const validationSchema = yup.object({
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, loginWithGoogle, loginWithMicrosoft } = useAuth();
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -49,14 +51,45 @@ const Register = () => {
     onSubmit: async (values) => {
       try {
         setError('');
+        setIsLoading(true);
         await register(values.email, values.password, values.name);
         navigate('/');
       } catch (err) {
         setError('Failed to create an account. Please try again.');
         console.error('Registration error:', err);
+      } finally {
+        setIsLoading(false);
       }
     },
   });
+
+  const handleGoogleLogin = async () => {
+    try {
+      setError('');
+      setIsLoading(true);
+      await loginWithGoogle();
+      navigate('/');
+    } catch (err) {
+      setError('Failed to sign up with Google.');
+      console.error('Google login error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    try {
+      setError('');
+      setIsLoading(true);
+      await loginWithMicrosoft();
+      navigate('/');
+    } catch (err) {
+      setError('Failed to sign up with Microsoft.');
+      console.error('Microsoft login error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -78,7 +111,7 @@ const Register = () => {
             width: '100%',
           }}
         >
-          <Typography component="h1" variant="h5">
+          <Typography component="h1" variant="h5" gutterBottom>
             Sign up
           </Typography>
           {error && (
@@ -103,6 +136,7 @@ const Register = () => {
               onChange={formik.handleChange}
               error={formik.touched.name && Boolean(formik.errors.name)}
               helperText={formik.touched.name && formik.errors.name}
+              disabled={isLoading}
             />
             <TextField
               margin="normal"
@@ -115,6 +149,7 @@ const Register = () => {
               onChange={formik.handleChange}
               error={formik.touched.email && Boolean(formik.errors.email)}
               helperText={formik.touched.email && formik.errors.email}
+              disabled={isLoading}
             />
             <TextField
               margin="normal"
@@ -128,6 +163,7 @@ const Register = () => {
               onChange={formik.handleChange}
               error={formik.touched.password && Boolean(formik.errors.password)}
               helperText={formik.touched.password && formik.errors.password}
+              disabled={isLoading}
             />
             <TextField
               margin="normal"
@@ -140,16 +176,25 @@ const Register = () => {
               onChange={formik.handleChange}
               error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
               helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
+              disabled={isLoading}
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{ mt: 3 }}
+              disabled={isLoading}
             >
               Sign Up
             </Button>
-            <Box sx={{ textAlign: 'center' }}>
+
+            <SocialLoginButtons
+              onGoogleClick={handleGoogleLogin}
+              onMicrosoftClick={handleMicrosoftLogin}
+              isLoading={isLoading}
+            />
+
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Link component={RouterLink} to="/login" variant="body2">
                 {"Already have an account? Sign in"}
               </Link>
