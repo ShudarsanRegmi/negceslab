@@ -39,6 +39,7 @@ import {
 } from "@mui/icons-material";
 import { format } from "date-fns";
 import { bookingsAPI, computersAPI } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Booking {
   _id: string;
@@ -66,6 +67,7 @@ interface Computer {
 }
 
 const Dashboard: React.FC = () => {
+  const { userRole } = useAuth(); // Get userRole from auth context
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [computers, setComputers] = useState<Computer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,6 +190,17 @@ const Dashboard: React.FC = () => {
   if (error) {
     return <Alert severity="error">{error}</Alert>;
   }
+
+  // // If user is admin, don't show the dashboard
+  // if (userRole === 'admin') {
+  //   return (
+  //     <Box sx={{ p: 3 }}>
+  //       <Typography variant="h6">
+  //         Please use the Admin Dashboard to manage bookings and computers.
+  //       </Typography>
+  //     </Box>
+  //   );
+  // }
 
   return (
     <Box>
@@ -516,108 +529,110 @@ const Dashboard: React.FC = () => {
 
       {/* Content Grid */}
       <Box>
-        {/* Recent Bookings */}
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Recent Bookings
-            </Typography>
-            {recentBookings.length === 0 ? (
-              <Typography
-                color="text.secondary"
-                sx={{ textAlign: "center", py: 4 }}
-              >
-                No bookings yet
+        {/* Recent Bookings - Only show for non-admin users */}
+        {userRole !== 'admin' && (
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Recent Bookings
               </Typography>
-            ) : (
-              <TableContainer component={Paper} variant="outlined">
-                <Table size={isMobile ? "small" : "medium"}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>ID</TableCell>
-                      <TableCell>Computer</TableCell>
-                      <TableCell>From</TableCell>
-                      <TableCell>To</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Created On</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {recentBookings.map((booking) => (
-                      <TableRow key={booking._id}>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="bold">
-                            {booking._id.slice(-6).toUpperCase()}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Box>
-                            <Typography variant="body2" fontWeight="bold">
-                              {booking.computerId?.name || "Unknown Computer"}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {booking.computerId?.location ||
-                                "Unknown Location"}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {format(new Date(booking.date), "yyyy-MM-dd")}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {booking.startTime}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {format(new Date(booking.date), "yyyy-MM-dd")}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {booking.endTime}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={booking.status}
-                            color={getStatusColor(booking.status) as any}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {format(new Date(booking.date), "yyyy-MM-dd")}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {format(new Date(booking.date), "HH:mm:ss")}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {booking.status === "pending" && (
-                            <Button
-                              variant="outlined"
-                              color="error"
-                              size="small"
-                              startIcon={<CloseIcon />}
-                              onClick={() => openCancelDialog(booking._id)}
-                              sx={{ minWidth: "auto", px: 1 }}
-                            >
-                              Cancel
-                            </Button>
-                          )}
-                        </TableCell>
+              {recentBookings.length === 0 ? (
+                <Typography
+                  color="text.secondary"
+                  sx={{ textAlign: "center", py: 4 }}
+                >
+                  No bookings yet
+                </Typography>
+              ) : (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size={isMobile ? "small" : "medium"}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>ID</TableCell>
+                        <TableCell>Computer</TableCell>
+                        <TableCell>From</TableCell>
+                        <TableCell>To</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Created On</TableCell>
+                        <TableCell>Actions</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </CardContent>
-        </Card>
+                    </TableHead>
+                    <TableBody>
+                      {recentBookings.map((booking) => (
+                        <TableRow key={booking._id}>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="bold">
+                              {booking._id.slice(-6).toUpperCase()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">
+                                {booking.computerId?.name || "Unknown Computer"}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {booking.computerId?.location ||
+                                  "Unknown Location"}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {format(new Date(booking.date), "yyyy-MM-dd")}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {booking.startTime}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {format(new Date(booking.date), "yyyy-MM-dd")}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {booking.endTime}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={booking.status}
+                              color={getStatusColor(booking.status) as any}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {format(new Date(booking.date), "yyyy-MM-dd")}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {format(new Date(booking.date), "HH:mm:ss")}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {booking.status === "pending" && (
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                startIcon={<CloseIcon />}
+                                onClick={() => openCancelDialog(booking._id)}
+                                sx={{ minWidth: "auto", px: 1 }}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </Box>
 
       {/* Cancel Booking Dialog */}
