@@ -90,6 +90,7 @@ interface Booking {
   };
   datasetLink?: string;
   bottleneckExplanation?: string;
+  endDate?: string; // Added for multi-day bookings
 }
 
 const AdminDashboard: React.FC = () => {
@@ -123,6 +124,7 @@ const AdminDashboard: React.FC = () => {
   );
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -182,11 +184,11 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleUpdateBookingStatus = async () => {
+  const handleUpdateBookingStatus = async (reason: string) => {
     if (!selectedBooking) return;
 
     try {
-      await bookingsAPI.updateBookingStatus(selectedBooking._id, newStatus);
+      await bookingsAPI.updateBookingStatus(selectedBooking._id, newStatus, reason);
       setStatusDialogOpen(false);
       setSelectedBooking(null);
       fetchData();
@@ -790,13 +792,23 @@ const AdminDashboard: React.FC = () => {
                   <strong>Email:</strong>{" "}
                   {selectedBooking.userInfo?.email || selectedBooking.userId}
                 </Typography>
+                {/* Booking Date */}
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Date:</strong>{" "}
-                  {new Date(selectedBooking.date).toLocaleDateString()}
+                  <strong>Booking Date:</strong> {selectedBooking.endDate && selectedBooking.endDate !== selectedBooking.date
+                    ? `${new Date(selectedBooking.date).toLocaleDateString()} - ${new Date(selectedBooking.endDate).toLocaleDateString()}`
+                    : new Date(selectedBooking.date).toLocaleDateString()}
                 </Typography>
+                {/* Booking Time */}
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Time:</strong> {selectedBooking.startTime} -{" "}
-                  {selectedBooking.endTime}
+                  <strong>Booking Time:</strong> {selectedBooking.startTime} - {selectedBooking.endTime}
+                </Typography>
+                {/* Booking Duration */}
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Booking Duration:</strong> {(() => {
+                    const startDateStr = new Date(selectedBooking.date).toLocaleDateString();
+                    const endDateStr = selectedBooking.endDate ? new Date(selectedBooking.endDate).toLocaleDateString() : startDateStr;
+                    return `${startDateStr} - ${endDateStr}`;
+                  })()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Reason:</strong> {selectedBooking.reason}
@@ -813,6 +825,21 @@ const AdminDashboard: React.FC = () => {
             </Typography>
           </Alert>
 
+          {newStatus === "rejected" && (
+            <TextField
+              label="Reason for Cancellation"
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+              fullWidth
+              required
+              multiline
+              minRows={2}
+              sx={{ mb: 2 }}
+              error={!cancelReason}
+              helperText={!cancelReason ? "Please provide a reason for cancellation." : ""}
+            />
+          )}
+
           <Typography
             variant="body1"
             sx={{
@@ -826,9 +853,10 @@ const AdminDashboard: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
           <Button
-            onClick={handleUpdateBookingStatus}
+            onClick={() => handleUpdateBookingStatus(cancelReason)}
             variant="contained"
             color={newStatus === "approved" ? "success" : "error"}
+            disabled={newStatus === "rejected" && !cancelReason}
           >
             {newStatus === "approved" ? "Approve" : "Reject"} Booking
           </Button>

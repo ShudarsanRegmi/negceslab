@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import type { ReactElement } from 'react';
+import type { ReactElement } from "react";
 import {
   Box,
   Typography,
@@ -41,20 +41,25 @@ interface Computer {
   specifications: string;
 }
 
-const steps = ["Select Computer", "Choose Dates & Times", "Project Details", "Review & Confirm"];
-
-const datasetTypes = [
-  'Image',
-  'Video',
-  'Audio',
-  'Satellite',
-  'Text',
-  'Tabular',
-  'Time Series',
-  'Other'
+const steps = [
+  "Select Computer",
+  "Choose Dates & Times",
+  "Project Details",
+  "Review & Confirm",
 ];
 
-const datasetSizeUnits = ['MB', 'GB', 'TB'];
+const datasetTypes = [
+  "Image",
+  "Video",
+  "Audio",
+  "Satellite",
+  "Text",
+  "Tabular",
+  "Time Series",
+  "Other",
+];
+
+const datasetSizeUnits = ["MB", "GB", "TB"];
 
 const BookingForm: React.FC = (): ReactElement => {
   const [activeStep, setActiveStep] = useState(0);
@@ -75,7 +80,7 @@ const BookingForm: React.FC = (): ReactElement => {
   const [datasetType, setDatasetType] = useState("");
   const [datasetLink, setDatasetLink] = useState("");
   const [datasetSize, setDatasetSize] = useState<number>(0);
-  const [datasetSizeUnit, setDatasetSizeUnit] = useState<string>('GB');
+  const [datasetSizeUnit, setDatasetSizeUnit] = useState<string>("GB");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -161,8 +166,10 @@ const BookingForm: React.FC = (): ReactElement => {
       return d;
     };
 
-    const startDateTime = startDate && startTime ? getDateTime(startDate, startTime) : null;
-    const endDateTime = endDate && endTime ? getDateTime(endDate, endTime) : null;
+    const startDateTime =
+      startDate && startTime ? getDateTime(startDate, startTime) : null;
+    const endDateTime =
+      endDate && endTime ? getDateTime(endDate, endTime) : null;
 
     if (startDateTime && endDateTime && isBefore(endDateTime, startDateTime)) {
       setError("End time must be after start time");
@@ -170,7 +177,11 @@ const BookingForm: React.FC = (): ReactElement => {
     }
 
     // Check minimum booking duration (1 hour) - only for same-day bookings
-    if (startDateTime && endDateTime && differenceInDays(endDate, startDate) === 0) {
+    if (
+      startDateTime &&
+      endDateTime &&
+      differenceInDays(endDate, startDate) === 0
+    ) {
       const durationInHours = differenceInHours(endDateTime, startDateTime);
       if (durationInHours < 1) {
         setError("Minimum booking duration is 1 hour for same-day bookings");
@@ -194,10 +205,10 @@ const BookingForm: React.FC = (): ReactElement => {
         datasetType,
         datasetSize: {
           value: datasetSize,
-          unit: datasetSizeUnit
+          unit: datasetSizeUnit,
         },
         datasetLink: datasetLink.trim(),
-        bottleneckExplanation: bottleneckExplanation.trim()
+        bottleneckExplanation: bottleneckExplanation.trim(),
       };
 
       await bookingsAPI.createBooking(bookingData);
@@ -215,7 +226,7 @@ const BookingForm: React.FC = (): ReactElement => {
       setProblemStatement("");
       setDatasetType("");
       setDatasetSize(0);
-      setDatasetSizeUnit('GB');
+      setDatasetSizeUnit("GB");
       setDatasetLink("");
       setBottleneckExplanation("");
       setActiveStep(0);
@@ -422,10 +433,11 @@ const BookingForm: React.FC = (): ReactElement => {
               Project Details
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Please provide details about your project and computational requirements
+              Please provide details about your project and computational
+              requirements
             </Typography>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <Box>
                 <TextField
                   fullWidth
@@ -439,7 +451,13 @@ const BookingForm: React.FC = (): ReactElement => {
                 />
               </Box>
 
-              <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 2,
+                  flexDirection: { xs: "column", sm: "row" },
+                }}
+              >
                 <FormControl fullWidth required>
                   <InputLabel>Dataset Type</InputLabel>
                   <Select
@@ -455,7 +473,7 @@ const BookingForm: React.FC = (): ReactElement => {
                   </Select>
                 </FormControl>
 
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: "flex", gap: 2 }}>
                   <TextField
                     sx={{ flex: 1 }}
                     type="number"
@@ -495,12 +513,16 @@ const BookingForm: React.FC = (): ReactElement => {
                 <Typography variant="subtitle2" gutterBottom>
                   Current Hardware Configuration
                 </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   <FormControl component="fieldset">
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      gutterBottom
+                    >
                       Do you have a GPU in your current setup?
                     </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Button
                         variant={hasGPU ? "contained" : "outlined"}
                         onClick={() => setHasGPU(true)}
@@ -524,7 +546,9 @@ const BookingForm: React.FC = (): ReactElement => {
                       type="number"
                       label="What is your current GPU Memory (GB)?"
                       value={currentGPUMemory}
-                      onChange={(e) => setCurrentGPUMemory(Number(e.target.value))}
+                      onChange={(e) =>
+                        setCurrentGPUMemory(Number(e.target.value))
+                      }
                       required
                       inputProps={{ min: 0, max: 48 }}
                       helperText="Enter the memory capacity of your current GPU in gigabytes"
@@ -627,9 +651,7 @@ const BookingForm: React.FC = (): ReactElement => {
                   <Typography variant="body1" fontWeight="bold">
                     Dataset Information
                   </Typography>
-                  <Typography variant="body2">
-                    Type: {datasetType}
-                  </Typography>
+                  <Typography variant="body2">Type: {datasetType}</Typography>
                   <Typography variant="body2">
                     Size: {datasetSize} {datasetSizeUnit}
                   </Typography>
@@ -641,7 +663,7 @@ const BookingForm: React.FC = (): ReactElement => {
                     Current Hardware Configuration
                   </Typography>
                   <Typography variant="body2">
-                    Has GPU: {hasGPU ? 'Yes' : 'No'}
+                    Has GPU: {hasGPU ? "Yes" : "No"}
                   </Typography>
                   {hasGPU && (
                     <Typography variant="body2">
@@ -660,10 +682,10 @@ const BookingForm: React.FC = (): ReactElement => {
                 <strong>Booking Guidelines:</strong>
               </Typography>
               <Typography variant="body2" component="div" sx={{ mt: 1 }}>
-                • Bookings are subject to admin approval
-                • Maximum booking duration is 7 days
-                • Resource allocation will be based on your computational needs
-                • Please arrive on time for your scheduled slot
+                • Bookings are subject to admin approval • Maximum booking
+                duration is 7 days • Resource allocation will be based on your
+                computational needs • Please arrive on time for your scheduled
+                slot
               </Typography>
             </Alert>
           </Box>
