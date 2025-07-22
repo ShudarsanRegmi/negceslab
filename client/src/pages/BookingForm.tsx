@@ -154,14 +154,24 @@ const BookingForm: React.FC = (): ReactElement => {
       return;
     }
 
-    if (isBefore(endTime!, startTime!)) {
+    // Combine date and time for accurate comparison
+    const getDateTime = (date: Date, time: Date) => {
+      const d = new Date(date);
+      d.setHours(time.getHours(), time.getMinutes(), 0, 0);
+      return d;
+    };
+
+    const startDateTime = startDate && startTime ? getDateTime(startDate, startTime) : null;
+    const endDateTime = endDate && endTime ? getDateTime(endDate, endTime) : null;
+
+    if (startDateTime && endDateTime && isBefore(endDateTime, startDateTime)) {
       setError("End time must be after start time");
       return;
     }
 
     // Check minimum booking duration (1 hour) - only for same-day bookings
-    if (differenceInDays(endDate, startDate) === 0) {
-      const durationInHours = differenceInHours(endTime!, startTime!);
+    if (startDateTime && endDateTime && differenceInDays(endDate, startDate) === 0) {
+      const durationInHours = differenceInHours(endDateTime, startDateTime);
       if (durationInHours < 1) {
         setError("Minimum booking duration is 1 hour for same-day bookings");
         return;
