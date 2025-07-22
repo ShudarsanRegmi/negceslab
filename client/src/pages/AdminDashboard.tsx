@@ -184,18 +184,20 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleUpdateBookingStatus = async (reason: string) => {
+  const handleUpdateBookingStatus = async () => {
     if (!selectedBooking) return;
 
     try {
+      // Only pass rejection reason if status is rejected
+      const reason = newStatus === 'rejected' ? cancelReason : undefined;
       await bookingsAPI.updateBookingStatus(selectedBooking._id, newStatus, reason);
+      
       setStatusDialogOpen(false);
       setSelectedBooking(null);
+      setCancelReason(''); // Clear the reason after use
       fetchData();
-      setStatusUpdateSuccess(
-        `Booking status updated to ${newStatus} successfully!`
-      );
-      setTimeout(() => setStatusUpdateSuccess(null), 5000); // Clear success message after 5 seconds
+      setStatusUpdateSuccess(`Booking ${newStatus} successfully!`);
+      setTimeout(() => setStatusUpdateSuccess(null), 5000);
     } catch (error) {
       console.error("Error updating booking status:", error);
       setError("Failed to update booking status");
@@ -853,7 +855,7 @@ const AdminDashboard: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
           <Button
-            onClick={() => handleUpdateBookingStatus(cancelReason)}
+            onClick={handleUpdateBookingStatus}
             variant="contained"
             color={newStatus === "approved" ? "success" : "error"}
             disabled={newStatus === "rejected" && !cancelReason}

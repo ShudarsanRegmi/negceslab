@@ -31,6 +31,10 @@ const bookingSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected', 'completed', 'cancelled'],
     default: 'pending'
   },
+  rejectionReason: {
+    type: String,
+    required: function() { return this.status === 'rejected'; }
+  },
   // New fields for GPU-related information
   requiresGPU: {
     type: Boolean,

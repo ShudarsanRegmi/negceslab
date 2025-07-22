@@ -52,8 +52,8 @@ export const bookingsAPI = {
   // Admin endpoints
   getAllBookings: () => 
     api.get('/bookings'),
-  updateBookingStatus: (bookingId: string, status: string) => 
-    api.put(`/bookings/${bookingId}/status`, { status }),
+  updateBookingStatus: (bookingId: string, status: string, rejectionReason?: string) => 
+    api.put(`/bookings/${bookingId}/status`, { status, rejectionReason }),
 };
 
 export const notificationsAPI = {

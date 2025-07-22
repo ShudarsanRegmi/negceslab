@@ -126,9 +126,14 @@ router.put('/:id/status', verifyToken, async (req, res) => {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const { status } = req.body;
+    const { status, rejectionReason } = req.body;
     if (!['approved', 'rejected', 'cancelled'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    // If status is rejected, require rejection reason
+    if (status === 'rejected' && !rejectionReason) {
+      return res.status(400).json({ message: 'Rejection reason is required' });
     }
 
     const booking = await Booking.findById(req.params.id).populate('computerId');
@@ -137,6 +142,9 @@ router.put('/:id/status', verifyToken, async (req, res) => {
     }
 
     booking.status = status;
+    if (status === 'rejected') {
+      booking.rejectionReason = rejectionReason;
+    }
     await booking.save();
 
     // Update computer status if needed

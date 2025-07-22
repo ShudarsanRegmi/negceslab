@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
 } from "@mui/material";
 import {
   Computer as ComputerIcon,
@@ -47,12 +48,15 @@ interface Booking {
     _id: string;
     name: string;
     location: string;
+    specifications?: string;
   };
   date: string;
   startTime: string;
   endTime: string;
   status: "pending" | "approved" | "rejected" | "cancelled";
   reason: string;
+  rejectionReason?: string;
+  createdAt: string;
 }
 
 interface Computer {
@@ -76,6 +80,8 @@ const Dashboard: React.FC = () => {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
     null
   );
+  const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -121,6 +127,16 @@ const Dashboard: React.FC = () => {
   const closeCancelDialog = () => {
     setCancelDialogOpen(false);
     setSelectedBookingId(null);
+  };
+
+  const handleRowClick = (booking: Booking) => {
+    setSelectedBookingDetails(booking);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleCloseDetails = () => {
+    setDetailsDialogOpen(false);
+    setSelectedBookingDetails(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -559,7 +575,16 @@ const Dashboard: React.FC = () => {
                     </TableHead>
                     <TableBody>
                       {recentBookings.map((booking) => (
-                        <TableRow key={booking._id}>
+                        <TableRow
+                          key={booking._id}
+                          onClick={() => handleRowClick(booking)}
+                          sx={{
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: 'action.hover',
+                            }
+                          }}
+                        >
                           <TableCell>
                             <Typography variant="body2" fontWeight="bold">
                               {booking._id.slice(-6).toUpperCase()}
@@ -634,6 +659,106 @@ const Dashboard: React.FC = () => {
           </Card>
         )}
       </Box>
+
+      {/* Booking Details Dialog */}
+      <Dialog
+        open={detailsDialogOpen}
+        onClose={handleCloseDetails}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Booking Details
+          <Chip
+            label={selectedBookingDetails?.status}
+            color={getStatusColor(selectedBookingDetails?.status || '') as any}
+            size="small"
+            sx={{ ml: 1 }}
+          />
+        </DialogTitle>
+        <DialogContent>
+          {selectedBookingDetails && (
+            <Box sx={{ py: 1 }}>
+              {/* Computer Information */}
+              <Typography variant="h6" gutterBottom color="primary">
+                Computer Details
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body1">
+                  <strong>Name:</strong> {selectedBookingDetails.computerId.name}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Location:</strong> {selectedBookingDetails.computerId.location}
+                </Typography>
+                {selectedBookingDetails.computerId.specifications && (
+                  <Typography variant="body1">
+                    <strong>Specifications:</strong> {selectedBookingDetails.computerId.specifications}
+                  </Typography>
+                )}
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Booking Information */}
+              <Typography variant="h6" gutterBottom color="primary">
+                Booking Information
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body1">
+                  <strong>Date:</strong> {format(new Date(selectedBookingDetails.date), "MMMM d, yyyy")}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Time:</strong> {selectedBookingDetails.startTime} - {selectedBookingDetails.endTime}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Purpose:</strong> {selectedBookingDetails.reason}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Status:</strong>{" "}
+                  <Chip
+                    label={selectedBookingDetails.status}
+                    color={getStatusColor(selectedBookingDetails.status) as any}
+                    size="small"
+                    sx={{ ml: 1 }}
+                  />
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Created:</strong> {format(new Date(selectedBookingDetails.createdAt), "MMMM d, yyyy HH:mm")}
+                </Typography>
+              </Box>
+
+              {/* Show rejection reason if booking was rejected */}
+              {selectedBookingDetails.status === 'rejected' && selectedBookingDetails.rejectionReason && (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="h6" gutterBottom color="error">
+                      Rejection Reason
+                    </Typography>
+                    <Alert severity="error" sx={{ mt: 1 }}>
+                      {selectedBookingDetails.rejectionReason}
+                    </Alert>
+                  </Box>
+                </>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetails}>Close</Button>
+          {selectedBookingDetails?.status === 'pending' && (
+            <Button
+              color="error"
+              onClick={() => {
+                handleCloseDetails();
+                openCancelDialog(selectedBookingDetails._id);
+              }}
+            >
+              Cancel Booking
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
 
       {/* Cancel Booking Dialog */}
       <Dialog open={cancelDialogOpen} onClose={closeCancelDialog}>
