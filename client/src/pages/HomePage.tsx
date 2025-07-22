@@ -25,6 +25,9 @@ import MonitorIcon from "@mui/icons-material/Monitor";
 import PrintIcon from "@mui/icons-material/Print";
 import WifiIcon from "@mui/icons-material/Wifi";
 import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
+import MemoryIcon from '@mui/icons-material/Memory';
+import StorageIcon from '@mui/icons-material/Storage';
+import DeveloperBoardIcon from '@mui/icons-material/DeveloperBoard';
 import { motion, AnimatePresence } from "framer-motion";
 import Lottie from "lottie-react";
 
@@ -275,7 +278,7 @@ export default function HomePage() {
                       WebkitTextFillColor: "transparent",
                     }}
                   >
-                    Negsus Lab
+                    NEGCES Lab
                   </span>
                 </Typography>
               </motion.div>
@@ -285,6 +288,62 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
               >
+                <Typography
+                  variant="h5"
+                  sx={{
+                    mb: 2,
+                    fontWeight: 600,
+                    fontSize: { xs: "1rem", md: "1.2rem" },
+                    letterSpacing: "0.5px",
+                    textAlign: { xs: "center", md: "left" },
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)",
+                      backgroundClip: "text",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      fontWeight: 700,
+                      fontSize: { xs: "1.1rem", md: "1.3rem" },
+                      textShadow: "0 2px 10px rgba(37,99,235,0.2)",
+                    }}
+                  >
+                    Next Generation
+                  </Box>
+                  <Box
+                    component="span"
+                    sx={{
+                      background: "linear-gradient(135deg, #34d399 0%, #059669 50%, #047857 100%)",
+                      backgroundClip: "text",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      fontWeight: 700,
+                      fontSize: { xs: "1.1rem", md: "1.3rem" },
+                      textShadow: "0 2px 10px rgba(5,150,105,0.2)",
+                    }}
+                  >
+                    Computing and
+                  </Box>
+                  <Box
+                    component="span"
+                    sx={{
+                      background: "linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%)",
+                      backgroundClip: "text",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      fontWeight: 700,
+                      fontSize: { xs: "1.1rem", md: "1.3rem" },
+                      textShadow: "0 2px 10px rgba(79,70,229,0.2)",
+                    }}
+                  >
+                    Experimental System
+                  </Box>
+                </Typography>
                 <Typography
                   variant="h4"
                   sx={{
@@ -297,8 +356,8 @@ export default function HomePage() {
                   }}
                 >
                   <TypingText
-                    text="Smart. Secure. Sharable. Book your spot, follow the rules, and explore."
-                    speed={80}
+                    text="Empowering innovation through advanced computing resources. Your gateway to high-performance computing excellence."
+                    speed={10}
                   />
                 </Typography>
               </motion.div>
@@ -513,7 +572,7 @@ export default function HomePage() {
                     fontWeight: 500,
                   }}
                 >
-                  Block C, 3rd Floor, Room 301
+                  Lab BLock, 1st Floor
                 </Typography>
               </Box>
             </motion.div>
@@ -566,14 +625,14 @@ export default function HomePage() {
                   sx={{ color: "#64748b", fontSize: "1rem", lineHeight: 1.8 }}
                 >
                   <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Monday - Friday: 8:00 AM - 6:00 PM
+                    Monday - Friday: 8:30 AM - 5:00 PM
                   </Typography>
                   <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
                     Saturday: 9:00 AM - 4:00 PM
                   </Typography>
-                  <Typography sx={{ fontWeight: 500, color: "#94a3b8" }}>
+                  {/* <Typography sx={{ fontWeight: 500, color: "#94a3b8" }}>
                     Break: 12:00 PM - 1:00 PM
-                  </Typography>
+                  </Typography> */}
                 </Box>
               </Box>
             </motion.div>
@@ -714,9 +773,10 @@ export default function HomePage() {
                         fontWeight: 600,
                       }}
                     >
-                      50 Dell i7 PCs
+                      8 Dell PCs
                     </Typography>
                   </Box>
+
                   <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
                     <Box
                       sx={{
@@ -726,7 +786,7 @@ export default function HomePage() {
                         mr: 2,
                       }}
                     >
-                      <PrintIcon sx={{ color: "#2563eb", fontSize: 24 }} />
+                      <DeveloperBoardIcon sx={{ color: "#2563eb", fontSize: 24 }} />
                     </Box>
                     <Typography
                       sx={{
@@ -735,13 +795,79 @@ export default function HomePage() {
                         fontWeight: 600,
                       }}
                     >
-                      Printer Access
+                      NVIDIA GeForce RTX 3070
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        background: "rgba(37, 99, 235, 0.1)",
+                        mr: 2,
+                      }}
+                    >
+                      <StorageIcon sx={{ color: "#2563eb", fontSize: 24 }} />
+                    </Box>
+                    <Typography
+                      sx={{
+                        color: "#1e293b",
+                        fontSize: "1.2rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      3TB Storage
                     </Typography>
                   </Box>
                 </Box>
 
                 {/* Right Column */}
                 <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        background: "rgba(37, 99, 235, 0.1)",
+                        mr: 2,
+                      }}
+                    >
+                      <MemoryIcon sx={{ color: "#2563eb", fontSize: 24 }} />
+                    </Box>
+                    <Typography
+                      sx={{
+                        color: "#1e293b",
+                        fontSize: "1.2rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      32GB RAM
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        background: "rgba(37, 99, 235, 0.1)",
+                        mr: 2,
+                      }}
+                    >
+                      <ComputerIcon sx={{ color: "#2563eb", fontSize: 24 }} />
+                    </Box>
+                    <Typography
+                      sx={{
+                        color: "#1e293b",
+                        fontSize: "1.2rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      12th Gen Intel® Core™ i7-12700
+                    </Typography>
+                  </Box>
+
                   <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
                     <Box
                       sx={{
@@ -761,29 +887,6 @@ export default function HomePage() {
                       }}
                     >
                       High-speed Wi-Fi
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-                    <Box
-                      sx={{
-                        p: 1,
-                        borderRadius: 2,
-                        background: "rgba(37, 99, 235, 0.1)",
-                        mr: 2,
-                      }}
-                    >
-                      <LibraryBooksIcon
-                        sx={{ color: "#2563eb", fontSize: 24 }}
-                      />
-                    </Box>
-                    <Typography
-                      sx={{
-                        color: "#1e293b",
-                        fontSize: "1.2rem",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Software Library
                     </Typography>
                   </Box>
                 </Box>

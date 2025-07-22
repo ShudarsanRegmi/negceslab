@@ -100,18 +100,6 @@ const Contact: React.FC = () => {
                 ))}
               </ul>
             </motion.div>
-            {/* Office Hours Card */}
-            <motion.div className={styles.infoCard} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.35 }}>
-              <div className={styles.infoCardHeader}><AccessTime className={styles.infoCardIcon} /> <span>Office Hours</span></div>
-              <ul className={styles.hoursList}>
-                {officeHours.map((item, i) => (
-                  <li key={item.day} className={styles.hoursListItem}>
-                    <span>{item.day}</span>
-                    <span style={{ color: item.color, fontWeight: 600 }}>{item.hours}</span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
           </div>
           {/* Right Column: Feedback Form */}
           <motion.div className={styles.formCard} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}>
@@ -141,20 +129,6 @@ const Contact: React.FC = () => {
               </AnimatePresence>
             </form>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Emergency Support Section */}
-      <section className={styles.emergencySection}>
-        <h2 className={styles.emergencyTitle}>Need Immediate Help?</h2>
-        <div className={styles.emergencyGrid}>
-          {emergencyCards.map((card, i) => (
-            <div className={styles.emergencyCard} key={card.title} style={{ background: card.color }}>
-              <div className={styles.emergencyIcon}>{card.icon}</div>
-              <div className={styles.emergencyCardTitle}>{card.title}</div>
-              <div className={styles.emergencyCardDesc}>{card.desc}</div>
-            </div>
-          ))}
         </div>
       </section>
 
