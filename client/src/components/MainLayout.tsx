@@ -110,6 +110,23 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 {link.label}
               </Button>
             ))}
+            {/* Login/Sign Up buttons */}
+            <Button
+              color="primary"
+              variant="outlined"
+              onClick={() => navigate('/login')}
+              sx={{ ml: 2, fontWeight: 600 }}
+            >
+              Login
+            </Button>
+            <Button
+              color="primary"
+              variant="contained"
+              onClick={() => navigate('/register')}
+              sx={{ ml: 1, fontWeight: 600 }}
+            >
+              Sign Up
+            </Button>
           </Box>
           {/* Mobile Nav */}
           <Box sx={{ display: { xs: "flex", md: "none" } }}>
@@ -172,6 +189,17 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                     </ListItemButton>
                   </ListItem>
                 ))}
+                {/* Login/Sign Up buttons for mobile */}
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { setDrawerOpen(false); navigate('/login'); }}>
+                    <ListItemText primary="Login" primaryTypographyProps={{ fontWeight: 600, color: '#2563eb' }} />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { setDrawerOpen(false); navigate('/register'); }}>
+                    <ListItemText primary="Sign Up" primaryTypographyProps={{ fontWeight: 600, color: '#1de9b6' }} />
+                  </ListItemButton>
+                </ListItem>
               </List>
             </Drawer>
           </Box>
