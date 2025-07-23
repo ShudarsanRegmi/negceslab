@@ -18,6 +18,14 @@ import {
   useTheme,
   useMediaQuery,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  Chip,
 } from "@mui/material";
 import {
   Computer as ComputerIcon,
@@ -33,6 +41,7 @@ import {
 } from "@mui/icons-material";
 import { computersAPI } from "../services/api";
 import { bookingsAPI } from "../services/api";
+import { format } from "date-fns";
 
 interface Computer {
   _id: string;
@@ -43,6 +52,7 @@ interface Computer {
   currentBookings?: any[];
   nextAvailable?: string;
   nextAvailableDate?: string;
+  bookings: Booking[];
 }
 
 interface Booking {
@@ -52,6 +62,12 @@ interface Booking {
   startTime: string;
   endTime: string;
   reason: string;
+  startDate: string;
+  endDate: string;
+  userId: {
+    name: string;
+    email: string;
+  };
 }
 
 const ComputerGrid: React.FC = () => {
@@ -63,6 +79,8 @@ const ComputerGrid: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedComputer, setSelectedComputer] = useState<Computer | null>(null);
+  const [showBookingsDialog, setShowBookingsDialog] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -95,6 +113,14 @@ const ComputerGrid: React.FC = () => {
         return "warning";
       case "booked":
         return "error";
+      case "approved":
+        return "success";
+      case "pending":
+        return "warning";
+      case "rejected":
+        return "error";
+      case "cancelled":
+        return "default";
       default:
         return "info";
     }
@@ -143,6 +169,105 @@ const ComputerGrid: React.FC = () => {
     if (newMode !== null) {
       setViewMode(newMode);
     }
+  };
+
+  const handleComputerClick = (computer: Computer) => {
+    setSelectedComputer(computer);
+    setShowBookingsDialog(true);
+  };
+
+  const BookingsDialog = () => {
+    if (!selectedComputer) return null;
+
+    const activeBookings = (selectedComputer.bookings || []).filter(
+      (b) => b.status !== "rejected" && b.status !== "cancelled"
+    );
+
+    return (
+      <Dialog
+        open={showBookingsDialog}
+        onClose={() => setShowBookingsDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Typography variant="h6">
+              Bookings for {selectedComputer.name}
+            </Typography>
+            <Chip
+              label={`${activeBookings.length} Active Booking${activeBookings.length !== 1 ? 's' : ''}`}
+              color="primary"
+              variant="outlined"
+            />
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {activeBookings.length > 0 ? (
+            <List>
+              {activeBookings.map((booking) => (
+                <ListItem
+                  key={booking._id}
+                  sx={{
+                    mb: 2,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                  }}
+                >
+                  <Box sx={{ width: "100%" }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {booking.userId?.name || "Unknown User"}
+                      </Typography>
+                      <Chip
+                        label={booking.status}
+                        color={getStatusColor(booking.status)}
+                        size="small"
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {format(new Date(booking.startDate), "MMM d, yyyy")} -{" "}
+                      {format(new Date(booking.endDate), "MMM d, yyyy")}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Time: {booking.startTime} - {booking.endTime}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 1 }}
+                    >
+                      Reason: {booking.reason}
+                    </Typography>
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Box
+              sx={{
+                py: 4,
+                textAlign: "center",
+                color: "text.secondary",
+              }}
+            >
+              <Typography variant="body1">No active bookings</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBookingsDialog(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    );
   };
 
   // Calculate summary statistics
@@ -902,7 +1027,7 @@ const ComputerGrid: React.FC = () => {
           mb: 4,
         }}
       >
-        {/* Status Legend */}
+        {/* Status Legend - Update to show booking ranges */}
         <Box
           sx={{
             display: "flex",
@@ -912,45 +1037,9 @@ const ComputerGrid: React.FC = () => {
             flexWrap: "wrap",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box
-              sx={{
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                bgcolor: "success.main",
-              }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              Available ({availableComputers})
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box
-              sx={{
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                bgcolor: "error.main",
-              }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              Occupied ({occupiedComputers})
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box
-              sx={{
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                bgcolor: "warning.main",
-              }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              Maintenance ({maintenanceComputers})
-            </Typography>
-          </Box>
+          <Typography variant="body2" color="text.secondary">
+            Click on a computer to view its bookings
+          </Typography>
         </Box>
 
         {/* Computer Status Cards */}
@@ -967,72 +1056,78 @@ const ComputerGrid: React.FC = () => {
             justifyContent: "center",
           }}
         >
-          {filteredComputers.map((computer) => (
-            <Card
-              key={computer._id}
-              sx={{
-                minHeight: 140,
-                display: "flex",
-                flexDirection: "column",
-                borderRadius: 3,
-                transition: "transform 0.2s, box-shadow 0.2s",
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                },
-              }}
-            >
-              <CardContent
+          {filteredComputers.map((computer) => {
+            const activeBookings = (computer.bookings || []).filter(
+              (b) => b.status !== "rejected" && b.status !== "cancelled"
+            ).length || 0;
+
+            return (
+              <Card
+                key={computer._id}
                 sx={{
-                  flexGrow: 1,
+                  minHeight: 140,
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between",
-                  p: { xs: 2.5, sm: 3 },
-                  textAlign: "center",
+                  borderRadius: 3,
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                  cursor: "pointer",
+                  "&:hover": {
+                    transform: "translateY(-2px)",
+                    boxShadow: (theme) =>
+                      `0 8px 24px ${
+                        theme.palette.mode === "dark"
+                          ? "rgba(0,0,0,0.3)"
+                          : "rgba(0,0,0,0.1)"
+                      }`,
+                  },
                 }}
+                onClick={() => handleComputerClick(computer)}
               >
-                {/* Computer Icon */}
-                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-                  <ComputerIcon
+                <CardContent
+                  sx={{
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    p: { xs: 2.5, sm: 3 },
+                    textAlign: "center",
+                  }}
+                >
+                  {/* Computer Icon */}
+                  <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                    <ComputerIcon
+                      sx={{
+                        color: activeBookings > 0 ? "warning.main" : "success.main",
+                        fontSize: { xs: 36, sm: 40, md: 44 },
+                      }}
+                    />
+                  </Box>
+
+                  {/* Computer Name */}
+                  <Typography
+                    variant="h6"
                     sx={{
-                      color:
-                        computer.status === "available"
-                          ? "success.main"
-                          : computer.status === "maintenance"
-                          ? "warning.main"
-                          : computer.status === "booked"
-                          ? "error.main"
-                          : "text.secondary",
-                      fontSize: { xs: 36, sm: 40, md: 44 },
+                      fontWeight: 600,
+                      fontSize: { xs: "1rem", sm: "1.125rem" },
+                      mb: 1.5,
                     }}
-                  />
-                </Box>
+                  >
+                    {computer.name}
+                  </Typography>
 
-                {/* Computer ID */}
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: { xs: "1rem", sm: "1.125rem" },
-                    mb: 1.5,
-                  }}
-                >
-                  {computer.name}
-                </Typography>
+                  {/* Booking Count */}
+                  <Box>
+                    <Chip
+                      label={`${activeBookings} Active Booking${
+                        activeBookings !== 1 ? "s" : ""
+                      }`}
+                      color={activeBookings > 0 ? "warning" : "success"}
+                      size="small"
+                      sx={{ fontWeight: 500 }}
+                    />
+                  </Box>
 
-                {/* Status */}
-                <Typography
-                  variant="body1"
-                  sx={{
-                    fontWeight: "bold",
-                    fontSize: { xs: "0.875rem", sm: "1rem" },
-                  }}
-                >
-                  {getStatusLabel(computer.status)}
-                </Typography>
-
-                {/* Additional Info for Booked Computers */}
-                {computer.status === "booked" && computer.nextAvailable && (
+                  {/* Location */}
                   <Typography
                     variant="body2"
                     color="text.secondary"
@@ -1041,17 +1136,16 @@ const ComputerGrid: React.FC = () => {
                       mt: 1,
                     }}
                   >
-                    Until{" "}
-                    {computer.nextAvailableDate
-                      ? `${computer.nextAvailableDate} ${computer.nextAvailable}`
-                      : computer.nextAvailable}
+                    {computer.location}
                   </Typography>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </Box>
       </Paper>
+
+      <BookingsDialog />
 
       {filteredComputers.length === 0 && (
         <Box sx={{ textAlign: "center", py: 8 }}>

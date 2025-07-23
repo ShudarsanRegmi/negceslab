@@ -3,20 +3,25 @@ const mongoose = require('mongoose');
 const bookingSchema = new mongoose.Schema({
   userId: {
     type: String,
-    required: true
+    required: true,
+    ref: 'User',
+    index: true
   },
   computerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Computer',
-    required: true
+    required: true,
+    index: true
   },
   startDate: {
     type: String,
-    required: true
+    required: true,
+    index: true
   },
   endDate: {
     type: String,
-    required: true
+    required: true,
+    index: true
   },
   startTime: {
     type: String,
@@ -32,8 +37,9 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', 'completed', 'cancelled'],
-    default: 'pending'
+    enum: ['pending', 'approved', 'rejected', 'cancelled'],
+    default: 'pending',
+    index: true
   },
   rejectionReason: {
     type: String,
@@ -81,12 +87,24 @@ const bookingSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    index: true
   },
   updatedAt: {
     type: Date,
     default: Date.now
   }
+}, {
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Virtual for user information
+bookingSchema.virtual('user', {
+  ref: 'User',
+  localField: 'userId',
+  foreignField: 'firebaseUid',
+  justOne: true
 });
 
 // Pre-save middleware
@@ -94,5 +112,9 @@ bookingSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
+
+// Add index for common queries
+bookingSchema.index({ computerId: 1, status: 1, startDate: 1, endDate: 1 });
+bookingSchema.index({ userId: 1, status: 1 });
 
 module.exports = mongoose.model('Booking', bookingSchema);

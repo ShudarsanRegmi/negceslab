@@ -2,12 +2,21 @@ const express = require("express");
 const router = express.Router();
 const Computer = require("../models/computer");
 const Booking = require("../models/booking");
+const User = require("../models/user");
 const { verifyToken } = require("../middleware/auth");
 
 // Get all computers
 router.get("/", verifyToken, async (req, res) => {
   try {
-    const computers = await Computer.find().sort({ name: 1 });
+    const computers = await Computer.find()
+      .populate({
+        path: 'bookings',
+        populate: {
+          path: 'user',
+          select: 'name email'
+        }
+      })
+      .sort({ name: 1 });
     res.json(computers);
   } catch (error) {
     console.error("Error fetching computers:", error);
@@ -18,8 +27,16 @@ router.get("/", verifyToken, async (req, res) => {
 // Get computers with their current and upcoming bookings
 router.get("/with-bookings", verifyToken, async (req, res) => {
   try {
-    // Get all computers first
-    const computers = await Computer.find().sort({ name: 1 });
+    // Get all computers with their bookings populated
+    const computers = await Computer.find()
+      .populate({
+        path: 'bookings',
+        populate: {
+          path: 'user',
+          select: 'name email'
+        }
+      })
+      .sort({ name: 1 });
 
     // Get current date and time
     const now = new Date();
@@ -30,92 +47,43 @@ router.get("/with-bookings", verifyToken, async (req, res) => {
       minute: "2-digit",
     });
 
-    console.log("Fetching bookings for:", { today, currentTime });
+    console.log("Current date and time:", { today, currentTime });
 
-    // Get all current and future approved bookings
-    const bookings = await Booking.find({
-      status: "approved",
-      $or: [
-        // Today's bookings that haven't ended
-        {
-          startDate: today,
-          endDate: today,
-          endTime: { $gt: currentTime },
-        },
-        // Future bookings
-        {
-          startDate: { $gt: today },
-        },
-        // Multi-day bookings that include today
-        {
-          startDate: { $lte: today },
-          endDate: { $gte: today },
-        },
-      ],
-    });
-
-    console.log(`Found ${bookings.length} current/future bookings`);
-
-    // Add booking information to each computer
-    const computersWithBookings = computers.map((computer) => {
+    // Process each computer to include only relevant bookings
+    const computersWithActiveBookings = computers.map(computer => {
       const computerObj = computer.toObject();
-
-      // Find all bookings for this computer with status 'approved'
-      const computerBookings = bookings.filter(
-        (booking) =>
-          booking.computerId.toString() === computer._id.toString() &&
-          booking.status === "approved"
-      );
-
-      // Log the bookings being considered for this computer
-      console.log(
-        `Computer: ${computer.name} (${computer._id}) - Bookings considered:`,
-        computerBookings.map((b) => ({
-          id: b._id,
-          status: b.status,
-          startDate: b.startDate,
-          endDate: b.endDate,
-          startTime: b.startTime,
-          endTime: b.endTime,
-        }))
-      );
-
-      if (computerBookings.length > 0) {
-        // Sort bookings by date and time
-        computerBookings.sort((a, b) => {
-          if (a.startDate !== b.startDate) {
-            return a.startDate.localeCompare(b.startDate);
-          }
-          return a.startTime.localeCompare(b.startTime);
-        });
-
-        // Get the latest booking
-        const latestBooking = computerBookings[computerBookings.length - 1];
-        computerObj.nextAvailable = latestBooking.endTime;
-        computerObj.nextAvailableDate = latestBooking.endDate;
-        computerObj.currentBookings = computerBookings;
-
-        // Check if computer is currently booked
-        const isCurrentlyBooked = computerBookings.some((booking) => {
-          if (booking.startDate === today && booking.endDate === today) {
-            // Single day booking - check time
-            return booking.endTime > currentTime;
-          } else if (booking.startDate <= today && booking.endDate >= today) {
-            // Multi-day booking that includes today
-            return true;
-          }
+      
+      // Filter bookings to include only current, upcoming, and pending ones
+      computerObj.bookings = (computerObj.bookings || []).filter(booking => {
+        // Include if:
+        // 1. Booking is pending or approved
+        // 2. Booking hasn't ended yet
+        if (booking.status === 'rejected' || booking.status === 'cancelled') {
           return false;
-        });
-
-        if (isCurrentlyBooked && computer.status !== "maintenance") {
-          computerObj.status = "booked";
         }
-      }
+
+        // For today's bookings
+        if (booking.startDate === today) {
+          return booking.endTime > currentTime;
+        }
+
+        // For future bookings
+        if (booking.startDate > today) {
+          return true;
+        }
+
+        // For multi-day bookings
+        if (booking.startDate <= today && booking.endDate >= today) {
+          return true;
+        }
+
+        return false;
+      });
 
       return computerObj;
     });
 
-    res.json(computersWithBookings);
+    res.json(computersWithActiveBookings);
   } catch (error) {
     console.error("Error fetching computers with bookings:", error);
     res.status(500).json({
@@ -128,7 +96,7 @@ router.get("/with-bookings", verifyToken, async (req, res) => {
 // Create a new computer
 router.post("/", verifyToken, async (req, res) => {
   try {
-    const { name, location, specifications, status } = req.body;
+    const { name, location, specifications } = req.body;
 
     // Basic validation
     if (!name || !location) {
@@ -140,8 +108,7 @@ router.post("/", verifyToken, async (req, res) => {
     const computer = new Computer({
       name,
       location,
-      specifications,
-      status: status || "available",
+      specifications: specifications || "",
     });
 
     await computer.save();
@@ -167,7 +134,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
     // Check if computer has any active bookings
     const activeBookings = await Booking.findOne({
       computerId: req.params.id,
-      status: "approved",
+      status: { $in: ['approved', 'pending'] },
       endDate: { $gte: new Date().toISOString().split("T")[0] },
     });
 

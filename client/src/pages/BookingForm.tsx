@@ -20,6 +20,13 @@ import {
   useMediaQuery,
   Divider,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import { DatePicker, TimePicker } from "@mui/x-date-pickers";
 import {
@@ -30,15 +37,30 @@ import {
   differenceInDays,
   differenceInHours,
   getDay,
+  isWithinInterval,
+  parseISO,
+  set,
 } from "date-fns";
 import { computersAPI, bookingsAPI } from "../services/api";
+import Warning from "@mui/icons-material/Warning";
+import Info from "@mui/icons-material/Info";
+import { alpha } from "@mui/material/styles";
 
 interface Computer {
   _id: string;
   name: string;
   location: string;
-  status: "available" | "maintenance" | "booked";
   specifications: string;
+  bookings?: Booking[];
+}
+
+interface Booking {
+  _id: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  status: "pending" | "approved" | "rejected";
 }
 
 const steps = [
@@ -81,6 +103,9 @@ const BookingForm: React.FC = (): ReactElement => {
   const [datasetLink, setDatasetLink] = useState("");
   const [datasetSize, setDatasetSize] = useState<number>(0);
   const [datasetSizeUnit, setDatasetSizeUnit] = useState<string>("GB");
+  const [timeSlotError, setTimeSlotError] = useState<string | null>(null);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([]);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -96,18 +121,60 @@ const BookingForm: React.FC = (): ReactElement => {
   const fetchComputers = async () => {
     try {
       const response = await computersAPI.getAllComputers();
-      setComputers(
-        response.data.filter(
-          (computer: Computer) => computer.status === "available"
-        )
-      );
+      setComputers(response.data);
     } catch (error) {
       console.error("Error fetching computers:", error);
       setError("Failed to load computers");
     }
   };
 
+  const checkTimeSlotConflicts = (selectedComputer: Computer): Booking[] => {
+    if (!startDate || !endDate || !startTime || !endTime) return [];
+
+    const proposedStart = set(startDate, {
+      hours: startTime.getHours(),
+      minutes: startTime.getMinutes(),
+    });
+    const proposedEnd = set(endDate, {
+      hours: endTime.getHours(),
+      minutes: endTime.getMinutes(),
+    });
+
+    const conflicts = selectedComputer.bookings?.filter((booking) => {
+      if (booking.status === "rejected") return false;
+
+      const bookingStart = set(parseISO(booking.startDate), {
+        hours: parseInt(booking.startTime.split(":")[0]),
+        minutes: parseInt(booking.startTime.split(":")[1]),
+      });
+      const bookingEnd = set(parseISO(booking.endDate), {
+        hours: parseInt(booking.endTime.split(":")[0]),
+        minutes: parseInt(booking.endTime.split(":")[1]),
+      });
+
+      return (
+        isWithinInterval(proposedStart, { start: bookingStart, end: bookingEnd }) ||
+        isWithinInterval(proposedEnd, { start: bookingStart, end: bookingEnd }) ||
+        isWithinInterval(bookingStart, { start: proposedStart, end: proposedEnd }) ||
+        isWithinInterval(bookingEnd, { start: proposedStart, end: proposedEnd })
+      );
+    }) || [];
+
+    return conflicts;
+  };
+
   const handleNext = () => {
+    if (activeStep === 1) { // Time slot selection step
+      const selectedComp = computers.find(c => c._id === selectedComputer);
+      if (selectedComp) {
+        const conflicts = checkTimeSlotConflicts(selectedComp);
+        if (conflicts.length > 0) {
+          setConflictingBookings(conflicts);
+          setShowConflictDialog(true);
+          return;
+        }
+      }
+    }
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
 
@@ -239,6 +306,130 @@ const BookingForm: React.FC = (): ReactElement => {
     }
   };
 
+  const ConflictDialog: React.FC = () => {
+    const theme = useTheme();
+    
+    return (
+      <Dialog 
+        open={showConflictDialog} 
+        onClose={() => setShowConflictDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            background: '#fff',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          background: theme.palette.error.light,
+          color: theme.palette.error.dark,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          py: 2,
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            gap: 1,
+          }}>
+            <Warning sx={{ color: theme.palette.error.main }} />
+            <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
+              Time Slot Unavailable
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="body1" gutterBottom sx={{ mb: 3, fontWeight: 500 }}>
+            The selected time slot conflicts with existing bookings for this computer:
+          </Typography>
+          <List sx={{ 
+            bgcolor: '#fff',
+            borderRadius: 1,
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+          }}>
+            {conflictingBookings.map((booking, index) => (
+              <ListItem 
+                key={index}
+                sx={{
+                  borderBottom: index < conflictingBookings.length - 1 ? '1px solid rgba(0, 0, 0, 0.1)' : 'none',
+                  py: 2,
+                }}
+              >
+                <Box sx={{ width: '100%' }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 1,
+                  }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      {format(parseISO(booking.startDate), 'MMM d, yyyy')}
+                    </Typography>
+                    <Chip
+                      label={booking.status}
+                      size="small"
+                      color={booking.status === 'approved' ? 'success' : 'warning'}
+                      sx={{ 
+                        textTransform: 'capitalize',
+                        minWidth: 80,
+                        fontWeight: 500,
+                      }}
+                    />
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Time: {booking.startTime} - {booking.endTime}
+                  </Typography>
+                </Box>
+              </ListItem>
+            ))}
+          </List>
+          <Box sx={{ 
+            mt: 3,
+            p: 2,
+            borderRadius: 1,
+            bgcolor: alpha(theme.palette.error.light, 0.1),
+            border: `1px solid ${theme.palette.error.light}`,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 1,
+          }}>
+            <Info fontSize="small" color="error" sx={{ mt: 0.5 }} />
+            <Typography variant="body2" color="error.main" sx={{ fontWeight: 500 }}>
+              Please select a different time slot that doesn't overlap with existing bookings. You can try adjusting your start or end time to find an available slot.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ 
+          p: 2,
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          bgcolor: 'rgba(0, 0, 0, 0.02)',
+        }}>
+          <Button 
+            onClick={() => setShowConflictDialog(false)}
+            variant="contained"
+            color="error"
+            sx={{
+              px: 3,
+              py: 1,
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: theme.palette.error.dark,
+              },
+            }}
+          >
+            Choose Different Time
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
   const getStepContent = (step: number) => {
     switch (step) {
       case 0:
@@ -267,6 +458,9 @@ const BookingForm: React.FC = (): ReactElement => {
                       <Typography variant="body2" color="text.secondary">
                         {computer.location} • {computer.specifications}
                       </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {computer.bookings?.filter(b => b.status !== "rejected").length || 0} active bookings
+                      </Typography>
                     </Box>
                   </MenuItem>
                 ))}
@@ -286,17 +480,15 @@ const BookingForm: React.FC = (): ReactElement => {
                     </Typography>
                     <Typography variant="body2">
                       <strong>Location:</strong>{" "}
-                      {
-                        computers.find((c) => c._id === selectedComputer)
-                          ?.location
-                      }
+                      {computers.find((c) => c._id === selectedComputer)?.location}
                     </Typography>
                     <Typography variant="body2">
                       <strong>Specifications:</strong>{" "}
-                      {
-                        computers.find((c) => c._id === selectedComputer)
-                          ?.specifications
-                      }
+                      {computers.find((c) => c._id === selectedComputer)?.specifications}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Active Bookings:</strong>{" "}
+                      {computers.find((c) => c._id === selectedComputer)?.bookings?.filter(b => b.status !== "rejected").length || 0}
                     </Typography>
                   </Box>
                 )}
@@ -739,6 +931,12 @@ const BookingForm: React.FC = (): ReactElement => {
         </Alert>
       )}
 
+      {timeSlotError && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setTimeSlotError(null)}>
+          {timeSlotError}
+        </Alert>
+      )}
+
       <Card>
         <CardContent>
           {/* Stepper */}
@@ -832,6 +1030,8 @@ const BookingForm: React.FC = (): ReactElement => {
           </Box>
         </CardContent>
       </Card>
+
+      <ConflictDialog />
     </Box>
   );
 };

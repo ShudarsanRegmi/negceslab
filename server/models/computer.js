@@ -10,11 +10,6 @@ const computerSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  status: {
-    type: String,
-    enum: ["available", "maintenance", "booked"],
-    default: "available",
-  },
   specifications: {
     type: String,
     default: "",
@@ -23,6 +18,16 @@ const computerSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+}, {
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Virtual for bookings
+computerSchema.virtual('bookings', {
+  ref: 'Booking',
+  localField: '_id',
+  foreignField: 'computerId'
 });
 
 module.exports = mongoose.model("Computer", computerSchema);
