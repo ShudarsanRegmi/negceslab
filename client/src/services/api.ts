@@ -45,7 +45,24 @@ export const computersAPI = {
 export const bookingsAPI = {
   getUserBookings: () => 
     api.get('/bookings'),
-  createBooking: (data: { computerId: string; date: string; startTime: string; endTime: string; reason: string }) => 
+  createBooking: (data: { 
+    computerId: string; 
+    startDate: string; 
+    endDate: string;
+    startTime: string; 
+    endTime: string; 
+    reason: string;
+    requiresGPU?: boolean;
+    gpuMemoryRequired?: number;
+    problemStatement?: string;
+    datasetType?: string;
+    datasetSize?: {
+      value: number;
+      unit: string;
+    };
+    datasetLink?: string;
+    bottleneckExplanation?: string;
+  }) => 
     api.post('/bookings', data),
   cancelBooking: (bookingId: string) => 
     api.delete(`/bookings/${bookingId}`),
@@ -57,8 +74,9 @@ export const bookingsAPI = {
   updateBookingTime: (bookingId: string, data: {
     startTime?: string;
     endTime?: string;
-    computerId?: string;
+    startDate?: string;
     endDate?: string;
+    computerId?: string;
   }) => api.put(`/bookings/${bookingId}/time`, data),
   updateBookingStatus: (bookingId: string, status: string, rejectionReason?: string) => 
     api.put(`/bookings/${bookingId}/status`, { status, rejectionReason }),

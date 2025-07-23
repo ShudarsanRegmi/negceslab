@@ -74,21 +74,22 @@ router.get('/current', verifyToken, async (req, res) => {
       $or: [
         // Single day bookings that haven't ended yet
         {
-          date: currentDate,
+          startDate: currentDate,
+          endDate: currentDate,
           endTime: { $gte: currentTime }
         },
         // Future bookings
         {
-          date: { $gt: currentDate }
+          startDate: { $gt: currentDate }
         },
         // Multi-day bookings that haven't ended yet
         {
-          endDate: { $exists: true, $ne: null, $gte: currentDate }
+          endDate: { $gte: currentDate }
         }
       ]
     })
     .populate('computerId')
-    .sort({ date: 1, startTime: 1 });
+    .sort({ startDate: 1, startTime: 1 });
 
     console.log('Found current bookings:', currentBookings.length);
 
@@ -119,14 +120,22 @@ router.post('/', verifyToken, async (req, res) => {
   try {
     const {
       computerId,
-      date,
+      startDate,
+      endDate,
       startTime,
       endTime,
-      reason
+      reason,
+      requiresGPU,
+      gpuMemoryRequired,
+      problemStatement,
+      datasetType,
+      datasetSize,
+      datasetLink,
+      bottleneckExplanation
     } = req.body;
 
     // Basic validation
-    if (!computerId || !date || !startTime || !endTime || !reason) {
+    if (!computerId || !startDate || !endDate || !startTime || !endTime || !reason) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -136,17 +145,28 @@ router.post('/', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Computer not found' });
     }
 
-    // Create booking
+    // Create booking with all fields
     const booking = new Booking({
       userId: req.user.firebaseUid,
       computerId,
-      date,
+      startDate,
+      endDate,
       startTime,
       endTime,
-      reason
+      reason,
+      requiresGPU,
+      gpuMemoryRequired,
+      problemStatement,
+      datasetType,
+      datasetSize,
+      datasetLink,
+      bottleneckExplanation
     });
 
     await booking.save();
+
+    // Populate computer details before sending response
+    await booking.populate('computerId');
     res.status(201).json(booking);
   } catch (error) {
     console.error('Error creating booking:', error);

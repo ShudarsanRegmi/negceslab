@@ -20,33 +20,44 @@ class BookingExpirationService {
 
   async checkExpiredBookings() {
     try {
-      const now = new Date();
-      const currentDate = now.toISOString().split("T")[0];
-      const currentTime = now.toTimeString().split(" ")[0];
+      const currentDate = new Date().toISOString().split('T')[0];
+      const currentTime = new Date().toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit'
+      });
 
-      // Find all approved bookings that have ended
+      // Find bookings that have ended
       const expiredBookings = await Booking.find({
-        status: "approved",
+        status: 'approved',
         $or: [
-          // Past dates
-          { date: { $lt: currentDate } },
-          // Today but end time has passed
+          // Single day bookings that have ended
           {
-            date: currentDate,
-            endTime: { $lt: currentTime },
+            startDate: currentDate,
+            endDate: currentDate,
+            endTime: { $lt: currentTime }
           },
-        ],
-      }).populate("computerId");
+          // Multi-day bookings that have ended
+          {
+            endDate: { $lt: currentDate }
+          }
+        ]
+      });
 
+      // Update status to completed for expired bookings
       for (const booking of expiredBookings) {
-        await this.handleExpiredBooking(booking);
+        booking.status = 'completed';
+        await booking.save();
+
+        // Free up the computer
+        await Computer.findByIdAndUpdate(booking.computerId, {
+          status: 'available'
+        });
       }
 
-      if (expiredBookings.length > 0) {
-        console.log(`Processed ${expiredBookings.length} expired bookings`);
-      }
+      console.log(`Updated ${expiredBookings.length} expired bookings`);
     } catch (error) {
-      console.error("Error checking expired bookings:", error);
+      console.error('Error in booking expiration service:', error);
     }
   }
 

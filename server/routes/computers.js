@@ -1,212 +1,175 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const Computer = require("../models/computer");
-const Notification = require("../models/notification");
-const { verifyToken } = require("../middleware/auth");
+const Computer = require('../models/computer');
+const Booking = require('../models/booking');
+const { verifyToken } = require('../middleware/auth');
 
 // Get all computers
-router.get("/", verifyToken, async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   try {
-    const computers = await Computer.find().sort({ createdAt: -1 });
+    const computers = await Computer.find().sort({ name: 1 });
     res.json(computers);
   } catch (error) {
-    console.error("Get Computers Error:", error);
-    res.status(500).json({ message: "Error fetching computers" });
+    console.error('Error fetching computers:', error);
+    res.status(500).json({ message: 'Error fetching computers' });
   }
 });
 
-// Get all computers with booking information
-router.get("/with-bookings", verifyToken, async (req, res) => {
+// Get computers with their current and upcoming bookings
+router.get('/with-bookings', verifyToken, async (req, res) => {
   try {
-    const computers = await Computer.find().sort({ createdAt: -1 });
-    const Booking = require("../models/booking");
-
+    // Get all computers first
+    const computers = await Computer.find().sort({ name: 1 });
+    
     // Get current date and time
     const now = new Date();
-    const today = now.toISOString().split("T")[0];
-    const currentTime = now.toTimeString().split(" ")[0];
-
-    // Get all approved bookings
-    const approvedBookings = await Booking.find({
-      status: "approved",
-      $or: [
-        { date: { $gt: today } },
-        {
-          date: today,
-          endTime: { $gt: currentTime },
-        },
-      ],
-    }).populate("computerId", "name location");
-
-    // Create a map of computer bookings
-    const computerBookings = {};
-    approvedBookings.forEach((booking) => {
-      // Skip bookings with null computerId (orphaned bookings)
-      if (!booking.computerId || !booking.computerId._id) {
-        return;
-      }
-      if (!computerBookings[booking.computerId._id]) {
-        computerBookings[booking.computerId._id] = [];
-      }
-      computerBookings[booking.computerId._id].push(booking);
+    const today = now.toISOString().split('T')[0];
+    const currentTime = now.toLocaleTimeString('en-US', { 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit'
     });
 
-    // Add booking information to computers and update their status
-    const computersWithBookings = await Promise.all(
-      computers.map(async (computer) => {
-        const bookings = computerBookings[computer._id] || [];
-        const hasActiveBookings = bookings.length > 0;
+    console.log('Fetching bookings for:', { today, currentTime });
 
-        // Update computer status based on bookings
-        let updatedStatus = computer.status;
-        if (hasActiveBookings && computer.status !== "maintenance") {
-          updatedStatus = "booked";
-          // Update the computer status in database if it's not already 'booked'
-          if (computer.status !== "booked") {
-            await Computer.findByIdAndUpdate(computer._id, {
-              status: "booked",
-            });
-          }
-        } else if (
-          !hasActiveBookings &&
-          computer.status === "booked" &&
-          computer.status !== "maintenance"
-        ) {
-          updatedStatus = "available";
-          // Update the computer status in database if it should be available
-          await Computer.findByIdAndUpdate(computer._id, {
-            status: "available",
-          });
+    // Get all current and future approved bookings
+    const bookings = await Booking.find({
+      status: 'approved',
+      $or: [
+        // Today's bookings that haven't ended
+        {
+          startDate: today,
+          endDate: today,
+          endTime: { $gt: currentTime }
+        },
+        // Future bookings
+        {
+          startDate: { $gt: today }
+        },
+        // Multi-day bookings that include today
+        {
+          startDate: { $lte: today },
+          endDate: { $gte: today }
         }
+      ]
+    });
 
-        return {
-          ...computer.toObject(),
-          status: updatedStatus,
-          currentBookings: bookings,
-          nextAvailable:
-            bookings.length > 0 ? bookings[bookings.length - 1].endTime : null,
-          nextAvailableDate:
-            bookings.length > 0 ? bookings[bookings.length - 1].date : null,
-        };
-      })
-    );
+    console.log(`Found ${bookings.length} current/future bookings`);
+
+    // Add booking information to each computer
+    const computersWithBookings = computers.map(computer => {
+      const computerObj = computer.toObject();
+      
+      // Find all bookings for this computer
+      const computerBookings = bookings.filter(booking => 
+        booking.computerId.toString() === computer._id.toString()
+      );
+
+      if (computerBookings.length > 0) {
+        // Sort bookings by date and time
+        computerBookings.sort((a, b) => {
+          if (a.startDate !== b.startDate) {
+            return a.startDate.localeCompare(b.startDate);
+          }
+          return a.startTime.localeCompare(b.startTime);
+        });
+
+        // Get the latest booking
+        const latestBooking = computerBookings[computerBookings.length - 1];
+        computerObj.nextAvailable = latestBooking.endTime;
+        computerObj.nextAvailableDate = latestBooking.endDate;
+        computerObj.currentBookings = computerBookings;
+
+        // Check if computer is currently booked
+        const isCurrentlyBooked = computerBookings.some(booking => {
+          if (booking.startDate === today && booking.endDate === today) {
+            // Single day booking - check time
+            return booking.endTime > currentTime;
+          } else if (booking.startDate <= today && booking.endDate >= today) {
+            // Multi-day booking that includes today
+            return true;
+          }
+          return false;
+        });
+
+        if (isCurrentlyBooked && computer.status !== 'maintenance') {
+          computerObj.status = 'booked';
+        }
+      }
+
+      return computerObj;
+    });
 
     res.json(computersWithBookings);
   } catch (error) {
-    console.error("Get Computers with Bookings Error:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching computers with booking information" });
+    console.error('Error fetching computers with bookings:', error);
+    res.status(500).json({ 
+      message: 'Error fetching computers with bookings',
+      error: error.message 
+    });
   }
 });
 
-// Add new computer (admin only)
-router.post("/", verifyToken, async (req, res) => {
+// Create a new computer
+router.post('/', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Admin access required" });
+    const { name, location, specifications, status } = req.body;
+    
+    // Basic validation
+    if (!name || !location) {
+      return res.status(400).json({ message: 'Name and location are required' });
     }
 
-    const { name, location, specifications, status } = req.body;
     const computer = new Computer({
       name,
       location,
       specifications,
-      status: status || "available",
+      status: status || 'available'
     });
 
     await computer.save();
     res.status(201).json(computer);
   } catch (error) {
-    console.error("Create Computer Error:", error);
-    res.status(500).json({ message: "Error creating computer" });
+    console.error('Error creating computer:', error);
+    if (error.code === 11000) {
+      res.status(400).json({ message: 'A computer with this name already exists' });
+    } else {
+      res.status(500).json({ 
+        message: 'Error creating computer',
+        error: error.message 
+      });
+    }
   }
 });
 
-// Update computer (admin only)
-router.put("/:id", verifyToken, async (req, res) => {
+// Delete a computer
+router.delete('/:id', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Admin access required" });
-    }
+    // Check if computer has any active bookings
+    const activeBookings = await Booking.findOne({
+      computerId: req.params.id,
+      status: 'approved',
+      endDate: { $gte: new Date().toISOString().split('T')[0] }
+    });
 
-    const { name, location, specifications, status } = req.body;
-
-    // Get the current computer to check if status is changing
-    const currentComputer = await Computer.findById(req.params.id);
-    if (!currentComputer) {
-      return res.status(404).json({ message: "Computer not found" });
-    }
-
-    const computer = await Computer.findByIdAndUpdate(
-      req.params.id,
-      { name, location, specifications, status },
-      { new: true }
-    );
-
-    // Send notification if computer status changed to maintenance
-    if (currentComputer.status !== "maintenance" && status === "maintenance") {
-      const maintenanceNotification = new Notification({
-        userId: "all", // Special identifier for all users
-        title: "Computer Maintenance Alert",
-        message: `${computer.name} (${computer.location}) is now under maintenance and unavailable for booking.`,
-        type: "warning",
-        isRead: false,
-        metadata: {
-          computerId: computer._id,
-          computerName: computer.name,
-          computerLocation: computer.location,
-          previousStatus: currentComputer.status,
-          newStatus: status,
-        },
+    if (activeBookings) {
+      return res.status(400).json({ 
+        message: 'Cannot delete computer with active bookings' 
       });
-
-      await maintenanceNotification.save();
-    }
-
-    // Send notification if computer status changed from maintenance to available
-    if (currentComputer.status === "maintenance" && status === "available") {
-      const availableNotification = new Notification({
-        userId: "all", // Special identifier for all users
-        title: "Computer Available",
-        message: `${computer.name} (${computer.location}) is now available for booking after maintenance.`,
-        type: "success",
-        isRead: false,
-        metadata: {
-          computerId: computer._id,
-          computerName: computer.name,
-          computerLocation: computer.location,
-          previousStatus: currentComputer.status,
-          newStatus: status,
-        },
-      });
-
-      await availableNotification.save();
-    }
-
-    res.json(computer);
-  } catch (error) {
-    console.error("Update Computer Error:", error);
-    res.status(500).json({ message: "Error updating computer" });
-  }
-});
-
-// Delete computer (admin only)
-router.delete("/:id", verifyToken, async (req, res) => {
-  try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Admin access required" });
     }
 
     const computer = await Computer.findByIdAndDelete(req.params.id);
     if (!computer) {
-      return res.status(404).json({ message: "Computer not found" });
+      return res.status(404).json({ message: 'Computer not found' });
     }
 
-    res.json({ message: "Computer deleted successfully" });
+    res.json({ message: 'Computer deleted successfully' });
   } catch (error) {
-    console.error("Delete Computer Error:", error);
-    res.status(500).json({ message: "Error deleting computer" });
+    console.error('Error deleting computer:', error);
+    res.status(500).json({ 
+      message: 'Error deleting computer',
+      error: error.message 
+    });
   }
 });
 

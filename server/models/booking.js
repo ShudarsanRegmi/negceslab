@@ -10,7 +10,11 @@ const bookingSchema = new mongoose.Schema({
     ref: 'Computer',
     required: true
   },
-  date: {
+  startDate: {
+    type: String,
+    required: true
+  },
+  endDate: {
     type: String,
     required: true
   },
@@ -35,44 +39,45 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     required: function() { return this.status === 'rejected'; }
   },
-  // New fields for GPU-related information
+  // Project-related information
   requiresGPU: {
     type: Boolean,
-    default: false
+    default: false,
+    required: true
   },
   gpuMemoryRequired: {
     type: Number,
     min: 0,
-    max: 48, // Maximum GPU memory in GB
+    max: 48,
     required: function() { return this.requiresGPU; }
   },
   problemStatement: {
     type: String,
-    required: false // Make it optional for now since we're adding it to existing system
+    required: true
   },
   datasetType: {
     type: String,
     enum: ['Image', 'Video', 'Audio', 'Satellite', 'Text', 'Tabular', 'Time Series', 'Other'],
-    required: false // Make it optional for now since we're adding it to existing system
+    required: true
   },
   datasetSize: {
     value: {
       type: Number,
-      required: false // Make it optional for now since we're adding it to existing system
+      required: true
     },
     unit: {
       type: String,
       enum: ['MB', 'GB', 'TB'],
-      required: false // Make it optional for now since we're adding it to existing system
+      required: true
     }
   },
   datasetLink: {
     type: String,
-    required: false // Make it optional for now since we're adding it to existing system
+    required: true
   },
   bottleneckExplanation: {
     type: String,
-    required: function() { return this.requiresGPU; }
+    required: true
   },
   createdAt: {
     type: Date,
@@ -84,6 +89,7 @@ const bookingSchema = new mongoose.Schema({
   }
 });
 
+// Pre-save middleware
 bookingSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();

@@ -4,7 +4,6 @@ import {
   Typography,
   Card,
   CardContent,
-  Grid,
   Chip,
   Table,
   TableBody,
@@ -24,6 +23,7 @@ import {
   DialogActions,
   Divider,
 } from "@mui/material";
+import Grid from '@mui/material/Grid';
 import {
   Computer as ComputerIcon,
   BookOnline as BookingIcon,
@@ -42,6 +42,7 @@ import { format } from "date-fns";
 import { bookingsAPI, computersAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
+
 interface Booking {
   _id: string;
   computerId: {
@@ -50,7 +51,8 @@ interface Booking {
     location: string;
     specifications?: string;
   };
-  date: string;
+  startDate: string;
+  endDate: string;
   startTime: string;
   endTime: string;
   status: "pending" | "approved" | "rejected" | "cancelled";
@@ -225,9 +227,9 @@ const Dashboard: React.FC = () => {
       </Typography>
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
         {/* Total Computers */}
-        <Grid item xs={12} sm={6} md={4} lg={3}>
+        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' } }}>
           <Card
             sx={{
               height: "100%",
@@ -303,10 +305,10 @@ const Dashboard: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Active Bookings */}
-        <Grid item xs={12} sm={6} md={4} lg={3}>
+        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' } }}>
           <Card
             sx={{
               height: "100%",
@@ -382,10 +384,10 @@ const Dashboard: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Users Online */}
-        <Grid item xs={12} sm={6} md={4} lg={3}>
+        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' } }}>
           <Card
             sx={{
               height: "100%",
@@ -461,10 +463,10 @@ const Dashboard: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Lab Utilization */}
-        <Grid item xs={12} sm={6} md={4} lg={3}>
+        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' } }}>
           <Card
             sx={{
               height: "100%",
@@ -540,8 +542,8 @@ const Dashboard: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Content Grid */}
       <Box>
@@ -606,7 +608,7 @@ const Dashboard: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
-                              {format(new Date(booking.date), "yyyy-MM-dd")}
+                              {format(new Date(booking.startDate), "yyyy-MM-dd")}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {booking.startTime}
@@ -614,7 +616,7 @@ const Dashboard: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
-                              {format(new Date(booking.date), "yyyy-MM-dd")}
+                              {format(new Date(booking.endDate), "yyyy-MM-dd")}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {booking.endTime}
@@ -629,10 +631,7 @@ const Dashboard: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
-                              {format(new Date(booking.date), "yyyy-MM-dd")}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {format(new Date(booking.date), "HH:mm:ss")}
+                              {format(new Date(booking.createdAt), "yyyy-MM-dd HH:mm:ss")}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -705,7 +704,10 @@ const Dashboard: React.FC = () => {
               </Typography>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body1">
-                  <strong>Date:</strong> {format(new Date(selectedBookingDetails.date), "MMMM d, yyyy")}
+                  <strong>Start Date:</strong> {format(new Date(selectedBookingDetails.startDate), "MMMM d, yyyy")}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>End Date:</strong> {format(new Date(selectedBookingDetails.endDate), "MMMM d, yyyy")}
                 </Typography>
                 <Typography variant="body1">
                   <strong>Time:</strong> {selectedBookingDetails.startTime} - {selectedBookingDetails.endTime}
@@ -723,7 +725,7 @@ const Dashboard: React.FC = () => {
                   />
                 </Typography>
                 <Typography variant="body1">
-                  <strong>Created:</strong> {format(new Date(selectedBookingDetails.createdAt), "MMMM d, yyyy HH:mm")}
+                  <strong>Created:</strong> {new Date(selectedBookingDetails.createdAt).toLocaleString()}
                 </Typography>
               </Box>
 

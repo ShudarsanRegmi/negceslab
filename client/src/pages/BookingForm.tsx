@@ -195,7 +195,8 @@ const BookingForm: React.FC = (): ReactElement => {
 
       const bookingData = {
         computerId: selectedComputer,
-        date: format(startDate, "yyyy-MM-dd"),
+        startDate: format(startDate, "yyyy-MM-dd"),
+        endDate: format(endDate, "yyyy-MM-dd"),
         startTime: format(startTime, "HH:mm"),
         endTime: format(endTime, "HH:mm"),
         reason: reason.trim(),
