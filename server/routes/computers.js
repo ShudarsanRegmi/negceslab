@@ -62,11 +62,23 @@ router.get("/with-bookings", verifyToken, async (req, res) => {
 
       // Find all bookings for this computer with status 'approved'
       const computerBookings = bookings.filter(
-        (booking) => booking.computerId.toString() === computer._id.toString() && booking.status === 'approved'
+        (booking) =>
+          booking.computerId.toString() === computer._id.toString() &&
+          booking.status === "approved"
       );
 
       // Log the bookings being considered for this computer
-      console.log(`Computer: ${computer.name} (${computer._id}) - Bookings considered:`, computerBookings.map(b => ({id: b._id, status: b.status, startDate: b.startDate, endDate: b.endDate, startTime: b.startTime, endTime: b.endTime})));
+      console.log(
+        `Computer: ${computer.name} (${computer._id}) - Bookings considered:`,
+        computerBookings.map((b) => ({
+          id: b._id,
+          status: b.status,
+          startDate: b.startDate,
+          endDate: b.endDate,
+          startTime: b.startTime,
+          endTime: b.endTime,
+        }))
+      );
 
       if (computerBookings.length > 0) {
         // Sort bookings by date and time

@@ -481,11 +481,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         variant="caption"
                         color="text.secondary"
                         sx={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
+                          whiteSpace: 'normal',
+                          wordBreak: 'break-word',
+                          display: 'block',
+                          maxWidth: 260,
+                          overflowWrap: 'break-word',
                         }}
+                        title={notification.message}
                       >
                         {notification.message}
                       </Typography>

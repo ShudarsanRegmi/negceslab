@@ -167,15 +167,18 @@ router.post('/', verifyToken, async (req, res) => {
     await booking.save();
 
     // Notify all admins about the new booking
+    const userBookingId = booking._id.toString().slice(-6).toUpperCase();
     const admins = await User.find({ role: 'admin' });
     const adminNotifications = admins.map(admin => new Notification({
       userId: admin.firebaseUid,
       title: 'New Booking Request',
-      message: `A new booking has been made for computer ${computer.name} by user ${req.user.firebaseUid}.`,
+      message: `A new booking (ID: ${userBookingId}) has been made for computer ${computer.name} (${computer.specifications}) by user ${req.user.firebaseUid}.`,
       type: 'info',
       metadata: {
-        bookingId: booking._id,
+        bookingId: userBookingId,
         computerId: computer._id,
+        computerName: computer.name,
+        computerSpecifications: computer.specifications,
         userId: req.user.firebaseUid
       }
     }));
@@ -309,15 +312,16 @@ router.put('/:id/status', verifyToken, async (req, res) => {
     // Notify user about status change
     let notifTitle = '';
     let notifMsg = '';
+    const userBookingId = booking._id.toString().slice(-6).toUpperCase();
     if (status === 'approved') {
       notifTitle = 'Booking Approved';
-      notifMsg = `Your booking for computer ${booking.computerId.name} has been approved.`;
+      notifMsg = `Your booking (ID: ${userBookingId}) for computer ${booking.computerId.name} (${booking.computerId.specifications}) has been approved.`;
     } else if (status === 'rejected') {
       notifTitle = 'Booking Rejected';
-      notifMsg = `Your booking for computer ${booking.computerId.name} has been rejected. Reason: ${rejectionReason}`;
+      notifMsg = `Your booking (ID: ${userBookingId}) for computer ${booking.computerId.name} (${booking.computerId.specifications}) has been rejected. Reason: ${rejectionReason}`;
     } else if (status === 'cancelled') {
       notifTitle = 'Booking Cancelled';
-      notifMsg = `Your booking for computer ${booking.computerId.name} has been cancelled.`;
+      notifMsg = `Your booking (ID: ${userBookingId}) for computer ${booking.computerId.name} (${booking.computerId.specifications}) has been cancelled.`;
     }
     if (notifTitle && notifMsg) {
       const userNotification = new Notification({
@@ -326,9 +330,10 @@ router.put('/:id/status', verifyToken, async (req, res) => {
         message: notifMsg,
         type: status === 'approved' ? 'success' : 'error',
         metadata: {
-          bookingId: booking._id,
+          bookingId: userBookingId,
           computerId: booking.computerId._id,
-          computerName: booking.computerId.name
+          computerName: booking.computerId.name,
+          computerSpecifications: booking.computerId.specifications
         }
       });
       await userNotification.save();

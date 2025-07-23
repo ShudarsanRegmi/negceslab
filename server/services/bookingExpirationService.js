@@ -86,14 +86,15 @@ class BookingExpirationService {
     try {
       const computerName = computer ? computer.name : 'Unknown Computer';
       const computerId = computer ? computer._id : booking.computerId;
+      const userBookingId = booking._id.toString().slice(-6).toUpperCase();
       // Notification for user
       const userNotification = new Notification({
         userId: booking.userId,
         title: "Booking Session Ended",
-        message: `Your booking for ${computerName} (ID: ${computerId}) has ended. The computer is now available for other users.`,
+        message: `Your booking for ${computerName} (ID: ${userBookingId}) has ended. The computer is now available for other users.`,
         type: "info",
         metadata: {
-          bookingId: booking._id,
+          bookingId: userBookingId,
           computerId: computerId,
           computerName: computerName,
         },
@@ -106,10 +107,10 @@ class BookingExpirationService {
         const adminNotification = new Notification({
           userId: admin._id,
           title: "Computer Available",
-          message: `Computer ${computerName} (ID: ${computerId}) is now available after booking session ended.`,
+          message: `Computer ${computerName} (ID: ${userBookingId}) is now available after booking session ended.`,
           type: "success",
           metadata: {
-            bookingId: booking._id,
+            bookingId: userBookingId,
             computerId: computerId,
             computerName: computerName,
             userId: booking.userId,
