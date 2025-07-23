@@ -35,7 +35,6 @@ import {
   Divider,
   Link,
 } from "@mui/material";
-import Grid from '@mui/material/Grid';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -136,6 +135,17 @@ const AdminDashboard: React.FC = () => {
   const [extensionData, setExtensionData] = useState({
     endTime: "",
     endDate: "",
+  });
+
+  // Add new state variables at the top of the component
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<{
+    startDate: string | null;
+    endDate: string | null;
+  }>({
+    startDate: null,
+    endDate: null,
   });
 
   useEffect(() => {
@@ -291,6 +301,31 @@ const AdminDashboard: React.FC = () => {
   ).length;
   const totalBookings = bookings.length;
   const pendingBookings = bookings.filter((b) => b.status === "pending").length;
+
+  // Add filter function
+  const filteredBookings = bookings.filter((booking) => {
+    // Status filter
+    if (statusFilter !== "all" && booking.status !== statusFilter) {
+      return false;
+    }
+
+    // Date range filter
+    if (dateRange.startDate && new Date(booking.startDate) < new Date(dateRange.startDate)) {
+      return false;
+    }
+    if (dateRange.endDate && new Date(booking.endDate) > new Date(dateRange.endDate)) {
+      return false;
+    }
+
+    // Search query
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      booking.computerId?.name?.toLowerCase().includes(searchLower) ||
+      booking.userInfo?.name?.toLowerCase().includes(searchLower) ||
+      booking.userInfo?.email?.toLowerCase().includes(searchLower) ||
+      booking.reason.toLowerCase().includes(searchLower)
+    );
+  });
 
   if (loading) {
     return <Typography>Loading...</Typography>;
@@ -700,13 +735,97 @@ const AdminDashboard: React.FC = () => {
       {/* All Bookings Tab */}
       {activeTab === 3 && (
         <Box>
-          <Typography variant="h6" gutterBottom>
-            All Bookings Management
-          </Typography>
+          {/* Header and Search Section */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' }, 
+            justifyContent: 'space-between',
+            alignItems: { xs: 'stretch', sm: 'center' },
+            gap: 2,
+            mb: 2 
+          }}>
+            {/* Left side - Title and Results Count */}
+            <Box>
+              <Typography variant="h6" sx={{ mb: 0.5 }}>
+                All Bookings Management
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Showing {filteredBookings.length} of {bookings.length} bookings
+              </Typography>
+            </Box>
 
+            {/* Right side - Search and Filters */}
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap',
+              gap: 1,
+              flex: { xs: '1', sm: '0.7' },
+              '& > *': { 
+                minWidth: { xs: '100%', sm: '150px' }
+              }
+            }}>
+              <TextField
+                size="small"
+                placeholder="Search bookings..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <Box component="span" sx={{ color: 'text.secondary', mr: 1 }}>
+                      🔍
+                    </Box>
+                  ),
+                }}
+              />
+              <FormControl size="small">
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  displayEmpty
+                  sx={{ minWidth: 120 }}
+                >
+                  <MenuItem value="all">All Status</MenuItem>
+                  <MenuItem value="pending">Pending</MenuItem>
+                  <MenuItem value="approved">Approved</MenuItem>
+                  <MenuItem value="rejected">Rejected</MenuItem>
+                  <MenuItem value="cancelled">Cancelled</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                size="small"
+                type="date"
+                value={dateRange.startDate || ""}
+                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                InputProps={{
+                  startAdornment: (
+                    <Box component="span" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.875rem' }}>
+                      From:
+                    </Box>
+                  ),
+                }}
+                sx={{ maxWidth: { sm: '200px' } }}
+              />
+              <TextField
+                size="small"
+                type="date"
+                value={dateRange.endDate || ""}
+                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                InputProps={{
+                  startAdornment: (
+                    <Box component="span" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.875rem' }}>
+                      To:
+                    </Box>
+                  ),
+                }}
+                sx={{ maxWidth: { sm: '200px' } }}
+              />
+            </Box>
+          </Box>
+
+          {/* Table/List Content */}
           {isMobile ? (
             <List>
-              {bookings.map((booking) => (
+              {filteredBookings.map((booking) => (
                 <React.Fragment key={booking._id}>
                   <ListItem>
                     <ListItemText
@@ -783,7 +902,7 @@ const AdminDashboard: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {bookings.map((booking) => (
+                  {filteredBookings.map((booking) => (
                     <TableRow
                       key={booking._id}
                       onClick={() => handleViewDetails(booking)}
@@ -839,6 +958,14 @@ const AdminDashboard: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+          )}
+
+          {filteredBookings.length === 0 && (
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+              <Typography variant="body1" color="text.secondary">
+                No bookings found matching your filters
+              </Typography>
+            </Box>
           )}
         </Box>
       )}
