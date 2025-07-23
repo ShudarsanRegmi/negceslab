@@ -617,7 +617,15 @@ const AdminDashboard: React.FC = () => {
             <List>
               {currentBookings.map((booking) => (
                 <React.Fragment key={booking._id}>
-                  <ListItem>
+                  <ListItem
+                    onClick={() => handleViewDetails(booking)}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      }
+                    }}
+                  >
                     <ListItemText
                       primary={
                         <Typography variant="subtitle1">
@@ -651,7 +659,8 @@ const AdminDashboard: React.FC = () => {
                       <IconButton
                         edge="end"
                         color="primary"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent row click
                           setSelectedCurrentBooking(booking);
                           setExtendDialogOpen(true);
                         }}
@@ -662,7 +671,10 @@ const AdminDashboard: React.FC = () => {
                       <IconButton
                         edge="end"
                         color="error"
-                        onClick={() => handleRevokeBooking(booking._id)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent row click
+                          handleRevokeBooking(booking._id);
+                        }}
                         title="Revoke Booking"
                       >
                         <RevokeIcon />
@@ -688,7 +700,16 @@ const AdminDashboard: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {currentBookings.map((booking) => (
-                    <TableRow key={booking._id}>
+                    <TableRow
+                      key={booking._id}
+                      onClick={() => handleViewDetails(booking)}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        }
+                      }}
+                    >
                       <TableCell>{booking.computerId?.name}</TableCell>
                       <TableCell>
                         <Typography>{booking.userInfo?.name}</Typography>
@@ -707,7 +728,8 @@ const AdminDashboard: React.FC = () => {
                       <TableCell>
                         <IconButton
                           color="primary"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click
                             setSelectedCurrentBooking(booking);
                             setExtendDialogOpen(true);
                           }}
@@ -717,7 +739,10 @@ const AdminDashboard: React.FC = () => {
                         </IconButton>
                         <IconButton
                           color="error"
-                          onClick={() => handleRevokeBooking(booking._id)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click
+                            handleRevokeBooking(booking._id);
+                          }}
                           title="Revoke Booking"
                         >
                           <RevokeIcon />
@@ -728,6 +753,14 @@ const AdminDashboard: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+          )}
+
+          {currentBookings.length === 0 && (
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+              <Typography variant="body1" color="text.secondary">
+                No current bookings found
+              </Typography>
+            </Box>
           )}
         </Box>
       )}
