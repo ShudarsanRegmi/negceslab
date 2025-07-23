@@ -73,8 +73,8 @@ class BookingExpirationService {
         console.log(`Computer with ID ${booking.computerId} not found.`);
       }
 
-      // Send notifications
-      await this.sendExpirationNotifications(booking);
+      // Send notifications, passing the computer object
+      await this.sendExpirationNotifications(booking, computer);
 
       console.log(`Booking ${booking._id} expired and processed`);
     } catch (error) {
@@ -82,18 +82,20 @@ class BookingExpirationService {
     }
   }
 
-  async sendExpirationNotifications(booking) {
+  async sendExpirationNotifications(booking, computer) {
     try {
+      const computerName = computer ? computer.name : 'Unknown Computer';
+      const computerId = computer ? computer._id : booking.computerId;
       // Notification for user
       const userNotification = new Notification({
         userId: booking.userId,
         title: "Booking Session Ended",
-        message: `Your booking for ${booking.computerId.name} has ended. The computer is now available for other users.`,
+        message: `Your booking for ${computerName} (ID: ${computerId}) has ended. The computer is now available for other users.`,
         type: "info",
         metadata: {
           bookingId: booking._id,
-          computerId: booking.computerId._id,
-          computerName: booking.computerId.name,
+          computerId: computerId,
+          computerName: computerName,
         },
       });
       await userNotification.save();
@@ -104,12 +106,12 @@ class BookingExpirationService {
         const adminNotification = new Notification({
           userId: admin._id,
           title: "Computer Available",
-          message: `Computer ${booking.computerId.name} is now available after booking session ended.`,
+          message: `Computer ${computerName} (ID: ${computerId}) is now available after booking session ended.`,
           type: "success",
           metadata: {
             bookingId: booking._id,
-            computerId: booking.computerId._id,
-            computerName: booking.computerId.name,
+            computerId: computerId,
+            computerName: computerName,
             userId: booking.userId,
           },
         });
