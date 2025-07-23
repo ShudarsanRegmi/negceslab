@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styles from './Contact.module.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Phone, LocationOn, AccessTime, Person, Send, CheckCircle, Message, Apartment, Error, SupportAgent, Schedule, DoneAll } from '@mui/icons-material';
+import { feedbackAPI } from '../services/api';
 
 interface ContactInfo {
   icon: React.ReactNode;
@@ -55,19 +56,28 @@ const Contact: React.FC = () => {
   const [form, setForm] = useState<FormData>({ fullName: '', email: '', subject: subjectOptions[0], message: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setError(null);
+
+    try {
+      await feedbackAPI.submitFeedback(form);
       setSuccess(true);
       setForm({ fullName: '', email: '', subject: subjectOptions[0], message: '' });
-      setTimeout(() => setSuccess(false), 3000);
-    }, 1800);
+      setTimeout(() => setSuccess(false), 5000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to submit feedback. Please try again.');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -131,6 +141,22 @@ const Contact: React.FC = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* Add error message */}
+      <AnimatePresence>
+        {error && (
+          <motion.div 
+            className={styles.errorMsg} 
+            initial={{ opacity: 0, y: 10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: 10 }} 
+            transition={{ duration: 0.5 }}
+          >
+            <Error style={{ color: '#ef4444', marginRight: 6, verticalAlign: 'middle' }} />
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Footer */}
       <footer className={styles.footer}>

@@ -95,4 +95,19 @@ export const notificationsAPI = {
     api.get('/notifications/users'),
 };
 
+// Add feedback API endpoints
+export const feedbackAPI = {
+  submitFeedback: (data: {
+    fullName: string;
+    email: string;
+    subject: string;
+    message: string;
+  }) => api.post('/feedback', data),
+  getAllFeedback: () => api.get('/feedback'),
+  updateFeedbackStatus: (feedbackId: string, data: {
+    status: 'pending' | 'resolved' | 'in_progress';
+    adminResponse?: string;
+  }) => api.put(`/feedback/${feedbackId}/status`, data),
+};
+
 export default api; 
