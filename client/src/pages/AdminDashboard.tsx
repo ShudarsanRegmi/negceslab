@@ -44,6 +44,9 @@ import {
   Computer as ComputerIcon,
   BookOnline as BookingIcon,
   Notifications as NotificationIcon,
+  Edit as EditIcon,
+  Block as RevokeIcon,
+  Update as ExtendIcon,
 } from "@mui/icons-material";
 import { computersAPI, bookingsAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
@@ -126,6 +129,15 @@ const AdminDashboard: React.FC = () => {
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState("");
 
+  // Current Bookings management states
+  const [currentBookings, setCurrentBookings] = useState<Booking[]>([]);
+  const [selectedCurrentBooking, setSelectedCurrentBooking] = useState<Booking | null>(null);
+  const [extendDialogOpen, setExtendDialogOpen] = useState(false);
+  const [extensionData, setExtensionData] = useState({
+    endTime: "",
+    endDate: "",
+  });
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -133,12 +145,14 @@ const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [computersRes, bookingsRes] = await Promise.all([
+      const [computersRes, bookingsRes, currentBookingsRes] = await Promise.all([
         computersAPI.getComputersWithBookings(),
         bookingsAPI.getAllBookings(),
+        bookingsAPI.getCurrentBookings(),
       ]);
       setComputers(computersRes.data);
       setBookings(bookingsRes.data);
+      setCurrentBookings(currentBookingsRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
       setError("Failed to load data");
@@ -209,6 +223,37 @@ const AdminDashboard: React.FC = () => {
     setDetailsDialogOpen(true);
   };
 
+  // Function to handle revoking a booking
+  const handleRevokeBooking = async (bookingId: string) => {
+    try {
+      await bookingsAPI.updateBookingStatus(bookingId, "cancelled", "Revoked by admin");
+      fetchData();
+      setStatusUpdateSuccess("Booking revoked successfully!");
+      setTimeout(() => setStatusUpdateSuccess(null), 5000);
+    } catch (error) {
+      console.error("Error revoking booking:", error);
+      setError("Failed to revoke booking");
+    }
+  };
+
+  // Function to handle extending a booking
+  const handleExtendBooking = async () => {
+    if (!selectedCurrentBooking) return;
+
+    try {
+      await bookingsAPI.updateBookingTime(selectedCurrentBooking._id, extensionData);
+      setExtendDialogOpen(false);
+      setSelectedCurrentBooking(null);
+      setExtensionData({ endTime: "", endDate: "" });
+      fetchData();
+      setStatusUpdateSuccess("Booking extended successfully!");
+      setTimeout(() => setStatusUpdateSuccess(null), 5000);
+    } catch (error) {
+      console.error("Error extending booking:", error);
+      setError("Failed to extend booking");
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved":
@@ -276,7 +321,8 @@ const AdminDashboard: React.FC = () => {
       >
         <Tab label="Overview" />
         <Tab label="Computers" />
-        <Tab label="Bookings" />
+        <Tab label="Current Bookings" />
+        <Tab label="All Bookings" />
         <Tab label="Notifications" />
       </Tabs>
 
@@ -525,20 +571,136 @@ const AdminDashboard: React.FC = () => {
         </Box>
       )}
 
-      {/* Bookings Tab */}
+      {/* Current Bookings Tab */}
       {activeTab === 2 && (
         <Box>
           <Typography variant="h6" gutterBottom>
-            Booking Management
+            Current Bookings Management
           </Typography>
 
-          <Alert severity="info" sx={{ mb: 2 }}>
-            <Typography variant="body2">
-              <strong>Automatic Notifications:</strong> When you approve or
-              reject a booking, the user will automatically receive a
-              notification about the status change.
-            </Typography>
-          </Alert>
+          {isMobile ? (
+            <List>
+              {currentBookings.map((booking) => (
+                <React.Fragment key={booking._id}>
+                  <ListItem>
+                    <ListItemText
+                      primary={
+                        <Typography variant="subtitle1">
+                          {booking.computerId?.name || "Unknown Computer"}
+                        </Typography>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            User: {booking.userInfo?.name || "Unknown User"}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Email: {booking.userInfo?.email}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Date: {new Date(booking.date).toLocaleDateString()}
+                            {booking.endDate && ` - ${new Date(booking.endDate).toLocaleDateString()}`}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Time: {booking.startTime} - {booking.endTime}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Reason: {booking.reason}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        color="primary"
+                        onClick={() => {
+                          setSelectedCurrentBooking(booking);
+                          setExtendDialogOpen(true);
+                        }}
+                        title="Extend Booking"
+                      >
+                        <ExtendIcon />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        color="error"
+                        onClick={() => handleRevokeBooking(booking._id)}
+                        title="Revoke Booking"
+                      >
+                        <RevokeIcon />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                  <Divider />
+                </React.Fragment>
+              ))}
+            </List>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Computer</TableCell>
+                    <TableCell>User</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Time</TableCell>
+                    <TableCell>Reason</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {currentBookings.map((booking) => (
+                    <TableRow key={booking._id}>
+                      <TableCell>{booking.computerId?.name}</TableCell>
+                      <TableCell>
+                        <Typography>{booking.userInfo?.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {booking.userInfo?.email}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(booking.date).toLocaleDateString()}
+                        {booking.endDate && (
+                          <><br />{new Date(booking.endDate).toLocaleDateString()}</>
+                        )}
+                      </TableCell>
+                      <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
+                      <TableCell>{booking.reason}</TableCell>
+                      <TableCell>
+                        <IconButton
+                          color="primary"
+                          onClick={() => {
+                            setSelectedCurrentBooking(booking);
+                            setExtendDialogOpen(true);
+                          }}
+                          title="Extend Booking"
+                        >
+                          <ExtendIcon />
+                        </IconButton>
+                        <IconButton
+                          color="error"
+                          onClick={() => handleRevokeBooking(booking._id)}
+                          title="Revoke Booking"
+                        >
+                          <RevokeIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Box>
+      )}
+
+      {/* All Bookings Tab */}
+      {activeTab === 3 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            All Bookings Management
+          </Typography>
 
           {isMobile ? (
             <List>
@@ -680,7 +842,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* Notifications Tab */}
-      {activeTab === 3 && <AdminNotificationPanel />}
+      {activeTab === 4 && <AdminNotificationPanel />}
 
       {/* Add Computer Dialog */}
       <Dialog
@@ -1109,6 +1271,63 @@ const AdminDashboard: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Extend Booking Dialog */}
+      <Dialog
+        open={extendDialogOpen}
+        onClose={() => setExtendDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Extend Booking</DialogTitle>
+        <DialogContent>
+          {selectedCurrentBooking && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Current Booking Details:
+              </Typography>
+              <Typography variant="body2">
+                Computer: {selectedCurrentBooking.computerId?.name}
+              </Typography>
+              <Typography variant="body2">
+                Current End Time: {selectedCurrentBooking.endTime}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Current End Date: {new Date(selectedCurrentBooking.endDate || selectedCurrentBooking.date).toLocaleDateString()}
+              </Typography>
+
+              <TextField
+                label="New End Time"
+                type="time"
+                value={extensionData.endTime}
+                onChange={(e) => setExtensionData({ ...extensionData, endTime: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+
+              <TextField
+                label="New End Date"
+                type="date"
+                value={extensionData.endDate}
+                onChange={(e) => setExtensionData({ ...extensionData, endDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setExtendDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleExtendBooking} 
+            variant="contained" 
+            color="primary"
+            disabled={!extensionData.endTime && !extensionData.endDate}
+          >
+            Extend Booking
+          </Button>
         </DialogActions>
       </Dialog>
 

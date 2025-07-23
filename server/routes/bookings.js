@@ -5,46 +5,6 @@ const Computer = require('../models/computer');
 const User = require('../models/user');
 const { verifyToken } = require('../middleware/auth');
 
-// Create a new booking
-router.post('/', verifyToken, async (req, res) => {
-  try {
-    const {
-      computerId,
-      date,
-      startTime,
-      endTime,
-      reason
-    } = req.body;
-
-    // Basic validation
-    if (!computerId || !date || !startTime || !endTime || !reason) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    // Check if computer exists
-    const computer = await Computer.findById(computerId);
-    if (!computer) {
-      return res.status(404).json({ message: 'Computer not found' });
-    }
-
-    // Create booking
-    const booking = new Booking({
-      userId: req.user.firebaseUid,
-      computerId,
-      date,
-      startTime,
-      endTime,
-      reason
-    });
-
-    await booking.save();
-    res.status(201).json(booking);
-  } catch (error) {
-    console.error('Error creating booking:', error);
-    res.status(500).json({ message: 'Error creating booking', error: error.message });
-  }
-});
-
 // Get all bookings (admin) or user's bookings
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -88,33 +48,178 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-// Get a specific booking
-router.get('/:id', verifyToken, async (req, res) => {
+// Get current bookings (admin only)
+router.get('/current', verifyToken, async (req, res) => {
   try {
+    // Check if user is admin
     const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
-    const isAdmin = user && user.role === 'admin';
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
 
-    const query = isAdmin ? { _id: req.params.id } : { _id: req.params.id, userId: req.user.firebaseUid };
-    const booking = await Booking.findOne(query).populate('computerId');
+    // Get current date and time
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0];
+    const currentTime = now.toLocaleTimeString('en-US', { 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
 
+    console.log('Fetching current bookings for:', { currentDate, currentTime });
+
+    // Get all approved bookings that haven't expired yet
+    const currentBookings = await Booking.find({
+      status: 'approved',
+      $or: [
+        // Single day bookings that haven't ended yet
+        {
+          date: currentDate,
+          endTime: { $gte: currentTime }
+        },
+        // Future bookings
+        {
+          date: { $gt: currentDate }
+        },
+        // Multi-day bookings that haven't ended yet
+        {
+          endDate: { $exists: true, $ne: null, $gte: currentDate }
+        }
+      ]
+    })
+    .populate('computerId')
+    .sort({ date: 1, startTime: 1 });
+
+    console.log('Found current bookings:', currentBookings.length);
+
+    // Add user info to each booking
+    const bookingsWithUserInfo = await Promise.all(
+      currentBookings.map(async (booking) => {
+        const user = await User.findOne({ firebaseUid: booking.userId });
+        const bookingObj = booking.toObject();
+        return {
+          ...bookingObj,
+          userInfo: user ? {
+            name: user.name,
+            email: user.email
+          } : null
+        };
+      })
+    );
+
+    res.json(bookingsWithUserInfo);
+  } catch (error) {
+    console.error('Error fetching current bookings:', error);
+    res.status(500).json({ message: 'Error fetching current bookings', error: error.message });
+  }
+});
+
+// Create a new booking
+router.post('/', verifyToken, async (req, res) => {
+  try {
+    const {
+      computerId,
+      date,
+      startTime,
+      endTime,
+      reason
+    } = req.body;
+
+    // Basic validation
+    if (!computerId || !date || !startTime || !endTime || !reason) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Check if computer exists
+    const computer = await Computer.findById(computerId);
+    if (!computer) {
+      return res.status(404).json({ message: 'Computer not found' });
+    }
+
+    // Create booking
+    const booking = new Booking({
+      userId: req.user.firebaseUid,
+      computerId,
+      date,
+      startTime,
+      endTime,
+      reason
+    });
+
+    await booking.save();
+    res.status(201).json(booking);
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    res.status(500).json({ message: 'Error creating booking', error: error.message });
+  }
+});
+
+// Update booking time (admin only)
+router.put('/:id/time', verifyToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const booking = await Booking.findById(req.params.id);
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    if (isAdmin) {
-      const user = await User.findOne({ firebaseUid: booking.userId });
-      const bookingObj = booking.toObject();
-      bookingObj.userInfo = user ? {
-        name: user.name,
-        email: user.email
-      } : null;
-      res.json(bookingObj);
-    } else {
-      res.json(booking);
+    // Only allow updating approved bookings
+    if (booking.status !== 'approved') {
+      return res.status(400).json({ message: 'Can only update approved bookings' });
     }
+
+    const { startTime, endTime, computerId, endDate } = req.body;
+
+    // If changing computer
+    if (computerId && computerId !== booking.computerId.toString()) {
+      const newComputer = await Computer.findById(computerId);
+      if (!newComputer) {
+        return res.status(404).json({ message: 'New computer not found' });
+      }
+
+      // Update old computer status if no other active bookings
+      const otherBookings = await Booking.findOne({
+        computerId: booking.computerId,
+        status: 'approved',
+        _id: { $ne: booking._id }
+      });
+      if (!otherBookings) {
+        await Computer.findByIdAndUpdate(booking.computerId, { status: 'available' });
+      }
+
+      // Update new computer status
+      await Computer.findByIdAndUpdate(computerId, { status: 'booked' });
+      booking.computerId = computerId;
+    }
+
+    // Update booking details
+    if (startTime) booking.startTime = startTime;
+    if (endTime) booking.endTime = endTime;
+    if (endDate) booking.endDate = endDate;
+
+    const updatedBooking = await booking.save();
+    await updatedBooking.populate('computerId');
+
+    // Add user info
+    const bookingUser = await User.findOne({ firebaseUid: updatedBooking.userId });
+    const bookingObj = updatedBooking.toObject();
+    const bookingWithUser = {
+      ...bookingObj,
+      userInfo: bookingUser ? {
+        name: bookingUser.name,
+        email: bookingUser.email
+      } : null
+    };
+
+    res.json(bookingWithUser);
   } catch (error) {
-    console.error('Error fetching booking:', error);
-    res.status(500).json({ message: 'Error fetching booking', error: error.message });
+    console.error('Error updating booking time:', error);
+    res.status(500).json({ message: 'Error updating booking time', error: error.message });
   }
 });
 
@@ -167,56 +272,6 @@ router.put('/:id/status', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Error updating booking status:', error);
     res.status(500).json({ message: 'Error updating booking status', error: error.message });
-  }
-});
-
-// Update a booking
-router.put('/:id', verifyToken, async (req, res) => {
-  try {
-    const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
-    const isAdmin = user && user.role === 'admin';
-
-    const query = isAdmin ? { _id: req.params.id } : { _id: req.params.id, userId: req.user.firebaseUid };
-    const booking = await Booking.findOne(query);
-
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    // Don't allow updating userId
-    delete req.body.userId;
-
-    const updatedBooking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { ...req.body, updatedAt: Date.now() },
-      { new: true }
-    ).populate('computerId');
-
-    res.json(updatedBooking);
-  } catch (error) {
-    console.error('Error updating booking:', error);
-    res.status(500).json({ message: 'Error updating booking', error: error.message });
-  }
-});
-
-// Delete a booking
-router.delete('/:id', verifyToken, async (req, res) => {
-  try {
-    const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
-    const isAdmin = user && user.role === 'admin';
-
-    const query = isAdmin ? { _id: req.params.id } : { _id: req.params.id, userId: req.user.firebaseUid };
-    const booking = await Booking.findOne(query);
-
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    await Booking.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Booking deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting booking:', error);
-    res.status(500).json({ message: 'Error deleting booking', error: error.message });
   }
 });
 

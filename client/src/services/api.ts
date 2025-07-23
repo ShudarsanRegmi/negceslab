@@ -52,6 +52,14 @@ export const bookingsAPI = {
   // Admin endpoints
   getAllBookings: () => 
     api.get('/bookings'),
+  getCurrentBookings: () =>
+    api.get('/bookings/current'),
+  updateBookingTime: (bookingId: string, data: {
+    startTime?: string;
+    endTime?: string;
+    computerId?: string;
+    endDate?: string;
+  }) => api.put(`/bookings/${bookingId}/time`, data),
   updateBookingStatus: (bookingId: string, status: string, rejectionReason?: string) => 
     api.put(`/bookings/${bookingId}/status`, { status, rejectionReason }),
 };
