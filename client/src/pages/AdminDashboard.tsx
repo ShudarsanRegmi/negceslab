@@ -76,13 +76,14 @@ interface Booking {
     location: string;
     specifications: string;
   };
-  date: string;
+  startDate: string;
+  endDate: string;
   startTime: string;
   endTime: string;
   reason: string;
   status: "pending" | "approved" | "rejected" | "cancelled";
   createdAt: string;
-  // New fields
+  // Optional fields
   requiresGPU: boolean;
   gpuMemoryRequired?: number;
   problemStatement?: string;
@@ -93,7 +94,6 @@ interface Booking {
   };
   datasetLink?: string;
   bottleneckExplanation?: string;
-  endDate?: string; // Added for multi-day bookings
 }
 
 const AdminDashboard: React.FC = () => {
@@ -598,8 +598,10 @@ const AdminDashboard: React.FC = () => {
                             Email: {booking.userInfo?.email}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Date: {new Date(booking.date).toLocaleDateString()}
-                            {booking.endDate && ` - ${new Date(booking.endDate).toLocaleDateString()}`}
+                            Date: {new Date(booking.startDate).toLocaleDateString()}
+                            {booking.endDate !== booking.startDate && (
+                              <> - {new Date(booking.endDate).toLocaleDateString()}</>
+                            )}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             Time: {booking.startTime} - {booking.endTime}
@@ -660,8 +662,8 @@ const AdminDashboard: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {new Date(booking.date).toLocaleDateString()}
-                        {booking.endDate && (
+                        {new Date(booking.startDate).toLocaleDateString()}
+                        {booking.endDate !== booking.startDate && (
                           <><br />{new Date(booking.endDate).toLocaleDateString()}</>
                         )}
                       </TableCell>
@@ -718,7 +720,7 @@ const AdminDashboard: React.FC = () => {
                             Email: {booking.userInfo?.email || booking.userId}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Date: {new Date(booking.date).toLocaleDateString()}
+                            Date: {new Date(booking.startDate).toLocaleDateString()}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             Time: {booking.startTime} - {booking.endTime}
@@ -795,7 +797,7 @@ const AdminDashboard: React.FC = () => {
                       <TableCell>{booking.userInfo?.name || "Unknown User"}</TableCell>
                       <TableCell>{booking.userInfo?.email || booking.userId}</TableCell>
                       <TableCell>{booking.computerId?.name || "Unknown Computer"}</TableCell>
-                      <TableCell>{new Date(booking.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(booking.startDate).toLocaleDateString()}</TableCell>
                       <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
                       <TableCell>
                         <Chip
@@ -958,9 +960,9 @@ const AdminDashboard: React.FC = () => {
                 </Typography>
                 {/* Booking Date */}
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Booking Date:</strong> {selectedBooking.endDate && selectedBooking.endDate !== selectedBooking.date
-                    ? `${new Date(selectedBooking.date).toLocaleDateString()} - ${new Date(selectedBooking.endDate).toLocaleDateString()}`
-                    : new Date(selectedBooking.date).toLocaleDateString()}
+                  <strong>Booking Date:</strong> {selectedBooking.endDate && selectedBooking.endDate !== selectedBooking.startDate
+                    ? `${new Date(selectedBooking.startDate).toLocaleDateString()} - ${new Date(selectedBooking.endDate).toLocaleDateString()}`
+                    : new Date(selectedBooking.startDate).toLocaleDateString()}
                 </Typography>
                 {/* Booking Time */}
                 <Typography variant="body2" color="text.secondary">
@@ -968,11 +970,9 @@ const AdminDashboard: React.FC = () => {
                 </Typography>
                 {/* Booking Duration */}
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Booking Duration:</strong> {(() => {
-                    const startDateStr = new Date(selectedBooking.date).toLocaleDateString();
-                    const endDateStr = selectedBooking.endDate ? new Date(selectedBooking.endDate).toLocaleDateString() : startDateStr;
-                    return `${startDateStr} - ${endDateStr}`;
-                  })()}
+                  <strong>Booking Duration:</strong> {
+                    `${new Date(selectedBooking.startDate).toLocaleDateString()} - ${new Date(selectedBooking.endDate).toLocaleDateString()}`
+                  }
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Reason:</strong> {selectedBooking.reason}
@@ -1116,7 +1116,7 @@ const AdminDashboard: React.FC = () => {
                       Date
                     </Typography>
                     <Typography variant="body1">
-                      {new Date(selectedBookingDetails.date).toLocaleDateString()}
+                      {new Date(selectedBookingDetails.startDate).toLocaleDateString()}
                     </Typography>
                   </Box>
                   <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)' } }}>
@@ -1295,7 +1295,7 @@ const AdminDashboard: React.FC = () => {
                 Current End Time: {selectedCurrentBooking.endTime}
               </Typography>
               <Typography variant="body2" gutterBottom>
-                Current End Date: {new Date(selectedCurrentBooking.endDate || selectedCurrentBooking.date).toLocaleDateString()}
+                Current End Date: {new Date(selectedCurrentBooking.endDate).toLocaleDateString()}
               </Typography>
 
               <TextField
