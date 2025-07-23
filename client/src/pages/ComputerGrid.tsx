@@ -194,11 +194,11 @@ const ComputerGrid: React.FC = () => {
         <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
           Monitor and manage lab computer status in real-time
         </Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<BookIcon />} 
+        <Button
+          variant="contained"
+          startIcon={<BookIcon />}
           sx={{ mb: 3 }}
-          onClick={() => navigate('/book')}
+          onClick={() => navigate("/book")}
         >
           + Book Computer
         </Button>
@@ -212,7 +212,8 @@ const ComputerGrid: React.FC = () => {
               height: "100%",
               display: "flex",
               flexDirection: "column",
-              background: "linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(25, 118, 210, 0.01) 100%)",
+              background:
+                "linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(25, 118, 210, 0.01) 100%)",
               border: "1px solid rgba(25, 118, 210, 0.12)",
               transition: "all 0.3s ease",
               "&:hover": {
@@ -298,7 +299,8 @@ const ComputerGrid: React.FC = () => {
               height: "100%",
               display: "flex",
               flexDirection: "column",
-              background: "linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(76, 175, 80, 0.01) 100%)",
+              background:
+                "linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(76, 175, 80, 0.01) 100%)",
               border: "1px solid rgba(76, 175, 80, 0.12)",
               transition: "all 0.3s ease",
               "&:hover": {
@@ -384,7 +386,8 @@ const ComputerGrid: React.FC = () => {
               height: "100%",
               display: "flex",
               flexDirection: "column",
-              background: "linear-gradient(135deg, rgba(2, 136, 209, 0.05) 0%, rgba(2, 136, 209, 0.01) 100%)",
+              background:
+                "linear-gradient(135deg, rgba(2, 136, 209, 0.05) 0%, rgba(2, 136, 209, 0.01) 100%)",
               border: "1px solid rgba(2, 136, 209, 0.12)",
               transition: "all 0.3s ease",
               "&:hover": {
@@ -470,7 +473,8 @@ const ComputerGrid: React.FC = () => {
               height: "100%",
               display: "flex",
               flexDirection: "column",
-              background: "linear-gradient(135deg, rgba(245, 124, 0, 0.05) 0%, rgba(245, 124, 0, 0.01) 100%)",
+              background:
+                "linear-gradient(135deg, rgba(245, 124, 0, 0.05) 0%, rgba(245, 124, 0, 0.01) 100%)",
               border: "1px solid rgba(245, 124, 0, 0.12)",
               transition: "all 0.3s ease",
               "&:hover": {
@@ -556,7 +560,8 @@ const ComputerGrid: React.FC = () => {
               height: "100%",
               display: "flex",
               flexDirection: "column",
-              background: "linear-gradient(135deg, rgba(251, 146, 60, 0.05) 0%, rgba(251, 146, 60, 0.01) 100%)",
+              background:
+                "linear-gradient(135deg, rgba(251, 146, 60, 0.05) 0%, rgba(251, 146, 60, 0.01) 100%)",
               border: "1px solid rgba(251, 146, 60, 0.12)",
               transition: "all 0.3s ease",
               "&:hover": {
@@ -642,7 +647,8 @@ const ComputerGrid: React.FC = () => {
               height: "100%",
               display: "flex",
               flexDirection: "column",
-              background: "linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, rgba(46, 125, 50, 0.01) 100%)",
+              background:
+                "linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, rgba(46, 125, 50, 0.01) 100%)",
               border: "1px solid rgba(46, 125, 50, 0.12)",
               transition: "all 0.3s ease",
               "&:hover": {
@@ -728,7 +734,8 @@ const ComputerGrid: React.FC = () => {
               height: "100%",
               display: "flex",
               flexDirection: "column",
-              background: "linear-gradient(135deg, rgba(211, 47, 47, 0.05) 0%, rgba(211, 47, 47, 0.01) 100%)",
+              background:
+                "linear-gradient(135deg, rgba(211, 47, 47, 0.05) 0%, rgba(211, 47, 47, 0.01) 100%)",
               border: "1px solid rgba(211, 47, 47, 0.12)",
               transition: "all 0.3s ease",
               "&:hover": {
@@ -883,7 +890,7 @@ const ComputerGrid: React.FC = () => {
         variant="h5"
         sx={{ mb: 3, fontWeight: "bold", color: "#212121" }}
       >
-       Lab Computer Status
+        Lab Computer Status
       </Typography>
 
       {/* White Box Container */}
@@ -1034,7 +1041,10 @@ const ComputerGrid: React.FC = () => {
                       mt: 1,
                     }}
                   >
-                    Until {computer.nextAvailableDate ? `${computer.nextAvailableDate} ${computer.nextAvailable}` : computer.nextAvailable}
+                    Until{" "}
+                    {computer.nextAvailableDate
+                      ? `${computer.nextAvailableDate} ${computer.nextAvailable}`
+                      : computer.nextAvailable}
                   </Typography>
                 )}
               </CardContent>

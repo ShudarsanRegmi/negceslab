@@ -608,7 +608,9 @@ const Dashboard: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
-                              {format(new Date(booking.startDate), "yyyy-MM-dd")}
+                              {isNaN(new Date(booking.startDate).getTime())
+                                ? "Invalid date"
+                                : format(new Date(booking.startDate), "yyyy-MM-dd")}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {booking.startTime}
@@ -616,7 +618,9 @@ const Dashboard: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
-                              {format(new Date(booking.endDate), "yyyy-MM-dd")}
+                              {isNaN(new Date(booking.endDate).getTime())
+                                ? "Invalid date"
+                                : format(new Date(booking.endDate), "yyyy-MM-dd")}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {booking.endTime}
@@ -631,7 +635,9 @@ const Dashboard: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
-                              {format(new Date(booking.createdAt), "yyyy-MM-dd HH:mm:ss")}
+                              {isNaN(new Date(booking.createdAt).getTime())
+                                ? "Invalid date"
+                                : format(new Date(booking.createdAt), "yyyy-MM-dd HH:mm:ss")}
                             </Typography>
                           </TableCell>
                           <TableCell>

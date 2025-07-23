@@ -3,6 +3,7 @@ const router = express.Router();
 const Booking = require('../models/booking');
 const Computer = require('../models/computer');
 const User = require('../models/user');
+const Notification = require('../models/notification');
 const { verifyToken } = require('../middleware/auth');
 
 // Get all bookings (admin) or user's bookings
@@ -165,6 +166,23 @@ router.post('/', verifyToken, async (req, res) => {
 
     await booking.save();
 
+    // Notify all admins about the new booking
+    const admins = await User.find({ role: 'admin' });
+    const adminNotifications = admins.map(admin => new Notification({
+      userId: admin.firebaseUid,
+      title: 'New Booking Request',
+      message: `A new booking has been made for computer ${computer.name} by user ${req.user.firebaseUid}.`,
+      type: 'info',
+      metadata: {
+        bookingId: booking._id,
+        computerId: computer._id,
+        userId: req.user.firebaseUid
+      }
+    }));
+    if (adminNotifications.length > 0) {
+      await Notification.insertMany(adminNotifications);
+    }
+
     // Populate computer details before sending response
     await booking.populate('computerId');
     res.status(201).json(booking);
@@ -286,6 +304,34 @@ router.put('/:id/status', verifyToken, async (req, res) => {
       if (!otherApprovedBookings) {
         await Computer.findByIdAndUpdate(booking.computerId._id, { status: 'available' });
       }
+    }
+
+    // Notify user about status change
+    let notifTitle = '';
+    let notifMsg = '';
+    if (status === 'approved') {
+      notifTitle = 'Booking Approved';
+      notifMsg = `Your booking for computer ${booking.computerId.name} has been approved.`;
+    } else if (status === 'rejected') {
+      notifTitle = 'Booking Rejected';
+      notifMsg = `Your booking for computer ${booking.computerId.name} has been rejected. Reason: ${rejectionReason}`;
+    } else if (status === 'cancelled') {
+      notifTitle = 'Booking Cancelled';
+      notifMsg = `Your booking for computer ${booking.computerId.name} has been cancelled.`;
+    }
+    if (notifTitle && notifMsg) {
+      const userNotification = new Notification({
+        userId: booking.userId,
+        title: notifTitle,
+        message: notifMsg,
+        type: status === 'approved' ? 'success' : 'error',
+        metadata: {
+          bookingId: booking._id,
+          computerId: booking.computerId._id,
+          computerName: booking.computerId.name
+        }
+      });
+      await userNotification.save();
     }
 
     res.json(booking);

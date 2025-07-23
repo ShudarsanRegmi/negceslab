@@ -46,13 +46,7 @@ class BookingExpirationService {
 
       // Update status to completed for expired bookings
       for (const booking of expiredBookings) {
-        booking.status = 'completed';
-        await booking.save();
-
-        // Free up the computer
-        await Computer.findByIdAndUpdate(booking.computerId, {
-          status: 'available'
-        });
+        await this.handleExpiredBooking(booking);
       }
 
       console.log(`Updated ${expiredBookings.length} expired bookings`);
@@ -67,11 +61,16 @@ class BookingExpirationService {
       booking.status = "completed";
       await booking.save();
 
-      // Update computer status to available
-      const computer = booking.computerId;
+      // Always fetch the computer document by ID and update its status
+      const computer = await Computer.findById(booking.computerId);
       if (computer && computer.status === "booked") {
         computer.status = "available";
         await computer.save();
+        console.log(`Computer ${computer.name} (${computer._id}) status updated to: ${computer.status}`);
+      } else if (computer) {
+        console.log(`Computer ${computer.name} (${computer._id}) was not booked, current status: ${computer.status}`);
+      } else {
+        console.log(`Computer with ID ${booking.computerId} not found.`);
       }
 
       // Send notifications
