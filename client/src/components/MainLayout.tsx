@@ -12,11 +12,22 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
+  Avatar,
+  Menu,
+  MenuItem,
+  Divider,
 } from "@mui/material";
-import ComputerIcon from "@mui/icons-material/Computer";
-import MenuIcon from "@mui/icons-material/Menu";
+import {
+  Computer as ComputerIcon,
+  Menu as MenuIcon,
+  Person,
+  Settings,
+  Logout,
+  AccountCircle,
+} from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuth } from "../contexts/AuthContext";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -30,10 +41,41 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const { currentUser, userRole, logout } = useAuth();
+
+  const handleUserMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setUserMenuAnchor(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setUserMenuAnchor(null);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/login");
+    } catch (error) {
+      console.error("Failed to log out:", error);
+    }
+  };
+
+  const getUserInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getUserDisplayName = () => {
+    return currentUser?.displayName || currentUser?.email?.split("@")[0] || "User";
+  };
 
   return (
     <Box>
-      {/* No transition on the whole navbar, only on navitems and logo */}
       <AppBar
         position="fixed"
         elevation={0}
@@ -84,7 +126,13 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
             </Stack>
           </div>
           {/* Desktop Nav */}
-          <Box sx={{ display: { xs: "none", md: "flex" }, gap: 2 }}>
+          <Box
+            sx={{
+              display: { xs: "none", md: "flex" },
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
             {navLinks.map((link) => (
               <Button
                 key={link.label}
@@ -110,26 +158,143 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 {link.label}
               </Button>
             ))}
-            {/* Login/Sign Up buttons */}
-            <Button
-              color="primary"
-              variant="outlined"
-              onClick={() => navigate('/login')}
-              sx={{ ml: 2, fontWeight: 600 }}
-            >
-              Login
-            </Button>
-            <Button
-              color="primary"
-              variant="contained"
-              onClick={() => navigate('/register')}
-              sx={{ ml: 1, fontWeight: 600 }}
-            >
-              Sign Up
-            </Button>
+            {/* User Profile or Login/Sign Up buttons */}
+            {currentUser ? (
+              <>
+                <Button
+                  onClick={handleUserMenuClick}
+                  sx={{
+                    ml: 2,
+                    color: "inherit",
+                    textTransform: "none",
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    "&:hover": {
+                      background: "linear-gradient(90deg, rgba(37,99,235,0.08) 0%, rgba(29,233,182,0.08) 100%)",
+                    },
+                  }}
+                >
+                  <Avatar
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      background: "linear-gradient(135deg, #2563eb 0%, #1de9b6 100%)",
+                    }}
+                  >
+                    {currentUser.displayName ? (
+                      getUserInitials(currentUser.displayName)
+                    ) : (
+                      <Person />
+                    )}
+                  </Avatar>
+                  <Box sx={{ textAlign: "left" }}>
+                    <Typography
+                      variant="body2"
+                      fontWeight="bold"
+                      color="inherit"
+                      noWrap
+                    >
+                      {getUserDisplayName()}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      noWrap
+                    >
+                      {userRole === "admin" ? "Administrator" : "User"}
+                    </Typography>
+                  </Box>
+                </Button>
+                <Menu
+                  anchorEl={userMenuAnchor}
+                  open={Boolean(userMenuAnchor)}
+                  onClose={handleUserMenuClose}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      minWidth: 200,
+                      boxShadow:
+                        "0 8px 32px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.08)",
+                      borderRadius: 2,
+                      border: "1px solid rgba(0,0,0,0.08)",
+                    },
+                  }}
+                  transformOrigin={{ horizontal: "right", vertical: "top" }}
+                  anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+                >
+                  <MenuItem
+                    onClick={() => {
+                      handleUserMenuClose();
+                      navigate("/profile");
+                    }}
+                  >
+                    <AccountCircle sx={{ mr: 1 }} />
+                    Profile
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      handleUserMenuClose();
+                      navigate("/settings");
+                    }}
+                  >
+                    <Settings sx={{ mr: 1 }} />
+                    Settings
+                  </MenuItem>
+                  <Divider />
+                  <MenuItem
+                    onClick={() => {
+                      handleUserMenuClose();
+                      handleLogout();
+                    }}
+                  >
+                    <Logout sx={{ mr: 1 }} />
+                    Sign out
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
+              <>
+                <Button
+                  color="primary"
+                  variant="outlined"
+                  onClick={() => navigate("/login")}
+                  sx={{
+                    ml: 2,
+                    fontWeight: 600,
+                    borderWidth: 2,
+                    "&:hover": {
+                      borderWidth: 2,
+                      transform: "translateY(-2px)",
+                    },
+                  }}
+                >
+                  Login
+                </Button>
+                <Button
+                  color="primary"
+                  variant="contained"
+                  onClick={() => navigate("/register")}
+                  sx={{
+                    ml: 1,
+                    fontWeight: 600,
+                    background: "linear-gradient(90deg, #2563eb 0%, #1de9b6 100%)",
+                    "&:hover": {
+                      background: "linear-gradient(90deg, #1d4ed8 0%, #15b995 100%)",
+                      transform: "translateY(-2px)",
+                    },
+                  }}
+                >
+                  Sign Up
+                </Button>
+              </>
+            )}
           </Box>
           {/* Mobile Nav */}
-          <Box sx={{ display: { xs: "flex", md: "none" } }}>
+          <Box sx={{ display: { xs: "block", md: "none" } }}>
             <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
               <IconButton
                 edge="end"
@@ -155,7 +320,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
               }}
             >
               <List>
-                {navLinks.map((link, index) => (
+                {navLinks.map((link) => (
                   <ListItem key={link.label} disablePadding>
                     <ListItemButton
                       onClick={() => {
@@ -189,17 +354,109 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                     </ListItemButton>
                   </ListItem>
                 ))}
-                {/* Login/Sign Up buttons for mobile */}
-                <ListItem disablePadding>
-                  <ListItemButton onClick={() => { setDrawerOpen(false); navigate('/login'); }}>
-                    <ListItemText primary="Login" primaryTypographyProps={{ fontWeight: 600, color: '#2563eb' }} />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton onClick={() => { setDrawerOpen(false); navigate('/register'); }}>
-                    <ListItemText primary="Sign Up" primaryTypographyProps={{ fontWeight: 600, color: '#1de9b6' }} />
-                  </ListItemButton>
-                </ListItem>
+                <Divider sx={{ my: 1 }} />
+                {currentUser ? (
+                  <>
+                    <ListItem>
+                      <Box sx={{ p: 2, width: "100%" }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+                          <Avatar
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              background: "linear-gradient(135deg, #2563eb 0%, #1de9b6 100%)",
+                            }}
+                          >
+                            {currentUser.displayName ? (
+                              getUserInitials(currentUser.displayName)
+                            ) : (
+                              <Person />
+                            )}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle1" fontWeight="bold">
+                              {getUserDisplayName()}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {userRole === "admin" ? "Administrator" : "User"}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          color="primary"
+                          onClick={() => {
+                            setDrawerOpen(false);
+                            navigate("/profile");
+                          }}
+                          sx={{ mb: 1 }}
+                        >
+                          Profile
+                        </Button>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          color="primary"
+                          onClick={() => {
+                            setDrawerOpen(false);
+                            handleLogout();
+                          }}
+                          sx={{
+                            background: "linear-gradient(90deg, #2563eb 0%, #1de9b6 100%)",
+                            "&:hover": {
+                              background: "linear-gradient(90deg, #1d4ed8 0%, #15b995 100%)",
+                            },
+                          }}
+                        >
+                          Sign out
+                        </Button>
+                      </Box>
+                    </ListItem>
+                  </>
+                ) : (
+                  <>
+                    <ListItem>
+                      <Box sx={{ p: 2, width: "100%" }}>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          color="primary"
+                          onClick={() => {
+                            setDrawerOpen(false);
+                            navigate("/login");
+                          }}
+                          sx={{
+                            mb: 1,
+                            borderWidth: 2,
+                            "&:hover": {
+                              borderWidth: 2,
+                            },
+                          }}
+                        >
+                          Login
+                        </Button>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          color="primary"
+                          onClick={() => {
+                            setDrawerOpen(false);
+                            navigate("/register");
+                          }}
+                          sx={{
+                            background: "linear-gradient(90deg, #2563eb 0%, #1de9b6 100%)",
+                            "&:hover": {
+                              background: "linear-gradient(90deg, #1d4ed8 0%, #15b995 100%)",
+                            },
+                          }}
+                        >
+                          Sign Up
+                        </Button>
+                      </Box>
+                    </ListItem>
+                  </>
+                )}
               </List>
             </Drawer>
           </Box>

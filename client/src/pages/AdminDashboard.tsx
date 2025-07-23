@@ -47,7 +47,7 @@ import {
   Block as RevokeIcon,
   Update as ExtendIcon,
 } from "@mui/icons-material";
-import { computersAPI, bookingsAPI } from "../services/api";
+import { computersAPI, bookingsAPI, feedbackAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
 
 interface Computer {
@@ -93,6 +93,19 @@ interface Booking {
   };
   datasetLink?: string;
   bottleneckExplanation?: string;
+}
+
+// Add feedback interface
+interface Feedback {
+  _id: string;
+  fullName: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: 'pending' | 'resolved' | 'in_progress';
+  adminResponse?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -148,6 +161,11 @@ const AdminDashboard: React.FC = () => {
     endDate: null,
   });
 
+  // Add to component state
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -155,14 +173,16 @@ const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [computersRes, bookingsRes, currentBookingsRes] = await Promise.all([
+      const [computersRes, bookingsRes, currentBookingsRes, feedbackRes] = await Promise.all([
         computersAPI.getComputersWithBookings(),
         bookingsAPI.getAllBookings(),
         bookingsAPI.getCurrentBookings(),
+        feedbackAPI.getAllFeedback(),
       ]);
       setComputers(computersRes.data);
       setBookings(bookingsRes.data);
       setCurrentBookings(currentBookingsRes.data);
+      setFeedbacks(feedbackRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
       setError("Failed to load data");
@@ -358,6 +378,7 @@ const AdminDashboard: React.FC = () => {
         <Tab label="Computers" />
         <Tab label="Current Bookings" />
         <Tab label="All Bookings" />
+        <Tab label="Feedback" />
         <Tab label="Notifications" />
       </Tabs>
 
@@ -1003,8 +1024,77 @@ const AdminDashboard: React.FC = () => {
         </Box>
       )}
 
+      {/* Add Feedback Tab */}
+      {activeTab === 4 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Feedback Management
+          </Typography>
+
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Subject</TableCell>
+                  <TableCell>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {feedbacks.map((feedback) => (
+                  <TableRow
+                    key={feedback._id}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      }
+                    }}
+                    onClick={() => {
+                      setSelectedFeedback(feedback);
+                      setFeedbackDialogOpen(true);
+                    }}
+                  >
+                    <TableCell>{new Date(feedback.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Typography>{feedback.fullName}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {feedback.email}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{feedback.subject}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={feedback.status}
+                        color={
+                          feedback.status === 'resolved'
+                            ? 'success'
+                            : feedback.status === 'in_progress'
+                            ? 'warning'
+                            : 'default'
+                        }
+                        size="small"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {feedbacks.length === 0 && (
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+              <Typography variant="body1" color="text.secondary">
+                No feedback submissions found
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      )}
+
       {/* Notifications Tab */}
-      {activeTab === 4 && <AdminNotificationPanel />}
+      {activeTab === 5 && <AdminNotificationPanel />}
 
       {/* Add Computer Dialog */}
       <Dialog
@@ -1488,6 +1578,67 @@ const AdminDashboard: React.FC = () => {
           >
             Extend Booking
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Feedback Dialog */}
+      <Dialog
+        open={feedbackDialogOpen}
+        onClose={() => setFeedbackDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            Feedback Details
+            <Chip
+              label={selectedFeedback?.status}
+              color={
+                selectedFeedback?.status === 'resolved'
+                  ? 'success'
+                  : selectedFeedback?.status === 'in_progress'
+                  ? 'warning'
+                  : 'default'
+              }
+              size="small"
+            />
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedFeedback && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  User Information
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography><strong>Name:</strong> {selectedFeedback.fullName}</Typography>
+                  <Typography><strong>Email:</strong> {selectedFeedback.email}</Typography>
+                  <Typography><strong>Subject:</strong> {selectedFeedback.subject}</Typography>
+                  <Typography><strong>Submitted:</strong> {new Date(selectedFeedback.createdAt).toLocaleString()}</Typography>
+                </Box>
+              </Paper>
+
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Feedback Message
+                </Typography>
+                <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedFeedback.message}</Typography>
+              </Paper>
+
+              {selectedFeedback.adminResponse && (
+                <Paper sx={{ p: 2 }}>
+                  <Typography variant="h6" gutterBottom color="primary">
+                    Admin Response
+                  </Typography>
+                  <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedFeedback.adminResponse}</Typography>
+                </Paper>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFeedbackDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 
