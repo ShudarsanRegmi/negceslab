@@ -154,6 +154,36 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
+    // Lab hours/time validation
+    // Parse times as minutes since midnight
+    function parseTimeToMinutes(timeStr) {
+      const [h, m] = timeStr.split(":").map(Number);
+      return h * 60 + m;
+    }
+    const minLabMinutes = 8 * 60 + 30; // 8:30
+    const maxLabMinutes = 17 * 60 + 30; // 17:30
+    const startMinutes = parseTimeToMinutes(startTime);
+    const endMinutes = parseTimeToMinutes(endTime);
+    // Check lab hours
+    if (startMinutes < minLabMinutes) {
+      return res.status(400).json({ message: 'Start time must be at or after 8:30 AM.' });
+    }
+    if (endMinutes > maxLabMinutes) {
+      return res.status(400).json({ message: 'End time must be at or before 5:30 PM.' });
+    }
+    if (endMinutes <= startMinutes) {
+      return res.status(400).json({ message: 'End time must be after start time.' });
+    }
+    // Prevent booking in the past (for today)
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    if (startDate === todayStr) {
+      const nowMinutes = today.getHours() * 60 + today.getMinutes();
+      if (startMinutes < nowMinutes) {
+        return res.status(400).json({ message: 'Start time must not be in the past.' });
+      }
+    }
+
     // Create booking
     const booking = new Booking({
       userId: req.user.firebaseUid,
