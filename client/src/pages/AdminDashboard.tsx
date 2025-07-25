@@ -508,75 +508,73 @@ const AdminDashboard: React.FC = () => {
 
           {isMobile ? (
             <List>
-              {computers.map((computer) => (
-                <React.Fragment key={computer._id}>
-                  <ListItem>
-                    <ListItemText
-                      primary={computer.name}
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            {computer.location}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {computer.specifications}
-                          </Typography>
-                          <Chip
-                            label={computer.status}
-                            color={
-                              getComputerStatusColor(computer.status) as any
-                            }
-                            size="small"
-                            sx={{ mt: 1 }}
-                          />
-                          {computer.status === "booked" &&
-                            computer.nextAvailable && (
+              {computers.map((computer) => {
+                const bookingCount = bookings.filter(b => b.computerId._id === computer._id).length;
+                return (
+                  <React.Fragment key={computer._id}>
+                    <ListItem>
+                      <ListItemText
+                        primary={computer.name}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {computer.location}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {computer.specifications}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                              Bookings: {bookingCount}
+                            </Typography>
+                            {computer.status === "booked" &&
+                              computer.nextAvailable && (
+                                <Typography
+                                  variant="caption"
+                                  color="error"
+                                  display="block"
+                                  sx={{ mt: 1 }}
+                                >
+                                  Booked until {computer.nextAvailable} on{" "}
+                                  {computer.nextAvailableDate}
+                                </Typography>
+                              )}
+                            {computer.status === "maintenance" && (
                               <Typography
                                 variant="caption"
-                                color="error"
+                                color="warning.main"
                                 display="block"
                                 sx={{ mt: 1 }}
                               >
-                                Booked until {computer.nextAvailable} on{" "}
-                                {computer.nextAvailableDate}
+                                Under maintenance
                               </Typography>
                             )}
-                          {computer.status === "maintenance" && (
-                            <Typography
-                              variant="caption"
-                              color="warning.main"
-                              display="block"
-                              sx={{ mt: 1 }}
-                            >
-                              Under maintenance
-                            </Typography>
-                          )}
-                          {computer.status === "available" && (
-                            <Typography
-                              variant="caption"
-                              color="success.main"
-                              display="block"
-                              sx={{ mt: 1 }}
-                            >
-                              Available now
-                            </Typography>
-                          )}
-                        </Box>
-                      }
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        color="error"
-                        onClick={() => handleDeleteComputer(computer._id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  <Divider />
-                </React.Fragment>
-              ))}
+                            {computer.status === "available" && (
+                              <Typography
+                                variant="caption"
+                                color="success.main"
+                                display="block"
+                                sx={{ mt: 1 }}
+                              >
+                                Available now
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          color="error"
+                          onClick={() => handleDeleteComputer(computer._id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                );
+              })}
             </List>
           ) : (
             <TableContainer component={Paper}>
@@ -585,61 +583,33 @@ const AdminDashboard: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Location</TableCell>
-                    <TableCell>Status</TableCell>
                     <TableCell>Booking Info</TableCell>
                     <TableCell>Specifications</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {computers.map((computer) => (
-                    <TableRow key={computer._id}>
-                      <TableCell>{computer.name}</TableCell>
-                      <TableCell>{computer.location}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={computer.status}
-                          color={getComputerStatusColor(computer.status) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {computer.status === "booked" &&
-                          computer.nextAvailable && (
-                            <Box>
-                              <Typography variant="body2" color="error">
-                                Booked until {computer.nextAvailable}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                Date: {computer.nextAvailableDate}
-                              </Typography>
-                            </Box>
-                          )}
-                        {computer.status === "maintenance" && (
-                          <Typography variant="body2" color="warning.main">
-                            Under maintenance
-                          </Typography>
-                        )}
-                        {computer.status === "available" && (
-                          <Typography variant="body2" color="success.main">
-                            Available now
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>{computer.specifications}</TableCell>
-                      <TableCell>
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDeleteComputer(computer._id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {computers.map((computer) => {
+                    const bookingCount = bookings.filter(b => b.computerId._id === computer._id).length;
+                    return (
+                      <TableRow key={computer._id}>
+                        <TableCell>{computer.name}</TableCell>
+                        <TableCell>{computer.location}</TableCell>
+                        <TableCell>
+                          Bookings: {bookingCount}
+                        </TableCell>
+                        <TableCell>{computer.specifications}</TableCell>
+                        <TableCell>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteComputer(computer._id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
