@@ -150,6 +150,13 @@ const AdminDashboard: React.FC = () => {
     endDate: "",
   });
 
+  // Filter current bookings: only approved and not expired
+  const filteredCurrentBookings = currentBookings.filter(
+    (booking) =>
+      booking.status === "approved" &&
+      new Date(booking.endDate) >= new Date(new Date().toDateString())
+  );
+
   // Add new state variables at the top of the component
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -346,6 +353,19 @@ const AdminDashboard: React.FC = () => {
       booking.reason.toLowerCase().includes(searchLower)
     );
   });
+
+  // Helper functions to get user name and email from booking
+  const getBookingUserName = (booking: any) =>
+    booking.userInfo?.name || booking.user?.name || "Unknown User";
+  const getBookingUserEmail = (booking: any) =>
+    booking.userInfo?.email || booking.user?.email || booking.userId;
+
+  // Helper to format booking date range
+  const formatBookingDateRange = (start: string, end: string) => {
+    if (!start) return '';
+    // Always show both dates, even if they are the same
+    return `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`;
+  };
 
   if (loading) {
     return <Typography>Loading...</Typography>;
@@ -636,7 +656,7 @@ const AdminDashboard: React.FC = () => {
 
           {isMobile ? (
             <List>
-              {currentBookings.map((booking) => (
+              {filteredCurrentBookings.map((booking) => (
                 <React.Fragment key={booking._id}>
                   <ListItem
                     onClick={() => handleViewDetails(booking)}
@@ -656,16 +676,13 @@ const AdminDashboard: React.FC = () => {
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.secondary">
-                            User: {booking.userInfo?.name || "Unknown User"}
+                            User: {getBookingUserName(booking)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Email: {booking.userInfo?.email}
+                            Email: {getBookingUserEmail(booking)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Date: {new Date(booking.startDate).toLocaleDateString()}
-                            {booking.endDate !== booking.startDate && (
-                              <> - {new Date(booking.endDate).toLocaleDateString()}</>
-                            )}
+                            Date: {formatBookingDateRange(booking.startDate, booking.endDate)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             Time: {booking.startTime} - {booking.endTime}
@@ -720,7 +737,7 @@ const AdminDashboard: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {currentBookings.map((booking) => (
+                  {filteredCurrentBookings.map((booking) => (
                     <TableRow
                       key={booking._id}
                       onClick={() => handleViewDetails(booking)}
@@ -733,16 +750,13 @@ const AdminDashboard: React.FC = () => {
                     >
                       <TableCell>{booking.computerId?.name}</TableCell>
                       <TableCell>
-                        <Typography>{booking.userInfo?.name}</Typography>
+                        <Typography>{getBookingUserName(booking)}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {booking.userInfo?.email}
+                          {getBookingUserEmail(booking)}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {new Date(booking.startDate).toLocaleDateString()}
-                        {booking.endDate !== booking.startDate && (
-                          <><br />{new Date(booking.endDate).toLocaleDateString()}</>
-                        )}
+                        {formatBookingDateRange(booking.startDate, booking.endDate)}
                       </TableCell>
                       <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
                       <TableCell>{booking.reason}</TableCell>
@@ -776,7 +790,7 @@ const AdminDashboard: React.FC = () => {
             </TableContainer>
           )}
 
-          {currentBookings.length === 0 && (
+          {filteredCurrentBookings.length === 0 && (
             <Box sx={{ textAlign: 'center', py: 2 }}>
               <Typography variant="body1" color="text.secondary">
                 No current bookings found
@@ -887,13 +901,13 @@ const AdminDashboard: React.FC = () => {
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.secondary">
-                            User: {booking.userInfo?.name || "Unknown User"}
+                            User: {getBookingUserName(booking)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Email: {booking.userInfo?.email || booking.userId}
+                            Email: {getBookingUserEmail(booking)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Date: {new Date(booking.startDate).toLocaleDateString()}
+                            Date: {formatBookingDateRange(booking.startDate, booking.endDate)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             Time: {booking.startTime} - {booking.endTime}
@@ -967,10 +981,10 @@ const AdminDashboard: React.FC = () => {
                         }
                       }}
                     >
-                      <TableCell>{booking.userInfo?.name || "Unknown User"}</TableCell>
-                      <TableCell>{booking.userInfo?.email || booking.userId}</TableCell>
+                      <TableCell>{getBookingUserName(booking)}</TableCell>
+                      <TableCell>{getBookingUserEmail(booking)}</TableCell>
                       <TableCell>{booking.computerId?.name || "Unknown Computer"}</TableCell>
-                      <TableCell>{new Date(booking.startDate).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatBookingDateRange(booking.startDate, booking.endDate)}</TableCell>
                       <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
                       <TableCell>
                         <Chip
@@ -1210,9 +1224,7 @@ const AdminDashboard: React.FC = () => {
                 </Typography>
                 {/* Booking Date */}
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Booking Date:</strong> {selectedBooking.endDate && selectedBooking.endDate !== selectedBooking.startDate
-                    ? `${new Date(selectedBooking.startDate).toLocaleDateString()} - ${new Date(selectedBooking.endDate).toLocaleDateString()}`
-                    : new Date(selectedBooking.startDate).toLocaleDateString()}
+                  <strong>Booking Date:</strong> {formatBookingDateRange(selectedBooking.startDate, selectedBooking.endDate)}
                 </Typography>
                 {/* Booking Time */}
                 <Typography variant="body2" color="text.secondary">
@@ -1308,7 +1320,7 @@ const AdminDashboard: React.FC = () => {
                       Name
                     </Typography>
                     <Typography variant="body1">
-                      {selectedBookingDetails.userInfo?.name || "Unknown User"}
+                      {getBookingUserName(selectedBookingDetails)}
                     </Typography>
                   </Box>
                   <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)' } }}>
@@ -1316,7 +1328,7 @@ const AdminDashboard: React.FC = () => {
                       Email
                     </Typography>
                     <Typography variant="body1">
-                      {selectedBookingDetails.userInfo?.email || selectedBookingDetails.userId}
+                      {getBookingUserEmail(selectedBookingDetails)}
                     </Typography>
                   </Box>
                 </Box>
@@ -1366,7 +1378,7 @@ const AdminDashboard: React.FC = () => {
                       Date
                     </Typography>
                     <Typography variant="body1">
-                      {new Date(selectedBookingDetails.startDate).toLocaleDateString()}
+                      {formatBookingDateRange(selectedBookingDetails.startDate, selectedBookingDetails.endDate)}
                     </Typography>
                   </Box>
                   <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)' } }}>
