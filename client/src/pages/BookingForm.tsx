@@ -106,6 +106,7 @@ const BookingForm: React.FC = (): ReactElement => {
   const [timeSlotError, setTimeSlotError] = useState<string | null>(null);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([]);
+  const [timeValidationError, setTimeValidationError] = useState<string | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -113,6 +114,53 @@ const BookingForm: React.FC = (): ReactElement => {
   const shouldDisableDate = (date: Date) => {
     return getDay(date) === 0; // 0 = Sunday
   };
+
+  // Helper: check if time is within lab hours
+  const isWithinLabHours = (time: Date | null, isStart: boolean) => {
+    if (!time) return false;
+    const minutes = time.getHours() * 60 + time.getMinutes();
+    const min = 8 * 60 + 30; // 8:30
+    const max = 17 * 60 + 30; // 17:30
+    if (isStart) return minutes >= min && minutes < max;
+    return minutes > min && minutes <= max;
+  };
+
+  // Real-time validation for time pickers
+  useEffect(() => {
+    if (!startTime || !endTime || !startDate) {
+      setTimeValidationError(null);
+      return;
+    }
+    const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
+    const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
+    const min = 8 * 60 + 30;
+    const max = 17 * 60 + 30;
+    const today = new Date();
+    const isToday = startDate &&
+      startDate.getFullYear() === today.getFullYear() &&
+      startDate.getMonth() === today.getMonth() &&
+      startDate.getDate() === today.getDate();
+    if (isToday) {
+      const nowMinutes = today.getHours() * 60 + today.getMinutes();
+      if (startMinutes < nowMinutes) {
+        setTimeValidationError('Start time must not be in the past.');
+        return;
+      }
+    }
+    if (startMinutes < min) {
+      setTimeValidationError('Start time must be at or after 8:30 AM.');
+      return;
+    }
+    if (endMinutes > max) {
+      setTimeValidationError('End time must be at or before 5:30 PM.');
+      return;
+    }
+    if (endMinutes <= startMinutes) {
+      setTimeValidationError('End time must be after start time.');
+      return;
+    }
+    setTimeValidationError(null);
+  }, [startTime, endTime, startDate]);
 
   useEffect(() => {
     fetchComputers();
@@ -165,6 +213,10 @@ const BookingForm: React.FC = (): ReactElement => {
 
   const handleNext = () => {
     if (activeStep === 1) { // Time slot selection step
+      if (timeValidationError) {
+        setError(timeValidationError);
+        return;
+      }
       const selectedComp = computers.find(c => c._id === selectedComputer);
       if (selectedComp) {
         const conflicts = checkTimeSlotConflicts(selectedComp);
@@ -508,6 +560,11 @@ const BookingForm: React.FC = (): ReactElement => {
             </Typography>
 
             {/* Booking Guidelines */}
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Lab bookings are allowed only between 8:30 AM and 5:30 PM.</strong> Please select your desired time range within these hours.
+              </Typography>
+            </Alert>
             <Alert severity="info" sx={{ mb: 3 }}>
               <Typography variant="body2">
                 <strong>Booking Guidelines:</strong>
@@ -580,6 +637,12 @@ const BookingForm: React.FC = (): ReactElement => {
                 }}
               />
             </Box>
+
+            {timeValidationError && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {timeValidationError}
+              </Alert>
+            )}
 
             {/* Duration Display */}
             {startDate && endDate && startTime && endTime && (
