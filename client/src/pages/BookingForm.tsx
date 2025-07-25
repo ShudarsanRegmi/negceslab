@@ -107,6 +107,7 @@ const BookingForm: React.FC = (): ReactElement => {
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([]);
   const [timeValidationError, setTimeValidationError] = useState<string | null>(null);
+  const [fullDay, setFullDay] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -123,6 +124,20 @@ const BookingForm: React.FC = (): ReactElement => {
     const max = 17 * 60 + 30; // 17:30
     if (isStart) return minutes >= min && minutes < max;
     return minutes > min && minutes <= max;
+  };
+
+  // Helper: check if date range includes a Sunday
+  const rangeIncludesSunday = (start: Date | null, end: Date | null) => {
+    if (!start || !end) return false;
+    let d = new Date(start);
+    d.setHours(0,0,0,0);
+    const endD = new Date(end);
+    endD.setHours(0,0,0,0);
+    while (d <= endD) {
+      if (d.getDay() === 0) return true;
+      d.setDate(d.getDate() + 1);
+    }
+    return false;
   };
 
   // Real-time validation for time pickers
@@ -165,6 +180,18 @@ const BookingForm: React.FC = (): ReactElement => {
   useEffect(() => {
     fetchComputers();
   }, []);
+
+  useEffect(() => {
+    // If full day is checked, set times automatically
+    if (fullDay) {
+      const start = new Date();
+      start.setHours(8, 30, 0, 0);
+      const end = new Date();
+      end.setHours(17, 30, 0, 0);
+      setStartTime(start);
+      setEndTime(end);
+    }
+  }, [fullDay, startDate, endDate]);
 
   const fetchComputers = async () => {
     try {
@@ -576,6 +603,12 @@ const BookingForm: React.FC = (): ReactElement => {
               </Typography>
             </Alert>
 
+            {rangeIncludesSunday(startDate, endDate) && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Remember: Lab will be closed on Sundays within your selected range.
+              </Alert>
+            )}
+
             <Box
               sx={{
                 display: "grid",
@@ -613,10 +646,28 @@ const BookingForm: React.FC = (): ReactElement => {
                 shouldDisableDate={shouldDisableDate}
               />
 
+
+<Box sx={{ mb: 2 }}>
+              <FormControl>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={fullDay}
+                    onChange={e => setFullDay(e.target.checked)}
+                    style={{ accentColor: '#1976d2', width: 18, height: 18 }}
+                  />
+                  Book full lab day (8:30 AM to 5:30 PM)
+                </label>
+              </FormControl>
+            </Box>
+
+            <br/>
+
               <TimePicker
                 label="Start Time"
                 value={startTime}
                 onChange={(newValue) => setStartTime(newValue)}
+                disabled={fullDay}
                 slotProps={{
                   textField: {
                     fullWidth: true,
@@ -629,6 +680,7 @@ const BookingForm: React.FC = (): ReactElement => {
                 label="End Time"
                 value={endTime}
                 onChange={(newValue) => setEndTime(newValue)}
+                disabled={fullDay}
                 slotProps={{
                   textField: {
                     fullWidth: true,
