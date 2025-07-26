@@ -247,7 +247,7 @@ router.post('/', verifyToken, async (req, res) => {
     const adminNotifications = admins.map(admin => new Notification({
       userId: admin.firebaseUid,
       title: 'New Booking Request',
-      message: `A new booking (ID: ${userBookingId}) has been made for computer ${computer.name} by user ${req.user.firebaseUid}.`,
+      message: `A new booking (ID: ${userBookingId}) has been made for computer ${computer.name} by user ${req.user.name}(${req.user.email}).`,
       type: 'info',
       metadata: {
         bookingId: userBookingId,
