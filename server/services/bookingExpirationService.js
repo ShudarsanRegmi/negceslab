@@ -1,142 +1,96 @@
-const Computer = require("../models/computer");
-const Booking = require("../models/booking");
-const Notification = require("../models/notification");
-const User = require("../models/user");
+const Booking = require('../models/booking');
+const User = require('../models/user');
+const { sendBookingExpiredEmail } = require('./emailService');
 
-class BookingExpirationService {
-  constructor() {
-    this.checkInterval = null;
-    this.initializeService();
-  }
+// Function to check and handle expired bookings
+const checkExpiredBookings = async () => {
+  try {
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0];
+    const currentTime = now.toLocaleTimeString('en-US', { 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
 
-  initializeService() {
-    // Check for expired bookings every minute
-    this.checkInterval = setInterval(() => {
-      this.checkExpiredBookings();
-    }, 60000); // 60 seconds
-
-    console.log("Booking expiration service initialized");
-  }
-
-  async checkExpiredBookings() {
-    try {
-      const currentDate = new Date().toISOString().split('T')[0];
-      const currentTime = new Date().toLocaleTimeString('en-US', { 
-        hour12: false, 
-        hour: '2-digit', 
-        minute: '2-digit'
-      });
-
-      // Find bookings that have ended
-      const expiredBookings = await Booking.find({
-        status: 'approved',
-        $or: [
-          // Single day bookings that have ended
-          {
-            startDate: currentDate,
-            endDate: currentDate,
-            endTime: { $lt: currentTime }
-          },
-          // Multi-day bookings that have ended
-          {
-            endDate: { $lt: currentDate }
-          }
-        ]
-      });
-
-      // Update status to completed for expired bookings
-      for (const booking of expiredBookings) {
-        await this.handleExpiredBooking(booking);
-      }
-
-      console.log(`Updated ${expiredBookings.length} expired bookings`);
-    } catch (error) {
-      console.error('Error in booking expiration service:', error);
-    }
-  }
-
-  async handleExpiredBooking(booking) {
-    try {
-      // Update booking status to completed
-      booking.status = "completed";
-      await booking.save();
-
-      // Always fetch the computer document by ID and update its status
-      const computer = await Computer.findById(booking.computerId);
-      if (computer && computer.status === "booked") {
-        computer.status = "available";
-        await computer.save();
-        console.log(`Computer ${computer.name} (${computer._id}) status updated to: ${computer.status}`);
-      } else if (computer) {
-        console.log(`Computer ${computer.name} (${computer._id}) was not booked, current status: ${computer.status}`);
-      } else {
-        console.log(`Computer with ID ${booking.computerId} not found.`);
-      }
-
-      // Send notifications, passing the computer object
-      await this.sendExpirationNotifications(booking, computer);
-
-      console.log(`Booking ${booking._id} expired and processed`);
-    } catch (error) {
-      console.error("Error handling expired booking:", error);
-    }
-  }
-
-  async sendExpirationNotifications(booking, computer) {
-    try {
-      const computerName = computer ? computer.name : 'Unknown Computer';
-      const computerId = computer ? computer._id : booking.computerId;
-      const userBookingId = booking._id.toString().slice(-6).toUpperCase();
-      // Notification for user
-      const userNotification = new Notification({
-        userId: booking.userId,
-        title: "Booking Session Ended",
-        message: `Your booking for ${computerName} (ID: ${userBookingId}) has ended. The computer is now available for other users.`,
-        type: "info",
-        metadata: {
-          bookingId: userBookingId,
-          computerId: computerId,
-          computerName: computerName,
+    // Find approved bookings that have expired
+    const expiredBookings = await Booking.find({
+      status: 'approved',
+      $or: [
+        // Single day bookings that have ended
+        {
+          startDate: { $lt: currentDate }
         },
-      });
-      await userNotification.save();
+        // Multi-day bookings that have ended
+        {
+          endDate: { $lt: currentDate }
+        },
+        // Same day bookings that have ended
+        {
+          startDate: currentDate,
+          endDate: currentDate,
+          endTime: { $lt: currentTime }
+        }
+      ]
+    }).populate('computerId');
 
-      // Notification for all admins
-      const adminUsers = await User.find({ role: "admin" });
-      for (const admin of adminUsers) {
-        const adminNotification = new Notification({
-          userId: admin._id,
-          title: "Computer Available",
-          message: `Computer ${computerName} (ID: ${userBookingId}) is now available after booking session ended.`,
-          type: "success",
-          metadata: {
-            bookingId: userBookingId,
-            computerId: computerId,
-            computerName: computerName,
-            userId: booking.userId,
-          },
-        });
-        await adminNotification.save();
+    console.log(`Found ${expiredBookings.length} expired bookings`);
+
+    // Process each expired booking
+    for (const booking of expiredBookings) {
+      try {
+        // Update booking status to expired (you might want to add 'expired' to your status enum)
+        booking.status = 'cancelled'; // Using cancelled as expired for now
+        await booking.save();
+
+        // Send email notification
+        console.log('Looking for user with firebaseUid:', booking.userId);
+        const user = await User.findOne({ firebaseUid: booking.userId });
+        console.log('Found user for expiration:', user ? { name: user.name, email: user.email } : 'Not found');
+        
+        if (user && user.email) {
+          const userName = user.name || 'User';
+          const computerName = booking.computerId.name;
+          const startDate = new Date(booking.startDate).toLocaleDateString();
+          const endDate = new Date(booking.endDate).toLocaleDateString();
+          
+          console.log('Sending expiration email to:', user.email);
+          
+          await sendBookingExpiredEmail(
+            user.email,
+            userName,
+            computerName,
+            startDate,
+            endDate,
+            booking.startTime,
+            booking.endTime
+          );
+          
+          console.log(`Expired booking email sent to ${user.email}`);
+        } else {
+          console.log('User not found or no email for expiration, firebaseUid:', booking.userId);
+        }
+      } catch (error) {
+        console.error(`Error processing expired booking ${booking._id}:`, error);
       }
-
-      console.log(`Notifications sent for expired booking ${booking._id}`);
-    } catch (error) {
-      console.error("Error sending expiration notifications:", error);
     }
+  } catch (error) {
+    console.error('Error checking expired bookings:', error);
   }
+};
 
-  // Manual method to check and process expired bookings (for testing)
-  async processExpiredBookings() {
-    await this.checkExpiredBookings();
-  }
+// Function to start the expiration service
+const startExpirationService = () => {
+  // Check for expired bookings every hour
+  setInterval(checkExpiredBookings, 60 * 60 * 1000);
+  
+  // Also check immediately when service starts
+  checkExpiredBookings();
+  
+  console.log('Booking expiration service started');
+};
 
-  // Cleanup method
-  stop() {
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval);
-      this.checkInterval = null;
-    }
-  }
-}
-
-module.exports = BookingExpirationService;
+module.exports = {
+  checkExpiredBookings,
+  startExpirationService
+};

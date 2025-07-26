@@ -6,6 +6,11 @@ const User = require('../models/user');
 const Notification = require('../models/notification');
 const { verifyToken } = require('../middleware/auth');
 const policy = require('../../shared/policy');
+const { 
+  sendBookingApprovedEmail, 
+  sendBookingRejectedEmail, 
+  sendBookingCancelledEmail 
+} = require('../services/emailService');
 
 // Get all bookings (admin) or user's bookings
 router.get('/', verifyToken, async (req, res) => {
@@ -339,6 +344,60 @@ router.put('/:id/status', verifyToken, async (req, res) => {
       await userNotification.save();
     }
 
+    // Send email notification
+    try {
+      console.log('Looking for user with firebaseUid:', booking.userId);
+      const user = await User.findOne({ firebaseUid: booking.userId });
+      console.log('Found user:', user ? { name: user.name, email: user.email } : 'Not found');
+      
+      if (user && user.email) {
+        const userName = user.name || 'User';
+        const computerName = booking.computerId.name;
+        const startDate = new Date(booking.startDate).toLocaleDateString();
+        const endDate = new Date(booking.endDate).toLocaleDateString();
+        
+        console.log('Sending email to:', user.email);
+        
+        if (status === 'approved') {
+          await sendBookingApprovedEmail(
+            user.email, 
+            userName, 
+            computerName, 
+            startDate, 
+            endDate, 
+            booking.startTime, 
+            booking.endTime
+          );
+        } else if (status === 'rejected') {
+          await sendBookingRejectedEmail(
+            user.email, 
+            userName, 
+            computerName, 
+            startDate, 
+            endDate, 
+            booking.startTime, 
+            booking.endTime, 
+            rejectionReason
+          );
+        } else if (status === 'cancelled') {
+          await sendBookingCancelledEmail(
+            user.email, 
+            userName, 
+            computerName, 
+            startDate, 
+            endDate, 
+            booking.startTime, 
+            booking.endTime
+          );
+        }
+      } else {
+        console.log('User not found or no email for firebaseUid:', booking.userId);
+      }
+    } catch (emailError) {
+      console.error('Error sending email notification:', emailError);
+      // Don't fail the request if email fails
+    }
+
     res.json(booking);
   } catch (error) {
     console.error('Error updating booking status:', error);
@@ -391,6 +450,37 @@ router.delete('/:id', verifyToken, async (req, res) => {
       if (adminNotifications.length > 0) {
         await Notification.insertMany(adminNotifications);
       }
+    }
+
+    // Send email notification for cancellation
+    try {
+      console.log('Looking for user with firebaseUid:', booking.userId);
+      const user = await User.findOne({ firebaseUid: booking.userId });
+      console.log('Found user for cancellation:', user ? { name: user.name, email: user.email } : 'Not found');
+      
+      if (user && user.email) {
+        const userName = user.name || 'User';
+        const computerName = booking.computerId.name || 'Computer';
+        const startDate = new Date(booking.startDate).toLocaleDateString();
+        const endDate = new Date(booking.endDate).toLocaleDateString();
+        
+        console.log('Sending cancellation email to:', user.email);
+        
+        await sendBookingCancelledEmail(
+          user.email, 
+          userName, 
+          computerName, 
+          startDate, 
+          endDate, 
+          booking.startTime, 
+          booking.endTime
+        );
+      } else {
+        console.log('User not found or no email for cancellation, firebaseUid:', booking.userId);
+      }
+    } catch (emailError) {
+      console.error('Error sending cancellation email:', emailError);
+      // Don't fail the request if email fails
     }
 
     // Populate computer and user details before sending response

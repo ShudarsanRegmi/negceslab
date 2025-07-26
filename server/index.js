@@ -37,11 +37,8 @@ mongoose
     console.log("Connected to MongoDB");
 
     // Initialize booking expiration service
-    const BookingExpirationService = require("./services/bookingExpirationService");
-    const bookingExpirationService = new BookingExpirationService();
-
-    // Store service instance for potential cleanup
-    app.locals.bookingExpirationService = bookingExpirationService;
+    const { startExpirationService } = require("./services/bookingExpirationService");
+    startExpirationService();
   })
   .catch((err) => console.error("MongoDB connection error:", err));
 
