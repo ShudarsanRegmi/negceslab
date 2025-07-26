@@ -34,6 +34,7 @@ import {
   ListItemSecondaryAction,
   Divider,
   Link,
+  Skeleton,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -46,6 +47,7 @@ import {
   Edit as EditIcon,
   Block as RevokeIcon,
   Update as ExtendIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { computersAPI, bookingsAPI, feedbackAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
@@ -367,10 +369,6 @@ const AdminDashboard: React.FC = () => {
     return `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`;
   };
 
-  if (loading) {
-    return <Typography>Loading...</Typography>;
-  }
-
   if (error) {
     return <Alert severity="error">{error}</Alert>;
   }
@@ -405,6 +403,19 @@ const AdminDashboard: React.FC = () => {
       {/* Overview Tab */}
       {activeTab === 0 && (
         <Box>
+          {/* Header with reload button */}
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+            <Typography variant="h6">Dashboard Overview</Typography>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchData}
+              disabled={loading}
+            >
+              {loading ? "Refreshing..." : "Refresh Data"}
+            </Button>
+          </Box>
+          
           {/* Summary Cards */}
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, mb: 4 }}>
             {/* Pending Approvals */}
@@ -496,14 +507,25 @@ const AdminDashboard: React.FC = () => {
             }}
           >
             <Typography variant="h6">Computer Management</Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setComputerDialogOpen(true)}
-              fullWidth={isMobile}
-            >
-              Add Computer
-            </Button>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={fetchData}
+                disabled={loading}
+                size="small"
+              >
+                {loading ? "Refreshing..." : "Refresh"}
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setComputerDialogOpen(true)}
+                fullWidth={isMobile}
+              >
+                Add Computer
+              </Button>
+            </Box>
           </Box>
 
           {isMobile ? (
@@ -624,9 +646,18 @@ const AdminDashboard: React.FC = () => {
       {/* Current Bookings Tab */}
       {activeTab === 2 && (
         <Box>
-          <Typography variant="h6" gutterBottom>
-            Current Bookings Management
-          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+            <Typography variant="h6">Current Bookings Management</Typography>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchData}
+              disabled={loading}
+              size="small"
+            >
+              {loading ? "Refreshing..." : "Refresh"}
+            </Button>
+          </Box>
 
           {isMobile ? (
             <List>
@@ -795,6 +826,17 @@ const AdminDashboard: React.FC = () => {
                 Showing {filteredBookings.length} of {bookings.length} bookings
               </Typography>
             </Box>
+
+            {/* Right side - Refresh button */}
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchData}
+              disabled={loading}
+              size="small"
+            >
+              {loading ? "Refreshing..." : "Refresh"}
+            </Button>
 
             {/* Right side - Search and Filters */}
             <Box sx={{ 
@@ -1015,9 +1057,18 @@ const AdminDashboard: React.FC = () => {
       {/* Add Feedback Tab */}
       {activeTab === 4 && (
         <Box>
-          <Typography variant="h6" gutterBottom>
-            Feedback Management
-          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+            <Typography variant="h6">Feedback Management</Typography>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchData}
+              disabled={loading}
+              size="small"
+            >
+              {loading ? "Refreshing..." : "Refresh"}
+            </Button>
+          </Box>
 
           <TableContainer component={Paper}>
             <Table>
