@@ -45,6 +45,17 @@ import { computersAPI, bookingsAPI } from "../services/api";
 import Warning from "@mui/icons-material/Warning";
 import Info from "@mui/icons-material/Info";
 import { alpha } from "@mui/material/styles";
+// Import shared policy constants
+import {
+  LAB_OPEN_HOUR,
+  LAB_OPEN_MINUTE,
+  LAB_CLOSE_HOUR,
+  LAB_CLOSE_MINUTE,
+  MAX_BOOKING_DAYS,
+  MIN_BOOKING_HOURS,
+  CLOSED_DAYS,
+  MAX_BOOKING_AHEAD_DAYS
+} from '../../../shared/policy.js';
 
 interface Computer {
   _id: string;
@@ -102,6 +113,7 @@ const BookingForm: React.FC = (): ReactElement => {
   const [datasetType, setDatasetType] = useState("");
   const [datasetLink, setDatasetLink] = useState("");
   const [datasetSize, setDatasetSize] = useState<number>(0);
+  const [datasetSizeError, setDatasetSizeError] = useState<string | null>(null);
   const [datasetSizeUnit, setDatasetSizeUnit] = useState<string>("GB");
   const [timeSlotError, setTimeSlotError] = useState<string | null>(null);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
@@ -120,21 +132,21 @@ const BookingForm: React.FC = (): ReactElement => {
   const isWithinLabHours = (time: Date | null, isStart: boolean) => {
     if (!time) return false;
     const minutes = time.getHours() * 60 + time.getMinutes();
-    const min = 8 * 60 + 30; // 8:30
-    const max = 17 * 60 + 30; // 17:30
+    const min = LAB_OPEN_HOUR * 60 + LAB_OPEN_MINUTE;
+    const max = LAB_CLOSE_HOUR * 60 + LAB_CLOSE_MINUTE;
     if (isStart) return minutes >= min && minutes < max;
     return minutes > min && minutes <= max;
   };
 
-  // Helper: check if date range includes a Sunday
-  const rangeIncludesSunday = (start: Date | null, end: Date | null) => {
+  // Helper: check if date range includes a closed day
+  const rangeIncludesClosedDay = (start: Date | null, end: Date | null) => {
     if (!start || !end) return false;
     let d = new Date(start);
     d.setHours(0,0,0,0);
     const endD = new Date(end);
     endD.setHours(0,0,0,0);
     while (d <= endD) {
-      if (d.getDay() === 0) return true;
+      if (CLOSED_DAYS.includes(d.getDay())) return true;
       d.setDate(d.getDate() + 1);
     }
     return false;
@@ -148,8 +160,8 @@ const BookingForm: React.FC = (): ReactElement => {
     }
     const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
     const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
-    const min = 8 * 60 + 30;
-    const max = 17 * 60 + 30;
+    const min = LAB_OPEN_HOUR * 60 + LAB_OPEN_MINUTE;
+    const max = LAB_CLOSE_HOUR * 60 + LAB_CLOSE_MINUTE;
     const today = new Date();
     const isToday = startDate &&
       startDate.getFullYear() === today.getFullYear() &&
@@ -163,19 +175,35 @@ const BookingForm: React.FC = (): ReactElement => {
       }
     }
     if (startMinutes < min) {
-      setTimeValidationError('Start time must be at or after 8:30 AM.');
+      setTimeValidationError(`Start time must be at or after ${LAB_OPEN_HOUR}:${LAB_OPEN_MINUTE.toString().padStart(2, '0')}.`);
       return;
     }
     if (endMinutes > max) {
-      setTimeValidationError('End time must be at or before 5:30 PM.');
+      setTimeValidationError(`End time must be at or before ${LAB_CLOSE_HOUR}:${LAB_CLOSE_MINUTE.toString().padStart(2, '0')}.`);
       return;
     }
     if (endMinutes <= startMinutes) {
       setTimeValidationError('End time must be after start time.');
       return;
     }
+    // Minimum booking duration for same-day bookings
+    if (startDate && endDate && startDate.getTime() === endDate.getTime()) {
+      if (endMinutes - startMinutes < MIN_BOOKING_HOURS * 60) {
+        setTimeValidationError(`Minimum booking duration is ${MIN_BOOKING_HOURS} hour(s) for same-day bookings.`);
+        return;
+      }
+    }
     setTimeValidationError(null);
-  }, [startTime, endTime, startDate]);
+  }, [startTime, endTime, startDate, endDate]);
+
+  // Prevent negative dataset size
+  useEffect(() => {
+    if (datasetSize < 0) {
+      setDatasetSizeError('Dataset size cannot be negative');
+    } else {
+      setDatasetSizeError(null);
+    }
+  }, [datasetSize]);
 
   useEffect(() => {
     fetchComputers();
@@ -185,9 +213,9 @@ const BookingForm: React.FC = (): ReactElement => {
     // If full day is checked, set times automatically
     if (fullDay) {
       const start = new Date();
-      start.setHours(8, 30, 0, 0);
+      start.setHours(LAB_OPEN_HOUR, LAB_OPEN_MINUTE, 0, 0);
       const end = new Date();
-      end.setHours(17, 30, 0, 0);
+      end.setHours(LAB_CLOSE_HOUR, LAB_CLOSE_MINUTE, 0, 0);
       setStartTime(start);
       setEndTime(end);
     }
@@ -216,7 +244,7 @@ const BookingForm: React.FC = (): ReactElement => {
     });
 
     const conflicts = selectedComputer.bookings?.filter((booking) => {
-      if (booking.status === "rejected") return false;
+      if (booking.status === "rejected" || booking.status === "cancelled") return false;
 
       const bookingStart = set(parseISO(booking.startDate), {
         hours: parseInt(booking.startTime.split(":")[0]),
@@ -273,9 +301,10 @@ const BookingForm: React.FC = (): ReactElement => {
       !datasetType ||
       !datasetLink.trim() ||
       !bottleneckExplanation.trim() ||
-      !datasetSize
+      !datasetSize ||
+      datasetSize < 0
     ) {
-      setError("Please fill in all required fields");
+      setError("Please fill in all required fields and ensure dataset size is not negative");
       return;
     }
 
@@ -300,8 +329,15 @@ const BookingForm: React.FC = (): ReactElement => {
 
     // Check if duration exceeds 7 days
     const durationInDays = differenceInDays(endDate, startDate) + 1; // +1 to include both start and end dates
-    if (durationInDays > 7) {
-      setError("Booking duration cannot exceed 7 days");
+    if (durationInDays > MAX_BOOKING_DAYS) {
+      setError(`Booking duration cannot exceed ${MAX_BOOKING_DAYS} days`);
+      return;
+    }
+
+    // Check if start date is more than MAX_BOOKING_AHEAD_DAYS ahead
+    const maxBookingDate = addDays(startOfDay(new Date()), MAX_BOOKING_AHEAD_DAYS);
+    if (startDate > maxBookingDate) {
+      setError(`Bookings can only be made up to ${MAX_BOOKING_AHEAD_DAYS} days in advance.`);
       return;
     }
 
@@ -329,8 +365,8 @@ const BookingForm: React.FC = (): ReactElement => {
       differenceInDays(endDate, startDate) === 0
     ) {
       const durationInHours = differenceInHours(endDateTime, startDateTime);
-      if (durationInHours < 1) {
-        setError("Minimum booking duration is 1 hour for same-day bookings");
+      if (durationInHours < MIN_BOOKING_HOURS) {
+        setError(`Minimum booking duration is ${MIN_BOOKING_HOURS} hour(s) for same-day bookings`);
         return;
       }
     }
@@ -589,7 +625,7 @@ const BookingForm: React.FC = (): ReactElement => {
             {/* Booking Guidelines */}
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
-                <strong>Lab bookings are allowed only between 8:30 AM and 5:30 PM.</strong> Please select your desired time range within these hours.
+                <strong>Lab bookings are allowed only between {LAB_OPEN_HOUR}:{LAB_OPEN_MINUTE.toString().padStart(2, '0')} and {LAB_CLOSE_HOUR}:{LAB_CLOSE_MINUTE.toString().padStart(2, '0')}.</strong> Please select your desired time range within these hours.
               </Typography>
             </Alert>
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -597,13 +633,13 @@ const BookingForm: React.FC = (): ReactElement => {
                 <strong>Booking Guidelines:</strong>
               </Typography>
               <Typography variant="body2" component="div" sx={{ mt: 1 }}>
-                • Lab is closed on Sundays • Maximum booking duration: 7 days •
-                Minimum booking duration: 1 hour • Bookings are subject to admin
+                • Lab is closed on Sundays • Maximum booking duration: {MAX_BOOKING_DAYS} days •
+                Minimum booking duration: {MIN_BOOKING_HOURS} hour • Bookings are subject to admin
                 approval
               </Typography>
             </Alert>
 
-            {rangeIncludesSunday(startDate, endDate) && (
+            {rangeIncludesClosedDay(startDate, endDate) && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 Remember: Lab will be closed on Sundays within your selected range.
               </Alert>
@@ -621,7 +657,7 @@ const BookingForm: React.FC = (): ReactElement => {
                 value={startDate}
                 onChange={(newValue) => setStartDate(newValue)}
                 minDate={startOfDay(new Date())}
-                maxDate={addDays(new Date(), 30)}
+                maxDate={addDays(new Date(), MAX_BOOKING_AHEAD_DAYS)}
                 slotProps={{
                   textField: {
                     fullWidth: true,
@@ -636,7 +672,7 @@ const BookingForm: React.FC = (): ReactElement => {
                 value={endDate}
                 onChange={(newValue) => setEndDate(newValue)}
                 minDate={startDate || startOfDay(new Date())}
-                maxDate={addDays(new Date(), 30)}
+                maxDate={startDate ? addDays(startDate, MAX_BOOKING_DAYS - 1) : addDays(new Date(), MAX_BOOKING_AHEAD_DAYS)}
                 slotProps={{
                   textField: {
                     fullWidth: true,
@@ -726,13 +762,13 @@ const BookingForm: React.FC = (): ReactElement => {
                     })()
                   }
                 </Typography>
-                {differenceInDays(endDate, startDate) + 1 > 7 && (
+                {differenceInDays(endDate, startDate) + 1 > MAX_BOOKING_DAYS && (
                   <Typography variant="body2" color="error" sx={{ mt: 1 }}>
                     ⚠️ Duration exceeds 7-day limit
                   </Typography>
                 )}
                 {differenceInDays(endDate, startDate) === 0 &&
-                  differenceInHours(endTime, startTime) < 1 && (
+                  differenceInHours(endTime, startTime) < MIN_BOOKING_HOURS && (
                     <Typography variant="body2" color="error" sx={{ mt: 1 }}>
                       ⚠️ Duration is less than 1 hour
                     </Typography>
@@ -810,6 +846,8 @@ const BookingForm: React.FC = (): ReactElement => {
                     onChange={(e) => setDatasetSize(Number(e.target.value))}
                     required
                     inputProps={{ min: 0 }}
+                    error={!!datasetSizeError}
+                    helperText={datasetSizeError}
                   />
                   <FormControl sx={{ minWidth: 100 }}>
                     <InputLabel>Unit</InputLabel>
