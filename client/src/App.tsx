@@ -28,6 +28,7 @@ import HomePage from "./pages/HomePage";
 import Rules from "./pages/Rules";
 import Team from "./pages/Team";
 import Contact from "./pages/Contact";
+import SystemDetails from "./pages/SystemDetails";
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -144,6 +145,16 @@ const AppContent = () => {
                     <ProtectedRoute>
                       <Layout>
                         <Settings />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/system-details"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <SystemDetails />
                       </Layout>
                     </ProtectedRoute>
                   }

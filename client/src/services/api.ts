@@ -110,4 +110,35 @@ export const feedbackAPI = {
   }) => api.put(`/feedback/${feedbackId}/status`, data),
 };
 
+// System Details API endpoints
+export const systemDetailsAPI = {
+  getAllSystemDetails: () => api.get('/system-details'),
+  getSystemDetails: (computerId: string) => api.get(`/system-details/${computerId}`),
+  getSoftwarePool: () => api.get('/system-details/software-pool'),
+  updateSystemDetails: (computerId: string, data: {
+    operatingSystem?: string;
+    osVersion?: string;
+    architecture?: string;
+    processor?: string;
+    ram?: string;
+    storage?: string;
+    gpu?: string;
+    installedSoftware?: Array<{
+      name: string;
+      version?: string;
+      category?: string;
+      icon?: string;
+    }>;
+    additionalNotes?: string;
+  }) => api.put(`/system-details/${computerId}`, data),
+  addSoftware: (computerId: string, data: {
+    name: string;
+    version?: string;
+    category?: string;
+    icon?: string;
+  }) => api.post(`/system-details/${computerId}/software`, data),
+  removeSoftware: (computerId: string, softwareIndex: number) => 
+    api.delete(`/system-details/${computerId}/software/${softwareIndex}`),
+};
+
 export default api; 

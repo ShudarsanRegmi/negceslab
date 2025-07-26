@@ -52,6 +52,7 @@ import {
   BrightnessAuto,
   ChevronLeft,
   ChevronRight,
+  Storage as StorageIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -188,6 +189,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       icon: <AdminPanelSettings />,
       path: "/admin",
       roles: ["admin"],
+    },
+    {
+      text: "System Details",
+      icon: <StorageIcon />,
+      path: "/system-details",
+      roles: ["user", "admin"],
     },
   ];
 
