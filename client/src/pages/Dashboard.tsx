@@ -647,7 +647,10 @@ const Dashboard: React.FC = () => {
                                 color="error"
                                 size="small"
                                 startIcon={<CloseIcon />}
-                                onClick={() => openCancelDialog(booking._id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openCancelDialog(booking._id);
+                                }}
                                 sx={{ minWidth: "auto", px: 1 }}
                               >
                                 Cancel
