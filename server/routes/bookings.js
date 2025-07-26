@@ -5,6 +5,7 @@ const Computer = require('../models/computer');
 const User = require('../models/user');
 const Notification = require('../models/notification');
 const { verifyToken } = require('../middleware/auth');
+const policy = require('../../shared/policy');
 
 // Get all bookings (admin) or user's bookings
 router.get('/', verifyToken, async (req, res) => {
@@ -126,50 +127,81 @@ router.post('/', verifyToken, async (req, res) => {
         {
           startDate: { $lte: endDate },
           endDate: { $gte: startDate },
-          $or: [
-            // Same day booking overlap
-            {
-              startDate: startDate,
-              endDate: endDate,
-              $or: [
-                { startTime: { $lte: endTime }, endTime: { $gt: startTime } },
-                { startTime: { $lt: endTime }, endTime: { $gte: startTime } }
-              ]
-            },
-            // Multi-day booking overlap
-            {
-              $or: [
-                { startDate: { $lt: endDate }, endDate: { $gt: startDate } }
-              ]
-            }
-          ]
         }
       ]
     });
 
-    if (conflictingBookings.length > 0) {
+    // Filter out adjacent bookings (end time == start time is allowed)
+    const overlaps = conflictingBookings.filter(existing => {
+      // If not same day, skip time check
+      if (existing.endDate < startDate || existing.startDate > endDate) return false;
+      // For each overlapping day, check time
+      // If same day
+      if (existing.startDate === startDate && existing.endDate === endDate) {
+        // Only overlap if: newStart < existingEnd && newEnd > existingStart
+        return (
+          (startTime < existing.endTime && endTime > existing.startTime)
+        );
+      }
+      // For multi-day, conservatively treat as overlap if date ranges overlap
+      return true;
+    });
+
+    if (overlaps.length > 0) {
       return res.status(400).json({
         message: 'Time slot conflict with existing booking',
-        conflicts: conflictingBookings
+        conflicts: overlaps
       });
     }
 
-    // Lab hours/time validation
-    // Parse times as minutes since midnight
+    // Parse dates and times
+    const startDateObj = new Date(startDate + 'T00:00:00');
+    const endDateObj = new Date(endDate + 'T00:00:00');
+    // Prevent booking in the past (date)
+    const todayDateOnly = new Date();
+    todayDateOnly.setHours(0, 0, 0, 0);
+    if (startDateObj < todayDateOnly) {
+      return res.status(400).json({ message: 'Cannot book for a past date.' });
+    }
+    // Prevent booking too far in the future
+    const maxBookingDate = new Date(todayDateOnly);
+    maxBookingDate.setDate(maxBookingDate.getDate() + policy.MAX_BOOKING_AHEAD_DAYS);
+    if (startDateObj > maxBookingDate) {
+      return res.status(400).json({ message: `Bookings can only be made up to ${policy.MAX_BOOKING_AHEAD_DAYS} days in advance.` });
+    }
+    // 1. End date must be after or equal to start date
+    if (endDateObj < startDateObj) {
+      return res.status(400).json({ message: 'End date must be after or equal to start date.' });
+    }
+    // 2. Booking duration cannot exceed policy.MAX_BOOKING_DAYS
+    const durationInDays = Math.floor((endDateObj - startDateObj) / (1000 * 60 * 60 * 24)) + 1;
+    if (durationInDays > policy.MAX_BOOKING_DAYS) {
+      return res.status(400).json({ message: `Booking duration cannot exceed ${policy.MAX_BOOKING_DAYS} days.` });
+    }
+    // 4. Minimum booking duration is policy.MIN_BOOKING_HOURS for same-day bookings
     function parseTimeToMinutes(timeStr) {
       const [h, m] = timeStr.split(":").map(Number);
       return h * 60 + m;
     }
-    const minLabMinutes = 8 * 60 + 30; // 8:30
-    const maxLabMinutes = 17 * 60 + 30; // 17:30
+    const minLabMinutes = policy.LAB_OPEN_HOUR * 60 + policy.LAB_OPEN_MINUTE;
+    const maxLabMinutes = policy.LAB_CLOSE_HOUR * 60 + policy.LAB_CLOSE_MINUTE;
     const startMinutes = parseTimeToMinutes(startTime);
     const endMinutes = parseTimeToMinutes(endTime);
+    if (startDate === endDate) {
+      if (endMinutes - startMinutes < policy.MIN_BOOKING_HOURS * 60) {
+        return res.status(400).json({ message: `Minimum booking duration is ${policy.MIN_BOOKING_HOURS} hour(s) for same-day bookings.` });
+      }
+    }
+    // Prevent negative dataset size
+    if (datasetSize && datasetSize.value < 0) {
+      return res.status(400).json({ message: 'Dataset size cannot be negative.' });
+    }
     // Check lab hours
     if (startMinutes < minLabMinutes) {
-      return res.status(400).json({ message: 'Start time must be at or after 8:30 AM.' });
+      return res.status(400).json({ message: `Start time must be at or after ${policy.LAB_OPEN_HOUR}:${policy.LAB_OPEN_MINUTE.toString().padStart(2, '0')}.` });
     }
     if (endMinutes > maxLabMinutes) {
-      return res.status(400).json({ message: 'End time must be at or before 5:30 PM.' });
+      return res.status(400).json({ message: `End time must be at or before ${policy.LAB_CLOSE_HOUR}:${policy.LAB_CLOSE_MINUTE.toString().padStart(2, '0')}.` });
     }
     if (endMinutes <= startMinutes) {
       return res.status(400).json({ message: 'End time must be after start time.' });
@@ -228,6 +260,19 @@ router.post('/', verifyToken, async (req, res) => {
     await booking.populate('user', 'name email');
     res.status(201).json(booking);
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      // Mongoose validation error (e.g., enum, min/max, required)
+      const messages = Object.values(error.errors).map(e => e.message).join('; ');
+      return res.status(400).json({ message: 'Validation error', error: messages });
+    }
+    if (error.name === 'MongoError' && error.code === 11000) {
+      // Duplicate key error
+      return res.status(400).json({ message: 'Duplicate booking', error: error.message });
+    }
+    // Malformed JSON or other client error
+    if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+      return res.status(400).json({ message: 'Malformed JSON' });
+    }
     console.error('Error creating booking:', error);
     res.status(500).json({ message: 'Error creating booking', error: error.message });
   }
@@ -298,6 +343,64 @@ router.put('/:id/status', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Error updating booking status:', error);
     res.status(500).json({ message: 'Error updating booking status', error: error.message });
+  }
+});
+
+// Cancel booking (user can cancel their own pending bookings)
+router.delete('/:id', verifyToken, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Check if user owns this booking or is admin
+    const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+    const isOwner = booking.userId === req.user.firebaseUid;
+    const isAdmin = user && user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'You can only cancel your own bookings' });
+    }
+
+    // Only allow cancellation of pending bookings (unless admin)
+    if (booking.status !== 'pending' && !isAdmin) {
+      return res.status(400).json({ message: 'Only pending bookings can be cancelled' });
+    }
+
+    // Update booking status to cancelled
+    booking.status = 'cancelled';
+    await booking.save();
+
+    // Notify admins about the cancellation (if user cancelled)
+    if (isOwner) {
+      const userBookingId = booking._id.toString().slice(-6).toUpperCase();
+      const admins = await User.find({ role: 'admin' });
+      const adminNotifications = admins.map(admin => new Notification({
+        userId: admin.firebaseUid,
+        title: 'Booking Cancelled',
+        message: `Booking (ID: ${userBookingId}) for computer ${booking.computerId} has been cancelled by user ${req.user.firebaseUid}.`,
+        type: 'info',
+        metadata: {
+          bookingId: userBookingId,
+          computerId: booking.computerId,
+          userId: req.user.firebaseUid
+        }
+      }));
+      if (adminNotifications.length > 0) {
+        await Notification.insertMany(adminNotifications);
+      }
+    }
+
+    // Populate computer and user details before sending response
+    await booking.populate('computerId');
+    await booking.populate('user', 'name email');
+    
+    res.json({ message: 'Booking cancelled successfully', booking });
+  } catch (error) {
+    console.error('Error cancelling booking:', error);
+    res.status(500).json({ message: 'Error cancelling booking', error: error.message });
   }
 });
 
