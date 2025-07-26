@@ -42,6 +42,7 @@ import {
 import { computersAPI } from "../services/api";
 import { bookingsAPI } from "../services/api";
 import { format } from "date-fns";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Computer {
   _id: string;
@@ -68,10 +69,14 @@ interface Booking {
     name: string;
     email: string;
   };
+  user: {
+    name: string;
+  }
 }
 
 const ComputerGrid: React.FC = () => {
   const navigate = useNavigate();
+  const { userRole } = useAuth(); // Get userRole from auth context
   const [computers, setComputers] = useState<Computer[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,7 +230,7 @@ const ComputerGrid: React.FC = () => {
                       }}
                     >
                       <Typography variant="subtitle1" fontWeight="bold">
-                        {booking.userId?.name || "Unknown User"}
+                        {userRole === 'admin' ? (booking.user?.name || "Unknown User") : "Unknown User"}
                       </Typography>
                       <Chip
                         label={booking.status}
@@ -239,13 +244,6 @@ const ComputerGrid: React.FC = () => {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Time: {booking.startTime} - {booking.endTime}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mt: 1 }}
-                    >
-                      Reason: {booking.reason}
                     </Typography>
                   </Box>
                 </ListItem>
@@ -412,93 +410,6 @@ const ComputerGrid: React.FC = () => {
                     }}
                   >
                     Total Computers
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-          <Card
-            sx={{
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              background:
-                "linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(76, 175, 80, 0.01) 100%)",
-              border: "1px solid rgba(76, 175, 80, 0.12)",
-              transition: "all 0.3s ease",
-              "&:hover": {
-                transform: "translateY(-4px)",
-                boxShadow: "0 8px 25px rgba(76, 175, 80, 0.15)",
-              },
-            }}
-          >
-            <CardContent
-              sx={{
-                p: { xs: 2, sm: 2.5, md: 3 },
-                flexGrow: 1,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: { xs: 1, sm: 1.5, md: 2 },
-                  mb: 1,
-                }}
-              >
-                <Box
-                  sx={{
-                    bgcolor: "success.main",
-                    borderRadius: 2,
-                    p: 1.5,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minWidth: 48,
-                    height: 48,
-                    flexShrink: 0,
-                    boxShadow: "0 4px 12px rgba(46, 125, 50, 0.25)",
-                  }}
-                >
-                  <CheckIcon
-                    sx={{
-                      fontSize: 24,
-                      color: "white",
-                    }}
-                  />
-                </Box>
-                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                  <Typography
-                    variant="h3"
-                    sx={{
-                      fontWeight: 600,
-                      lineHeight: 1.2,
-                      mb: 0.5,
-                      fontSize: {
-                        xs: "1.75rem",
-                        sm: "2rem",
-                        md: "2.5rem",
-                        lg: "3rem",
-                      },
-                    }}
-                  >
-                    {availableComputers}
-                  </Typography>
-                  <Typography
-                    variant="body1"
-                    color="text.secondary"
-                    sx={{
-                      fontWeight: 400,
-                      fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    Available Computers
                   </Typography>
                 </Box>
               </Box>
@@ -1058,7 +969,7 @@ const ComputerGrid: React.FC = () => {
         >
           {filteredComputers.map((computer) => {
             const activeBookings = (computer.bookings || []).filter(
-              (b) => b.status !== "rejected" && b.status !== "cancelled"
+              (b) => b.status === "approved"
             ).length || 0;
 
             return (
