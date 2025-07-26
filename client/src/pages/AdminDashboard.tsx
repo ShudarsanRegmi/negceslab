@@ -509,9 +509,9 @@ const AdminDashboard: React.FC = () => {
           {isMobile ? (
             <List>
               {computers.map((computer) => {
-                const bookingCount = bookings.filter(
-                  b => b.computerId._id === computer._id && b.status !== 'rejected' && b.status !== 'cancelled'
-                ).length;
+                                    const bookingCount = bookings.filter(
+                      b => b.computerId._id === computer._id && b.status === 'approved'
+                    ).length;
                 return (
                   <React.Fragment key={computer._id}>
                     <ListItem>
@@ -593,7 +593,7 @@ const AdminDashboard: React.FC = () => {
                 <TableBody>
                   {computers.map((computer) => {
                     const bookingCount = bookings.filter(
-                      b => b.computerId._id === computer._id && b.status !== 'rejected' && b.status !== 'cancelled'
+                      b => b.computerId._id === computer._id && b.status === 'approved'
                     ).length;
                     return (
                       <TableRow key={computer._id}>
