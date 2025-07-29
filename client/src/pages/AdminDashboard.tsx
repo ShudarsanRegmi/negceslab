@@ -36,6 +36,7 @@ import {
   Link,
   Skeleton,
   Badge,
+  CircularProgress,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -181,6 +182,14 @@ const AdminDashboard: React.FC = () => {
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [bookingTab, setBookingTab] = useState<'all' | 'pending'>('all');
 
+  // Add loading states
+  const [actionLoading, setActionLoading] = useState({
+    approve: false,
+    reject: false,
+    revoke: false,
+    extend: false,
+  });
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -245,7 +254,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleUpdateBookingStatus = async () => {
     if (!selectedBooking) return;
-
+    setActionLoading((prev) => ({ ...prev, [newStatus]: true }));
     try {
       // Only pass rejection reason if status is rejected
       const reason = newStatus === 'rejected' ? cancelReason : undefined;
@@ -260,6 +269,8 @@ const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error("Error updating booking status:", error);
       setError("Failed to update booking status");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [newStatus]: false }));
     }
   };
 
@@ -270,6 +281,7 @@ const AdminDashboard: React.FC = () => {
 
   // Function to handle revoking a booking
   const handleRevokeBooking = async (bookingId: string) => {
+    setActionLoading((prev) => ({ ...prev, revoke: true }));
     try {
       await bookingsAPI.updateBookingStatus(bookingId, "cancelled", "Revoked by admin");
       fetchData();
@@ -278,13 +290,15 @@ const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error("Error revoking booking:", error);
       setError("Failed to revoke booking");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, revoke: false }));
     }
   };
 
   // Function to handle extending a booking
   const handleExtendBooking = async () => {
     if (!selectedCurrentBooking) return;
-
+    setActionLoading((prev) => ({ ...prev, extend: true }));
     try {
       await bookingsAPI.updateBookingTime(selectedCurrentBooking._id, extensionData);
       setExtendDialogOpen(false);
@@ -296,6 +310,8 @@ const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error("Error extending booking:", error);
       setError("Failed to extend booking");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, extend: false }));
     }
   };
 
@@ -730,8 +746,9 @@ const AdminDashboard: React.FC = () => {
                           setExtendDialogOpen(true);
                         }}
                         title="Extend Booking"
+                        disabled={actionLoading.extend}
                       >
-                        <ExtendIcon />
+                        {actionLoading.extend ? <CircularProgress size={20} color="inherit" /> : <ExtendIcon />}
                       </IconButton>
                       <IconButton
                         edge="end"
@@ -741,8 +758,9 @@ const AdminDashboard: React.FC = () => {
                           handleRevokeBooking(booking._id);
                         }}
                         title="Revoke Booking"
+                        disabled={actionLoading.revoke}
                       >
-                        <RevokeIcon />
+                        {actionLoading.revoke ? <CircularProgress size={20} color="inherit" /> : <RevokeIcon />}
                       </IconButton>
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -787,8 +805,9 @@ const AdminDashboard: React.FC = () => {
                             setExtendDialogOpen(true);
                           }}
                           title="Extend Booking"
+                          disabled={actionLoading.extend}
                         >
-                          <ExtendIcon />
+                          {actionLoading.extend ? <CircularProgress size={20} color="inherit" /> : <ExtendIcon />}
                         </IconButton>
                         <IconButton
                           color="error"
@@ -797,8 +816,9 @@ const AdminDashboard: React.FC = () => {
                             handleRevokeBooking(booking._id);
                           }}
                           title="Revoke Booking"
+                          disabled={actionLoading.revoke}
                         >
-                          <RevokeIcon />
+                          {actionLoading.revoke ? <CircularProgress size={20} color="inherit" /> : <RevokeIcon />}
                         </IconButton>
                       </TableCell>
                     </TableRow>
@@ -855,8 +875,9 @@ const AdminDashboard: React.FC = () => {
                             setStatusDialogOpen(true);
                           }}
                           title="Approve"
+                          disabled={actionLoading.approve}
                         >
-                          <CheckIcon />
+                          {actionLoading.approve ? <CircularProgress size={20} color="inherit" /> : <CheckIcon />}
                         </IconButton>
                         <IconButton
                           color="error"
@@ -866,8 +887,9 @@ const AdminDashboard: React.FC = () => {
                             setStatusDialogOpen(true);
                           }}
                           title="Reject"
+                          disabled={actionLoading.reject}
                         >
-                          <CancelIcon />
+                          {actionLoading.reject ? <CircularProgress size={20} color="inherit" /> : <CancelIcon />}
                         </IconButton>
                       </ListItemSecondaryAction>
                     </ListItem>
@@ -912,8 +934,9 @@ const AdminDashboard: React.FC = () => {
                               setStatusDialogOpen(true);
                             }}
                             title="Approve"
+                            disabled={actionLoading.approve}
                           >
-                            <CheckIcon />
+                            {actionLoading.approve ? <CircularProgress size={20} color="inherit" /> : <CheckIcon />}
                           </IconButton>
                           <IconButton
                             color="error"
@@ -924,8 +947,9 @@ const AdminDashboard: React.FC = () => {
                               setStatusDialogOpen(true);
                             }}
                             title="Reject"
+                            disabled={actionLoading.reject}
                           >
-                            <CancelIcon />
+                            {actionLoading.reject ? <CircularProgress size={20} color="inherit" /> : <CancelIcon />}
                           </IconButton>
                         </TableCell>
                       </TableRow>
@@ -1365,9 +1389,9 @@ const AdminDashboard: React.FC = () => {
             onClick={handleUpdateBookingStatus}
             variant="contained"
             color={newStatus === "approved" ? "success" : "error"}
-            disabled={newStatus === "rejected" && !cancelReason}
+            disabled={actionLoading[newStatus] || (newStatus === "rejected" && !cancelReason)}
           >
-            {newStatus === "approved" ? "Approve" : "Reject"} Booking
+            {actionLoading[newStatus] ? <CircularProgress size={20} color="inherit" /> : (newStatus === "approved" ? "Approve" : "Reject") + " Booking"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1595,8 +1619,9 @@ const AdminDashboard: React.FC = () => {
                       setDetailsDialogOpen(false);
                     }}
                     fullWidth
+                    disabled={actionLoading.approve}
                   >
-                    Approve Request
+                    {actionLoading.approve ? <CircularProgress size={20} color="inherit" /> : "Approve Request"}
                   </Button>
                   <Button
                     variant="contained"
@@ -1609,8 +1634,9 @@ const AdminDashboard: React.FC = () => {
                       setDetailsDialogOpen(false);
                     }}
                     fullWidth
+                    disabled={actionLoading.reject}
                   >
-                    Reject Request
+                    {actionLoading.reject ? <CircularProgress size={20} color="inherit" /> : "Reject Request"}
                   </Button>
                 </Box>
               )}
@@ -1672,9 +1698,9 @@ const AdminDashboard: React.FC = () => {
             onClick={handleExtendBooking} 
             variant="contained" 
             color="primary"
-            disabled={!extensionData.endTime && !extensionData.endDate}
+            disabled={actionLoading.extend || (!extensionData.endTime && !extensionData.endDate)}
           >
-            Extend Booking
+            {actionLoading.extend ? <CircularProgress size={20} color="inherit" /> : "Extend Booking"}
           </Button>
         </DialogActions>
       </Dialog>
