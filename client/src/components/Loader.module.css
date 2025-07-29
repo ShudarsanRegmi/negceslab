@@ -1,0 +1,92 @@
+.loaderContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: radial-gradient(circle at center, #f0f8ff, #e6f0ff, #ffffff);
+    z-index: 9999;
+    overflow: hidden;
+  }
+  
+  .flaskWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: flaskWiggle 2s infinite ease-in-out;
+  }
+  
+  @keyframes flaskWiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-1.5deg); }
+    75% { transform: rotate(1.5deg); }
+  }
+  
+  .flask {
+    filter: drop-shadow(0 0 20px #4f8cff88);
+  }
+  
+  .bubble {
+    animation: rise 2s ease-in-out infinite;
+    opacity: 0;
+    transform-origin: center;
+  }
+  
+  .bubble1 {
+    animation-delay: 0s;
+  }
+  .bubble2 {
+    animation-delay: 0.3s;
+  }
+  .bubble3 {
+    animation-delay: 0.6s;
+  }
+  
+  @keyframes rise {
+    0% {
+      transform: translateY(0) scale(1);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+      transform: translateY(-25px) scale(1.2);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-40px) scale(0.9);
+    }
+  }
+  
+  .labText {
+    font-family: 'Orbitron', 'Segoe UI', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #4f8cff;
+    text-shadow: 0 0 6px #4f8cff99, 0 0 10px #00e6e6cc;
+    animation: pulseGlow 3s infinite ease-in-out;
+    user-select: none;
+    margin-top: 12px;
+  }
+  
+  @keyframes pulseGlow {
+    0% {
+      text-shadow: 0 0 6px #4f8cff99, 0 0 10px #00e6e6cc;
+    }
+    50% {
+      text-shadow: 0 0 12px #00e6e6cc, 0 0 18px #4f8cffcc;
+    }
+    100% {
+      text-shadow: 0 0 6px #4f8cff99, 0 0 10px #00e6e6cc;
+    }
+  }
+  

@@ -13,6 +13,8 @@ import { NotificationProvider } from "./contexts/NotificationContext";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./components/MainLayout";
+import Loader from "./components/Loader";
+import { useAuth } from "./contexts/AuthContext";
 
 // Pages (to be created)
 import Login from "./pages/Login";
@@ -32,15 +34,18 @@ import SystemDetails from "./pages/SystemDetails";
 
 const AppContent = () => {
   const { theme } = useTheme();
+  const { loading } = useAuth();
+
+  if (loading) {
+    return <Loader />;
+  }
 
   return (
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <AuthProvider>
-          <NotificationProvider>
-            <Router>
-              <Routes>
+        <Router>
+          <Routes>
                 <Route
                   path="/login"
                   element={
@@ -161,19 +166,21 @@ const AppContent = () => {
                 />
               </Routes>
             </Router>
-          </NotificationProvider>
-        </AuthProvider>
-      </LocalizationProvider>
-    </MuiThemeProvider>
-  );
-};
+          </LocalizationProvider>
+        </MuiThemeProvider>
+      );
+    };
 
-function App() {
-  return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
-  );
-}
+    function App() {
+      return (
+        <ThemeProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <AppContent />
+            </NotificationProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      );
+    }
 
-export default App;
+    export default App;
