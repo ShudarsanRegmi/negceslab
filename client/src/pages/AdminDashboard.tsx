@@ -152,6 +152,9 @@ const AdminDashboard: React.FC = () => {
     endDate: "",
   });
 
+  // Add at the top of AdminDashboard component state
+  const [currentBookingsTab, setCurrentBookingsTab] = useState<'active' | 'upcoming'>('active');
+
   // Filter current bookings: only approved and not expired
   const filteredCurrentBookings = currentBookings.filter(
     (booking) =>
@@ -368,6 +371,20 @@ const AdminDashboard: React.FC = () => {
     // Always show both dates, even if they are the same
     return `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`;
   };
+
+  // Helper functions for filtering
+  const now = new Date();
+  const isActiveBooking = (booking: Booking) => {
+    const start = new Date(booking.startDate + 'T' + booking.startTime);
+    const end = new Date(booking.endDate + 'T' + booking.endTime);
+    return start <= now && end >= now;
+  };
+  const isUpcomingBooking = (booking: Booking) => {
+    const start = new Date(booking.startDate + 'T' + booking.startTime);
+    return start > now;
+  };
+  const activeBookings = filteredCurrentBookings.filter(isActiveBooking);
+  const upcomingBookings = filteredCurrentBookings.filter(isUpcomingBooking);
 
   if (error) {
     return <Alert severity="error">{error}</Alert>;
@@ -658,43 +675,35 @@ const AdminDashboard: React.FC = () => {
               {loading ? "Refreshing..." : "Refresh"}
             </Button>
           </Box>
-
+          {/* Tabbed filter for Active/Upcoming */}
+          <Tabs
+            value={currentBookingsTab}
+            onChange={(_, v) => setCurrentBookingsTab(v)}
+            sx={{ mb: 2 }}
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab label="Active Bookings" value="active" />
+            <Tab label="Upcoming Bookings" value="upcoming" />
+          </Tabs>
+          {/* List/Table rendering based on filter */}
           {isMobile ? (
             <List>
-              {filteredCurrentBookings.map((booking) => (
+              {(currentBookingsTab === 'active' ? activeBookings : upcomingBookings).map((booking) => (
                 <React.Fragment key={booking._id}>
                   <ListItem
                     onClick={() => handleViewDetails(booking)}
-                    sx={{
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: 'action.hover',
-                      }
-                    }}
+                    sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
                   >
                     <ListItemText
-                      primary={
-                        <Typography variant="subtitle1">
-                          {booking.computerId?.name || "Unknown Computer"}
-                        </Typography>
-                      }
+                      primary={<Typography variant="subtitle1">{booking.computerId?.name || "Unknown Computer"}</Typography>}
                       secondary={
                         <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            User: {getBookingUserName(booking)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Email: {getBookingUserEmail(booking)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Date: {formatBookingDateRange(booking.startDate, booking.endDate)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Time: {booking.startTime} - {booking.endTime}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Reason: {booking.reason}
-                          </Typography>
+                          <Typography variant="body2" color="text.secondary">User: {getBookingUserName(booking)}</Typography>
+                          <Typography variant="body2" color="text.secondary">Email: {getBookingUserEmail(booking)}</Typography>
+                          <Typography variant="body2" color="text.secondary">Date: {formatBookingDateRange(booking.startDate, booking.endDate)}</Typography>
+                          <Typography variant="body2" color="text.secondary">Time: {booking.startTime} - {booking.endTime}</Typography>
+                          <Typography variant="body2" color="text.secondary">Reason: {booking.reason}</Typography>
                         </Box>
                       }
                     />
@@ -703,7 +712,7 @@ const AdminDashboard: React.FC = () => {
                         edge="end"
                         color="primary"
                         onClick={(e) => {
-                          e.stopPropagation(); // Prevent row click
+                          e.stopPropagation();
                           setSelectedCurrentBooking(booking);
                           setExtendDialogOpen(true);
                         }}
@@ -715,7 +724,7 @@ const AdminDashboard: React.FC = () => {
                         edge="end"
                         color="error"
                         onClick={(e) => {
-                          e.stopPropagation(); // Prevent row click
+                          e.stopPropagation();
                           handleRevokeBooking(booking._id);
                         }}
                         title="Revoke Booking"
@@ -742,34 +751,25 @@ const AdminDashboard: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredCurrentBookings.map((booking) => (
+                  {(currentBookingsTab === 'active' ? activeBookings : upcomingBookings).map((booking) => (
                     <TableRow
                       key={booking._id}
                       onClick={() => handleViewDetails(booking)}
-                      sx={{
-                        cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                        }
-                      }}
+                      sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
                     >
                       <TableCell>{booking.computerId?.name}</TableCell>
                       <TableCell>
                         <Typography>{getBookingUserName(booking)}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {getBookingUserEmail(booking)}
-                        </Typography>
+                        <Typography variant="caption" color="text.secondary">{getBookingUserEmail(booking)}</Typography>
                       </TableCell>
-                      <TableCell>
-                        {formatBookingDateRange(booking.startDate, booking.endDate)}
-                      </TableCell>
+                      <TableCell>{formatBookingDateRange(booking.startDate, booking.endDate)}</TableCell>
                       <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
                       <TableCell>{booking.reason}</TableCell>
                       <TableCell>
                         <IconButton
                           color="primary"
                           onClick={(e) => {
-                            e.stopPropagation(); // Prevent row click
+                            e.stopPropagation();
                             setSelectedCurrentBooking(booking);
                             setExtendDialogOpen(true);
                           }}
@@ -780,7 +780,7 @@ const AdminDashboard: React.FC = () => {
                         <IconButton
                           color="error"
                           onClick={(e) => {
-                            e.stopPropagation(); // Prevent row click
+                            e.stopPropagation();
                             handleRevokeBooking(booking._id);
                           }}
                           title="Revoke Booking"
@@ -794,11 +794,10 @@ const AdminDashboard: React.FC = () => {
               </Table>
             </TableContainer>
           )}
-
-          {filteredCurrentBookings.length === 0 && (
+          {(currentBookingsTab === 'active' ? activeBookings : upcomingBookings).length === 0 && (
             <Box sx={{ textAlign: 'center', py: 2 }}>
               <Typography variant="body1" color="text.secondary">
-                No current bookings found
+                No {currentBookingsTab === 'active' ? 'active' : 'upcoming'} bookings found
               </Typography>
             </Box>
           )}
