@@ -35,6 +35,7 @@ import {
   Divider,
   Link,
   Skeleton,
+  Badge,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -177,6 +178,7 @@ const AdminDashboard: React.FC = () => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [bookingTab, setBookingTab] = useState<'all' | 'pending'>('all');
 
   useEffect(() => {
     fetchData();
@@ -359,6 +361,9 @@ const AdminDashboard: React.FC = () => {
     );
   });
 
+  const pendingBookingsList = bookings.filter((b) => b.status === "pending");
+  const nonPendingBookings = bookings.filter((b) => b.status !== "pending");
+
   // Helper functions to get user name and email from booking
   const getBookingUserName = (booking: any) =>
     booking.userInfo?.name || booking.user?.name || "Unknown User";
@@ -412,6 +417,13 @@ const AdminDashboard: React.FC = () => {
         <Tab label="Overview" />
         <Tab label="Computers" />
         <Tab label="Current Bookings" />
+        <Tab
+          label={
+            <Badge color="error" badgeContent={pendingBookingsList.length} max={99}>
+              New Booking Requests
+            </Badge>
+          }
+        />
         <Tab label="All Bookings" />
         <Tab label="Feedback" />
         <Tab label="Notifications" />
@@ -804,8 +816,129 @@ const AdminDashboard: React.FC = () => {
         </Box>
       )}
 
-      {/* All Bookings Tab */}
+      {/* New Booking Requests Tab */}
       {activeTab === 3 && (
+        <Box>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            New Booking Requests
+          </Typography>
+          {pendingBookingsList.length === 0 ? (
+            <Typography color="text.secondary">No new booking requests.</Typography>
+          ) : (
+            isMobile ? (
+              <List>
+                {pendingBookingsList.map((booking) => (
+                  <React.Fragment key={booking._id}>
+                    <ListItem
+                      onClick={() => handleViewDetails(booking)}
+                      sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                    >
+                      <ListItemText
+                        primary={<Typography variant="subtitle1">{booking.computerId?.name || "Unknown Computer"}</Typography>}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">User: {getBookingUserName(booking)}</Typography>
+                            <Typography variant="body2" color="text.secondary">Email: {getBookingUserEmail(booking)}</Typography>
+                            <Typography variant="body2" color="text.secondary">Date: {formatBookingDateRange(booking.startDate, booking.endDate)}</Typography>
+                            <Typography variant="body2" color="text.secondary">Time: {booking.startTime} - {booking.endTime}</Typography>
+                            <Typography variant="body2" color="text.secondary">Reason: {booking.reason}</Typography>
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          color="success"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setNewStatus("approved");
+                            setStatusDialogOpen(true);
+                          }}
+                          title="Approve"
+                        >
+                          <CheckIcon />
+                        </IconButton>
+                        <IconButton
+                          color="error"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setNewStatus("rejected");
+                            setStatusDialogOpen(true);
+                          }}
+                          title="Reject"
+                        >
+                          <CancelIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                ))}
+              </List>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Computer</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Time</TableCell>
+                      <TableCell>Reason</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pendingBookingsList.map((booking) => (
+                      <TableRow
+                        key={booking._id}
+                        onClick={() => handleViewDetails(booking)}
+                        sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                      >
+                        <TableCell>{getBookingUserName(booking)}</TableCell>
+                        <TableCell>{getBookingUserEmail(booking)}</TableCell>
+                        <TableCell>{booking.computerId?.name || "Unknown Computer"}</TableCell>
+                        <TableCell>{formatBookingDateRange(booking.startDate, booking.endDate)}</TableCell>
+                        <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
+                        <TableCell>{booking.reason}</TableCell>
+                        <TableCell>
+                          <IconButton
+                            color="success"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBooking(booking);
+                              setNewStatus("approved");
+                              setStatusDialogOpen(true);
+                            }}
+                            title="Approve"
+                          >
+                            <CheckIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBooking(booking);
+                              setNewStatus("rejected");
+                              setStatusDialogOpen(true);
+                            }}
+                            title="Reject"
+                          >
+                            <CancelIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )
+          )}
+        </Box>
+      )}
+
+      {/* All Bookings Tab (remove pending bookings) */}
+      {activeTab === 4 && (
         <Box>
           {/* Header and Search Section */}
           <Box sx={{ 
@@ -822,7 +955,7 @@ const AdminDashboard: React.FC = () => {
                 All Bookings Management
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Showing {filteredBookings.length} of {bookings.length} bookings
+                Showing {filteredBookings.filter(b => b.status !== 'pending').length} of {nonPendingBookings.length} bookings
               </Typography>
             </Box>
 
@@ -868,7 +1001,6 @@ const AdminDashboard: React.FC = () => {
                   sx={{ minWidth: 120 }}
                 >
                   <MenuItem value="all">All Status</MenuItem>
-                  <MenuItem value="pending">Pending</MenuItem>
                   <MenuItem value="approved">Approved</MenuItem>
                   <MenuItem value="rejected">Rejected</MenuItem>
                   <MenuItem value="cancelled">Cancelled</MenuItem>
@@ -908,62 +1040,24 @@ const AdminDashboard: React.FC = () => {
           {/* Table/List Content */}
           {isMobile ? (
             <List>
-              {filteredBookings.map((booking) => (
+              {filteredBookings.filter(b => b.status !== 'pending').map((booking) => (
                 <React.Fragment key={booking._id}>
                   <ListItem>
                     <ListItemText
                       primary={booking.computerId?.name || "Unknown Computer"}
                       secondary={
                         <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            User: {getBookingUserName(booking)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Email: {getBookingUserEmail(booking)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Date: {formatBookingDateRange(booking.startDate, booking.endDate)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Time: {booking.startTime} - {booking.endTime}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Reason: {booking.reason}
-                          </Typography>
-                          <Chip
-                            label={booking.status}
-                            color={getStatusColor(booking.status) as any}
-                            size="small"
-                            sx={{ mt: 1 }}
-                          />
+                          <Typography variant="body2" color="text.secondary">User: {getBookingUserName(booking)}</Typography>
+                          <Typography variant="body2" color="text.secondary">Email: {getBookingUserEmail(booking)}</Typography>
+                          <Typography variant="body2" color="text.secondary">Date: {formatBookingDateRange(booking.startDate, booking.endDate)}</Typography>
+                          <Typography variant="body2" color="text.secondary">Time: {booking.startTime} - {booking.endTime}</Typography>
+                          <Typography variant="body2" color="text.secondary">Reason: {booking.reason}</Typography>
+                          <Chip label={booking.status} color={getStatusColor(booking.status) as any} size="small" sx={{ mt: 1 }} />
                         </Box>
                       }
                     />
                     <ListItemSecondaryAction>
-                      {booking.status === "pending" && (
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          <IconButton
-                            color="success"
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setNewStatus("approved");
-                              setStatusDialogOpen(true);
-                            }}
-                          >
-                            <CheckIcon />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setNewStatus("rejected");
-                              setStatusDialogOpen(true);
-                            }}
-                          >
-                            <CancelIcon />
-                          </IconButton>
-                        </Box>
-                      )}
+                      {/* Only show actions for non-pending bookings if needed */}
                     </ListItemSecondaryAction>
                   </ListItem>
                   <Divider />
@@ -985,16 +1079,11 @@ const AdminDashboard: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredBookings.map((booking) => (
+                  {filteredBookings.filter(b => b.status !== 'pending').map((booking) => (
                     <TableRow
                       key={booking._id}
                       onClick={() => handleViewDetails(booking)}
-                      sx={{
-                        cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                        }
-                      }}
+                      sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
                     >
                       <TableCell>{getBookingUserName(booking)}</TableCell>
                       <TableCell>{getBookingUserEmail(booking)}</TableCell>
@@ -1002,40 +1091,9 @@ const AdminDashboard: React.FC = () => {
                       <TableCell>{formatBookingDateRange(booking.startDate, booking.endDate)}</TableCell>
                       <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
                       <TableCell>
-                        <Chip
-                          label={booking.status}
-                          color={getStatusColor(booking.status) as any}
-                          size="small"
-                        />
+                        <Chip label={booking.status} color={getStatusColor(booking.status) as any} size="small" />
                       </TableCell>
-                      <TableCell>
-                        {booking.status === "pending" && (
-                          <Box>
-                            <IconButton
-                              color="success"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent row click
-                                setSelectedBooking(booking);
-                                setNewStatus("approved");
-                                setStatusDialogOpen(true);
-                              }}
-                            >
-                              <CheckIcon />
-                            </IconButton>
-                            <IconButton
-                              color="error"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent row click
-                                setSelectedBooking(booking);
-                                setNewStatus("rejected");
-                                setStatusDialogOpen(true);
-                              }}
-                            >
-                              <CancelIcon />
-                            </IconButton>
-                          </Box>
-                        )}
-                      </TableCell>
+                      <TableCell>{/* Only show actions for non-pending bookings if needed */}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1043,7 +1101,7 @@ const AdminDashboard: React.FC = () => {
             </TableContainer>
           )}
 
-          {filteredBookings.length === 0 && (
+          {filteredBookings.filter(b => b.status !== 'pending').length === 0 && (
             <Box sx={{ textAlign: 'center', py: 2 }}>
               <Typography variant="body1" color="text.secondary">
                 No bookings found matching your filters
@@ -1054,7 +1112,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* Add Feedback Tab */}
-      {activeTab === 4 && (
+      {activeTab === 5 && (
         <Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
             <Typography variant="h6">Feedback Management</Typography>
@@ -1132,7 +1190,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* Notifications Tab */}
-      {activeTab === 5 && <AdminNotificationPanel />}
+      {activeTab === 6 && <AdminNotificationPanel />}
 
       {/* Add Computer Dialog */}
       <Dialog
