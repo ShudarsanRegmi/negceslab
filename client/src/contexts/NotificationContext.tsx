@@ -45,36 +45,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       console.error('Error fetching notifications:', error);
       // Fallback to mock data if API fails
-      const mockNotifications: Notification[] = [
-        {
-          _id: '1',
-          title: 'Booking Approved',
-          message: 'Your booking for LAB-PC-001 has been approved',
-          type: 'success',
-          isRead: false,
-          createdAt: new Date().toISOString(),
-          userId: currentUser.uid,
-        },
-        {
-          _id: '2',
-          title: 'New Computer Available',
-          message: 'LAB-PC-003 is now available for booking',
-          type: 'info',
-          isRead: false,
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-          userId: currentUser.uid,
-        },
-        {
-          _id: '3',
-          title: 'Maintenance Notice',
-          message: 'LAB-PC-004 will be under maintenance tomorrow',
-          type: 'warning',
-          isRead: false,
-          createdAt: new Date(Date.now() - 7200000).toISOString(),
-          userId: currentUser.uid,
-        },
-      ];
-      setNotifications(mockNotifications);
+      setNotifications([]);
     }
   };
 
