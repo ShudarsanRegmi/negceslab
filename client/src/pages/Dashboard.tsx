@@ -59,6 +59,7 @@ interface Booking {
   reason: string;
   rejectionReason?: string;
   createdAt: string;
+  mentor?: string; // Added mentor field
 }
 
 interface Computer {
@@ -723,6 +724,9 @@ const Dashboard: React.FC = () => {
                 </Typography>
                 <Typography variant="body1">
                   <strong>Purpose:</strong> {selectedBookingDetails.reason}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Mentor:</strong> {selectedBookingDetails?.mentor === undefined ? 'N/A' : (selectedBookingDetails.mentor?.trim() === '' || selectedBookingDetails.mentor?.toLowerCase() === 'self' ? 'Self' : selectedBookingDetails.mentor)}
                 </Typography>
                 <Typography variant="body1">
                   <strong>Status:</strong>{" "}

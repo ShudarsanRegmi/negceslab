@@ -96,6 +96,7 @@ interface Booking {
   };
   datasetLink?: string;
   bottleneckExplanation?: string;
+  mentor?: string; // Added mentor field
 }
 
 // Add feedback interface
@@ -1507,6 +1508,9 @@ const AdminDashboard: React.FC = () => {
                       {new Date(selectedBookingDetails.createdAt).toLocaleString()}
                     </Typography>
                   </Box>
+                  <Typography variant="body1">
+                    <strong>Mentor:</strong> {selectedBookingDetails?.mentor === undefined ? 'N/A' : (selectedBookingDetails.mentor?.trim() === '' || selectedBookingDetails.mentor?.toLowerCase() === 'self' ? 'Self' : selectedBookingDetails.mentor)}
+                  </Typography>
                 </Box>
               </Paper>
 

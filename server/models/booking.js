@@ -85,6 +85,10 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  mentor: {
+    type: String,
+    default: undefined
+  },
   createdAt: {
     type: Date,
     default: Date.now,

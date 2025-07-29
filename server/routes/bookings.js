@@ -236,7 +236,8 @@ router.post('/', verifyToken, async (req, res) => {
       datasetType,
       datasetSize,
       datasetLink,
-      bottleneckExplanation
+      bottleneckExplanation,
+      mentor: req.body.mentor || undefined,
     });
 
     await booking.save();
@@ -312,6 +313,10 @@ router.put('/:id/status', verifyToken, async (req, res) => {
     booking.status = status;
     if (status === 'rejected') {
       booking.rejectionReason = rejectionReason;
+    }
+    // In update booking status (PUT /:id/status), allow updating mentor if provided
+    if (typeof req.body.mentor === 'string') {
+      booking.mentor = req.body.mentor;
     }
     await booking.save();
 

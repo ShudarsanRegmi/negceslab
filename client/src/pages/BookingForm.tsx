@@ -120,6 +120,7 @@ const BookingForm: React.FC = (): ReactElement => {
   const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([]);
   const [timeValidationError, setTimeValidationError] = useState<string | null>(null);
   const [fullDay, setFullDay] = useState(false);
+  const [mentor, setMentor] = useState("");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -392,6 +393,7 @@ const BookingForm: React.FC = (): ReactElement => {
         },
         datasetLink: datasetLink.trim(),
         bottleneckExplanation: bottleneckExplanation.trim(),
+        mentor: mentor.trim(),
       };
 
       await bookingsAPI.createBooking(bookingData);
@@ -412,6 +414,7 @@ const BookingForm: React.FC = (): ReactElement => {
       setDatasetSizeUnit("GB");
       setDatasetLink("");
       setBottleneckExplanation("");
+      setMentor("");
       setActiveStep(0);
     } catch (error: any) {
       console.error("Error creating booking:", error);
@@ -937,6 +940,15 @@ const BookingForm: React.FC = (): ReactElement => {
                   />
                 </Box>
               </Box>
+              <TextField
+                fullWidth
+                label="Mentor"
+                value={mentor}
+                onChange={e => setMentor(e.target.value)}
+                placeholder="Type Self if not mentored by anyone."
+                helperText="Type Self if not mentored by anyone."
+                sx={{ mt: 2 }}
+              />
             </Box>
           </Box>
         );
@@ -1039,6 +1051,8 @@ const BookingForm: React.FC = (): ReactElement => {
                   <Typography variant="body2" paragraph>
                     Bottleneck Explanation: {bottleneckExplanation}
                   </Typography>
+                  <Typography variant="body1" fontWeight="bold">Mentor</Typography>
+                  <Typography variant="body2" paragraph>{mentor || 'Self'}</Typography>
                 </Box>
               </Box>
             </Paper>
