@@ -58,6 +58,10 @@ app.use("/api/notifications", notificationRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/system-details', systemDetailsRoutes);
 
+
+app.get('/', (req, res)=>{
+	res.status(200).json({'msg': "welcome to lab server api"});
+});
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
