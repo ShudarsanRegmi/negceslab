@@ -22,6 +22,7 @@ import {
   DialogContent,
   DialogActions,
   Divider,
+  CircularProgress,
 } from "@mui/material";
 import Grid from '@mui/material/Grid';
 import {
@@ -85,6 +86,7 @@ const Dashboard: React.FC = () => {
   );
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -110,6 +112,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleCancelBooking = async (bookingId: string) => {
+    setCancelLoading(true);
     try {
       await bookingsAPI.cancelBooking(bookingId);
       // Refresh the data after cancellation
@@ -119,6 +122,8 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error("Error cancelling booking:", error);
       setError("Failed to cancel booking");
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -768,8 +773,9 @@ const Dashboard: React.FC = () => {
                 handleCloseDetails();
                 openCancelDialog(selectedBookingDetails._id);
               }}
+              disabled={cancelLoading}
             >
-              Cancel Booking
+              {cancelLoading ? <CircularProgress size={20} color="inherit" /> : "Cancel Booking"}
             </Button>
           )}
         </DialogActions>
@@ -783,7 +789,7 @@ const Dashboard: React.FC = () => {
           undone.
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeCancelDialog} color="primary">
+          <Button onClick={closeCancelDialog} color="primary" disabled={cancelLoading}>
             Cancel
           </Button>
           <Button
@@ -792,8 +798,9 @@ const Dashboard: React.FC = () => {
             }
             color="error"
             variant="contained"
+            disabled={cancelLoading}
           >
-            Confirm Cancel
+            {cancelLoading ? <CircularProgress size={20} color="inherit" /> : "Confirm Cancel"}
           </Button>
         </DialogActions>
       </Dialog>
