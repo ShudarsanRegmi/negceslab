@@ -372,7 +372,7 @@ export default function Rules() {
             </Box>
 
             {/* How to Book Section */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
@@ -413,10 +413,28 @@ export default function Rules() {
                 easy, and secure booking process.
               </Typography>
               <LabBookingTimeline />
-            </motion.div>
+            </motion.div> */}
           </Container>
         </Box>
       </motion.div>
+    <Box
+      component="footer"
+      sx={{
+        mt: 8,
+        py: 4,
+        background: "linear-gradient(90deg, #2563eb 0%, #1de9b6 100%)",
+        color: "#fff",
+        textAlign: "center",
+        boxShadow: "0 -2px 8px rgba(0,0,0,0.04)",
+      }}
+    >
+      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+        &copy; {new Date().getFullYear()} Your Lab Name. All rights reserved.
+      </Typography>
+      <Typography variant="caption" sx={{ display: "block", mt: 1, opacity: 0.8 }}>
+        For support, contact <a href="mailto:k_deepak@amrita.edu" style={{ color: "#fff", textDecoration: "underline" }}>support@yourlab.com</a>
+      </Typography>
+    </Box>
     </Box>
   );
 }
