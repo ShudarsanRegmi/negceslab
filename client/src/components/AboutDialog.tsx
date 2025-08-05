@@ -102,7 +102,7 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
           {/* System Overview */}
           <Box>
             <Typography variant="h5" gutterBottom color="primary">
-              NEGSUS Lab Computer Booking System
+              NEGCES Lab Computer Booking System
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
               A comprehensive computer lab management system designed to streamline the booking process, 
@@ -275,9 +275,9 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
               For technical support, feature requests, or general inquiries, please contact our support team.
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Chip label="Email: support@negsus.com" />
-              <Chip label="Phone: +1 (555) 123-4567" />
-              <Chip label="Office: Building A, Room 101" />
+              <Chip label="Email: k_deepak@ch.amrita.edu" />
+              <Chip label="Phone: +9199406 87412" />
+              <Chip label="Lab Block, 1st Floor" />
             </Box>
           </Box>
         </Box>

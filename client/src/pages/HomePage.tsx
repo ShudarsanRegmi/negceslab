@@ -625,10 +625,7 @@ export default function HomePage() {
                   sx={{ color: "#64748b", fontSize: "1rem", lineHeight: 1.8 }}
                 >
                   <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Monday - Friday: 8:30 AM - 5:00 PM
-                  </Typography>
-                  <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Saturday: 9:00 AM - 4:00 PM
+                    Monday - Saturday: 8:30 AM - 5:00 PM
                   </Typography>
                   {/* <Typography sx={{ fontWeight: 500, color: "#94a3b8" }}>
                     Break: 12:00 PM - 1:00 PM
@@ -886,7 +883,7 @@ export default function HomePage() {
                         fontWeight: 600,
                       }}
                     >
-                      High-speed Wi-Fi
+                      High-speed Internet
                     </Typography>
                   </Box>
                 </Box>
@@ -924,15 +921,15 @@ export default function HomePage() {
               {[
                 {
                   q: 'How far in advance can I book?',
-                  a: 'You can book lab sessions up to 7 days in advance.'
+                  a: 'You can book lab sessions up to 1 month in advance.'
                 },
                 {
-                  q: 'Can I modify my booking?',
-                  a: 'Yes, you can modify or cancel your booking up to 1 hour before the scheduled time.'
+                  q: 'Who can book the lab?',
+                  a: 'The lab can be booked by students, faculties and research scholars in the campus'
                 },
                 {
-                  q: "What if I'm late for my booking?",
-                  a: 'A 15-minute grace period is provided. After that, the booking may be released to others.'
+                  q: 'What is the maximum booking period?',
+                  a: 'Users can book for upto 15 days in a single booking. They need to create a new booking request after the booking has been expired.'
                 }
               ].map((faq, i) => (
                 <Box
@@ -972,30 +969,30 @@ export default function HomePage() {
                 {
                   icon: <span style={{ color: '#2563eb', fontSize: 22, marginRight: 8 }}>★</span>,
                   title: 'New Software Installation',
-                  desc: 'Latest version of Visual Studio Code and Python 3.11 have been installed on all machines. Available from Monday, January 15th.',
-                  date: 'January 12, 2025',
+                  desc: 'Anaconda has been installed on all machines with major data science and scientific libraries',
+                  date: 'August 5, 2025',
                   color: '#e0edff',
                   border: '3px solid #2563eb',
                   text: '#2563eb',
                 },
                 {
-                  icon: <span style={{ color: '#f59e42', fontSize: 22, marginRight: 8 }}>⏰</span>,
-                  title: 'Extended Hours During Exam Week',
-                  desc: 'Lab will be open until 8:00 PM during final exam week (January 20-26) to accommodate increased usage.',
-                  date: 'January 10, 2025',
+                  icon: <span style={{ color: '#f59e42', fontSize: 22, marginRight: 8 }}>💻</span>,
+                  title: 'Online Compute Service Within Campus Network',
+                  desc: 'Negces lab is expected to provide online computation resources for students by the end of this month.',
+                  date: 'August 5, 2025',
                   color: '#fffbe7',
                   border: '3px solid #facc15',
                   text: '#b45309',
                 },
-                {
-                  icon: <span style={{ color: '#22c55e', fontSize: 22, marginRight: 8 }}>✔</span>,
-                  title: 'Network Upgrade Complete',
-                  desc: 'High-speed internet upgrade has been successfully completed. Enjoy faster browsing and downloads!',
-                  date: 'January 8, 2025',
-                  color: '#e7fbee',
-                  border: '3px solid #22c55e',
-                  text: '#15803d',
-                },
+                // {
+                //   icon: <span style={{ color: '#22c55e', fontSize: 22, marginRight: 8 }}>✔</span>,
+                //   title: 'Network Upgrade Complete',
+                //   desc: 'High-speed internet upgrade has been successfully completed. Enjoy faster browsing and downloads!',
+                //   date: 'January 8, 2025',
+                //   color: '#e7fbee',
+                //   border: '3px solid #22c55e',
+                //   text: '#15803d',
+                // },
               ].map((notice, i) => (
                 <Box
                   key={notice.title}

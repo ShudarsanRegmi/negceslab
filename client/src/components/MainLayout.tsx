@@ -121,7 +121,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                   textShadow: "0 2px 4px rgba(37,99,235,0.3)",
                 }}
               >
-                Negsus Lab
+                Negces Lab
               </Typography>
             </Stack>
           </div>
