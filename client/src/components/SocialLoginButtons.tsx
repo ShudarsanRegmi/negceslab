@@ -79,7 +79,7 @@ const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
           />
           Continue with Google
         </GoogleButton>
-        <MicrosoftButton
+        {/* <MicrosoftButton
           onClick={onMicrosoftClick}
           disabled={isLoading}
         >
@@ -88,7 +88,7 @@ const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
             alt="Microsoft"
           />
           Continue with Microsoft
-        </MicrosoftButton>
+        </MicrosoftButton> */}
       </Box>
     </>
   );
