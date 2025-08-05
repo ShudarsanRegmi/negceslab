@@ -87,7 +87,7 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <InfoIcon color="primary" />
-        About NEGSUS Lab Tracking System
+        About NEGCES Lab Tracking System
         <Button
           onClick={onClose}
           sx={{ ml: 'auto', minWidth: 'auto' }}

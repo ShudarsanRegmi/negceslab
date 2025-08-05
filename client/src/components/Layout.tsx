@@ -250,7 +250,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           />
           <Box>
             <Typography variant="h5" fontWeight="bold" color="primary">
-              NEGSUS Lab
+              NEGCES Lab
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Computer Booking System

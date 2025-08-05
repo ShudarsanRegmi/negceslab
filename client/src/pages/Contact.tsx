@@ -190,7 +190,7 @@ const Contact: React.FC = () => {
           ))}
         </div>
         <div className={styles.footerCopyright}>
-          &copy; {new Date().getFullYear()} Negsus Lab. All rights reserved.
+          &copy; {new Date().getFullYear()} Negces Lab. All rights reserved.
         </div>
       </footer>
     </div>
