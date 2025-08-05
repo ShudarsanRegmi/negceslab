@@ -4,11 +4,14 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/',
   plugins: [react()],
+  build: {
+    outDir: 'dist'
+  },
   resolve: {
     alias: {
       '@images': path.resolve(__dirname, 'src/assets/'),
+      '@': '/src'
       // You can add more aliases here
     },
   },
