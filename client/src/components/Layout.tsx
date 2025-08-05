@@ -695,7 +695,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   />
                 </MenuItem>
 
-                <MenuItem
+                {/* <MenuItem
                   onClick={() => handleUserMenuAction("help")}
                   sx={{ py: { xs: 2, sm: 1.5 } }}
                 >
@@ -712,7 +712,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       fontSize: { xs: "0.875rem", sm: "inherit" },
                     }}
                   />
-                </MenuItem>
+                </MenuItem> */}
 
                 <MenuItem
                   onClick={() => handleUserMenuAction("about")}

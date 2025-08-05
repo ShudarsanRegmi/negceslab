@@ -25,7 +25,12 @@ import {
   School,
   Code,
   Support,
+  GitHub,
+  LinkedIn,
 } from '@mui/icons-material';
+
+import richa from '@images/richa.jpeg'
+import shud from '@images/shud.jpeg'
 
 interface AboutDialogProps {
   open: boolean;
@@ -56,19 +61,20 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
 
   const teamMembers = [
     {
-      name: "Development Team",
-      role: "Software Development",
-      description: "Building and maintaining the system"
+      name: "Shudarsan Regmi",
+      role: "Full Stack Developer",
+      description: "Lead developer and system architect",
+      github: "https://github.com/ShudarsanRegmi",
+      linkedin: "https://linkedin.in/shudarsanregmi",
+      photo: shud
     },
     {
-      name: "IT Support",
-      role: "Technical Support",
-      description: "Providing technical assistance and maintenance"
-    },
-    {
-      name: "Administration",
-      role: "System Administration",
-      description: "Managing users and system configuration"
+      name: "Richa Kumari Jaishwal",
+      role: "Full Stack Developer",
+      description: "UI/UX design and frontend and backend development",
+      github: "https://github.com/richajaishwal0",
+      linkedin: "https://www.linkedin.com/in/richa-jaishwal/",
+      photo: richa
     }
   ];
 
@@ -112,6 +118,7 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
               <Chip label="Version 1.0.0" color="primary" />
               <Chip label="React + TypeScript" />
               <Chip label="Material-UI" />
+              <Chip label="NodeJS" />
               <Chip label="Firebase Auth" />
               <Chip label="MongoDB" />
             </Box>
@@ -150,18 +157,20 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
           {/* Team Information */}
           <Box>
             <Typography variant="h6" gutterBottom>
-              Our Team
+              Developers
             </Typography>
             <Grid container spacing={2}>
               {teamMembers.map((member, index) => (
-                <Grid item xs={12} md={4} key={index}>
+                <Grid item xs={12} md={6} key={index}>
                   <Card>
                     <CardContent>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          {index === 0 ? <Code /> : index === 1 ? <Support /> : <School />}
-                        </Avatar>
-                        <Box>
+                        <Avatar 
+                          sx={{ width: 56, height: 56 }}
+                          src={member.photo}
+                          alt={member.name}
+                        />
+                        <Box sx={{ flex: 1 }}>
                           <Typography variant="subtitle1" fontWeight="bold">
                             {member.name}
                           </Typography>
@@ -170,9 +179,31 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
                           </Typography>
                         </Box>
                       </Box>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" paragraph>
                         {member.description}
                       </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          startIcon={<GitHub />}
+                          href={member.github}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          variant="outlined"
+                        >
+                          GitHub
+                        </Button>
+                        <Button
+                          size="small"
+                          startIcon={<LinkedIn />}
+                          href={member.linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          variant="outlined"
+                        >
+                          LinkedIn
+                        </Button>
+                      </Box>
                     </CardContent>
                   </Card>
                 </Grid>
@@ -180,10 +211,10 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
             </Grid>
           </Box>
 
-          <Divider />
+          {/* <Divider /> */}
 
           {/* Technical Information */}
-          <Box>
+          {/* <Box>
             <Typography variant="h6" gutterBottom>
               Technical Information
             </Typography>
@@ -211,12 +242,12 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
                 </Box>
               </Grid>
             </Grid>
-          </Box>
+          </Box> */}
 
-          <Divider />
+          {/* <Divider /> */}
 
           {/* System Statistics */}
-          <Box>
+          {/* <Box>
             <Typography variant="h6" gutterBottom>
               System Statistics
             </Typography>
@@ -262,9 +293,9 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
                 </Box>
               </Grid>
             </Grid>
-          </Box>
+          </Box> */}
 
-          <Divider />
+          {/* <Divider /> */}
 
           {/* Contact & Support */}
           <Box>
@@ -272,12 +303,12 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
               Contact & Support
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              For technical support, feature requests, or general inquiries, please contact our support team.
+              For technical support, feature requests, or general inquiries, please contact in the email address below
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Chip label="Email: k_deepak@ch.amrita.edu" />
-              <Chip label="Phone: +9199406 87412" />
-              <Chip label="Lab Block, 1st Floor" />
+              <Chip label="Email: shudarsanregmi555@gmail.com" />
+              {/* <Chip label="Phone: +9199406 87412" />
+              <Chip label="Lab Block, 1st Floor" /> */}
             </Box>
           </Box>
         </Box>
@@ -293,3 +324,4 @@ const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
 };
 
 export default AboutDialog; 
+
