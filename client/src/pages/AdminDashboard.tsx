@@ -443,7 +443,7 @@ const AdminDashboard: React.FC = () => {
         />
         <Tab label="All Bookings" />
         <Tab label="Feedback" />
-        <Tab label="Notifications" />
+        {/* <Tab label="Notifications" /> */}
       </Tabs>
 
       {/* Overview Tab */}
