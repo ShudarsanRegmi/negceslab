@@ -5,6 +5,8 @@ import { Avatar } from '@mui/material';
 import { Groups as UsersIcon, Science as MicroscopeIcon, Star, Devices, Chair } from '@mui/icons-material';
 import indhu from '@images/indhu.jpeg';
 import deepak from '@images/deepak.jpeg';
+import richa from '@images/richa.jpeg';
+import shud from '@images/shud.jpeg';
 
 // --- Interfaces ---
 interface TeamMember {
@@ -39,6 +41,25 @@ const teamMembers: TeamMember[] = [
     bio: 'Expert in hardware troubleshooting and lab logistics. Passionate about assisting students and maintaining lab operations efficiently.',
     contact: '+91 97919 22510',
   },
+];
+
+const developers = [
+  {
+    name: "Shudarsan Regmi",
+    role: "Full Stack Developer",
+    description: "Lead developer and system architect responsible for product research, requirement identification, solution design, full-stack implementation, testing, deployment, and ongoing maintenance",
+    github: "https://github.com/ShudarsanRegmi",
+    linkedin: "https://linkedin.in/shudarsanregmi",
+    photo: shud
+  },
+  {
+    name: "Richa Kumari Jaishwal",
+    role: "Full Stack Developer",
+    description: "Full stack developer focused on core functionality implementation across frontend and backend, with primary contributions in UI/UX design and interface development.",
+    github: "https://github.com/richajaishwal0",
+    linkedin: "https://www.linkedin.com/in/richa-jaishwal/",
+    photo: richa
+  }
 ];
 
 const galleryImages: GalleryImage[] = [
@@ -92,7 +113,7 @@ const Team: React.FC = () => {
         <h1 className={styles.heroTitle}>Meet Our Team</h1>
         <p className={styles.heroSubtitle}>Our dedicated team is here to help you make the most of your lab experience</p>
       </motion.section>
-
+  
       {/* Team Cards */}
       <section className={styles.teamSection}>
         <div className={styles.teamGrid}>
@@ -129,34 +150,47 @@ const Team: React.FC = () => {
           ))}
         </div>
       </section>
-
-      {/* Lab Gallery */}
-      {/* <section className={styles.labGallerySection}>
-        <div className={styles.labGalleryHeader}>
-          <MicroscopeIcon className={styles.labGalleryIcon} />
-          <h2 className={styles.labGalleryHeading}>Lab Gallery</h2>
-        </div>
-        <p className={styles.labGallerySubheading}>Take a look at our modern facilities and see students in action during their lab sessions.</p>
-        <div className={styles.labGalleryGrid}>
-          {galleryImages.map((img, i) => (
+  
+      {/* Developers Section */}
+      <section className={styles.developerSection}>
+        <h2 className={styles.developerHeading}>Meet the Developers</h2>
+        <div className={styles.teamGrid}>
+          {developers.map((dev, i) => (
             <motion.div
-              className={styles.labGalleryImgWrap}
-              key={img.src}
-              whileHover={{ scale: 1.045, boxShadow: '0 8px 32px #2563eb22' }}
-              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              className={styles.teamCard}
+              key={dev.name}
+              custom={i}
+              initial="hidden"
+              animate="visible"
+              variants={cardVariants}
+              whileHover={{ scale: 1.03, boxShadow: '0 6px 24px #2563eb22' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
             >
-              <img src={img.src} alt={img.title} className={styles.labGalleryImg} />
-              <div className={styles.labGalleryOverlay}>
-                <div className={styles.labGalleryOverlayText}>
-                  <h4>{img.title}</h4>
-                  <p>{img.desc}</p>
+              <Avatar
+                src={dev.photo}
+                alt={dev.name}
+                sx={{
+                  width: 128,
+                  height: 128,
+                  margin: '0 auto',
+                  marginBottom: '1rem',
+                  border: '4px solid #2563eb'
+                }}
+              />
+              <div className={styles.teamCardBody}>
+                <h3 className={styles.teamName}>{dev.name}</h3>
+                <div className={styles.teamRole}>{dev.role}</div>
+                <p className={styles.teamBio}>{dev.description}</p>
+                <div className={styles.developerLinks}>
+                  <a href={dev.github} target="_blank" rel="noopener noreferrer">GitHub</a> |{" "}
+                  <a href={dev.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a>
                 </div>
               </div>
             </motion.div>
           ))}
         </div>
-      </section> */}
-
+      </section>
+  
       {/* Footer */}
       <footer className={styles.footer}>
         <div className={styles.footerFeatures}>
