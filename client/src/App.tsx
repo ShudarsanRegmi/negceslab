@@ -31,6 +31,7 @@ import Rules from "./pages/Rules";
 import Team from "./pages/Team";
 import Contact from "./pages/Contact";
 import SystemDetails from "./pages/SystemDetails";
+import Achievement from "./pages/Achievement";
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -162,6 +163,14 @@ const AppContent = () => {
                         <SystemDetails />
                       </Layout>
                     </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/achievements"
+                  element={
+                    <MainLayout>
+                      <Achievement />
+                    </MainLayout>
                   }
                 />
               </Routes>
