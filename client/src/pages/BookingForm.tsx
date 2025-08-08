@@ -62,6 +62,7 @@ interface Computer {
   name: string;
   location: string;
   specifications: string;
+  status: "available" | "reserved" | "maintenance";
   bookings?: Booking[];
 }
 
@@ -268,6 +269,15 @@ const BookingForm: React.FC = (): ReactElement => {
   };
 
   const handleNext = () => {
+    // Check if selected computer is available (for step 0)
+    if (activeStep === 0) {
+      const selectedComp = computers.find(c => c._id === selectedComputer);
+      if (!selectedComp || selectedComp.status !== "available") {
+        setError("Please select an available computer to proceed.");
+        return;
+      }
+    }
+    
     if (activeStep === 1) { // Time slot selection step
       if (timeValidationError) {
         setError(timeValidationError);
@@ -306,6 +316,13 @@ const BookingForm: React.FC = (): ReactElement => {
       datasetSize < 0
     ) {
       setError("Please fill in all required fields and ensure dataset size is not negative");
+      return;
+    }
+
+    // Check if selected computer is still available
+    const selectedComp = computers.find(c => c._id === selectedComputer);
+    if (!selectedComp || selectedComp.status !== "available") {
+      setError("The selected computer is no longer available. Please select a different computer.");
       return;
     }
 
@@ -567,23 +584,62 @@ const BookingForm: React.FC = (): ReactElement => {
                 onChange={(e) => setSelectedComputer(e.target.value)}
                 label="Computer"
               >
-                {computers.map((computer) => (
-                  <MenuItem key={computer._id} value={computer._id}>
-                    <Box>
-                      <Typography variant="body1" fontWeight="bold">
-                        {computer.name}
-                      </Typography>
+                {computers
+                  .sort((a, b) => {
+                    // Sort by status: available first, then reserved, then maintenance
+                    const statusOrder = { available: 0, reserved: 1, maintenance: 2 };
+                    return statusOrder[a.status] - statusOrder[b.status];
+                  })
+                  .map((computer) => (
+                  <MenuItem 
+                    key={computer._id} 
+                    value={computer._id}
+                    disabled={computer.status === "reserved" || computer.status === "maintenance"}
+                  >
+                    <Box sx={{ width: '100%' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="body1" fontWeight="bold">
+                          {computer.name}
+                        </Typography>
+                        {(computer.status === "reserved" || computer.status === "maintenance") && (
+                          <Chip 
+                            label={computer.status === "reserved" ? "Reserved" : "Maintenance"} 
+                            color={computer.status === "reserved" ? "warning" : "error"}
+                            size="small"
+                            sx={{ ml: 1 }}
+                          />
+                        )}
+                      </Box>
                       <Typography variant="body2" color="text.secondary">
                         {computer.location} • {computer.specifications}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {computer.bookings?.filter(b => b.status !== "rejected").length || 0} active bookings
                       </Typography>
+                      {(computer.status === "reserved" || computer.status === "maintenance") && (
+                        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                          This computer is currently unavailable for booking
+                        </Typography>
+                      )}
                     </Box>
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+
+            {/* Show available vs unavailable computers info */}
+            <Box sx={{ mt: 2, mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Available:</strong> {computers.filter(c => c.status === "available").length} computers • 
+                <strong> Reserved:</strong> {computers.filter(c => c.status === "reserved").length} computers • 
+                <strong> Maintenance:</strong> {computers.filter(c => c.status === "maintenance").length} computers
+              </Typography>
+              {computers.filter(c => c.status === "available").length === 0 && (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  No computers are currently available for booking. Please check back later.
+                </Alert>
+              )}
+            </Box>
 
             {selectedComputer && (
               <Paper sx={{ p: 2, mt: 2 }}>
@@ -599,6 +655,21 @@ const BookingForm: React.FC = (): ReactElement => {
                     <Typography variant="body2">
                       <strong>Location:</strong>{" "}
                       {computers.find((c) => c._id === selectedComputer)?.location}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Status:</strong>{" "}
+                      <Chip 
+                        label={computers.find((c) => c._id === selectedComputer)?.status || "unknown"}
+                        color={
+                          computers.find((c) => c._id === selectedComputer)?.status === "available" 
+                            ? "success" 
+                            : computers.find((c) => c._id === selectedComputer)?.status === "reserved"
+                            ? "warning"
+                            : "error"
+                        }
+                        size="small"
+                        sx={{ textTransform: 'capitalize' }}
+                      />
                     </Typography>
                     <Typography variant="body2">
                       <strong>Specifications:</strong>{" "}
@@ -1180,7 +1251,8 @@ const BookingForm: React.FC = (): ReactElement => {
                   variant="contained"
                   onClick={handleNext}
                   disabled={
-                    (activeStep === 0 && !selectedComputer) ||
+                    (activeStep === 0 && (!selectedComputer || 
+                      computers.find(c => c._id === selectedComputer)?.status !== "available")) ||
                     (activeStep === 1 &&
                       (!startDate ||
                         !endDate ||

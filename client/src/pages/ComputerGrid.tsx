@@ -48,7 +48,7 @@ interface Computer {
   _id: string;
   name: string;
   location: string;
-  status: "available" | "maintenance" | "booked";
+  status: "available" | "maintenance" | "booked" | "reserved";
   specifications: string;
   currentBookings?: any[];
   nextAvailable?: string;
@@ -118,6 +118,8 @@ const ComputerGrid: React.FC = () => {
         return "warning";
       case "booked":
         return "error";
+      case "reserved":
+        return "info";
       case "approved":
         return "success";
       case "pending":
@@ -139,6 +141,8 @@ const ComputerGrid: React.FC = () => {
         return <BuildIcon />;
       case "booked":
         return <PersonIcon />;
+      case "reserved":
+        return <BookIcon />;
       default:
         return <ComputerIcon />;
     }
@@ -152,6 +156,8 @@ const ComputerGrid: React.FC = () => {
         return "Maintenance";
       case "booked":
         return "Occupied";
+      case "reserved":
+        return "Reserved";
       default:
         return status;
     }
@@ -275,6 +281,9 @@ const ComputerGrid: React.FC = () => {
   ).length;
   const occupiedComputers = computers.filter(
     (c) => c.status === "booked"
+  ).length;
+  const reservedComputers = computers.filter(
+    (c) => c.status === "reserved"
   ).length;
   const maintenanceComputers = computers.filter(
     (c) => c.status === "maintenance"
@@ -597,6 +606,93 @@ const ComputerGrid: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               background:
+                "linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(33, 150, 243, 0.01) 100%)",
+              border: "1px solid rgba(33, 150, 243, 0.12)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 8px 25px rgba(33, 150, 243, 0.15)",
+              },
+            }}
+          >
+            <CardContent
+              sx={{
+                p: { xs: 2, sm: 2.5, md: 3 },
+                flexGrow: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: { xs: 1, sm: 1.5, md: 2 },
+                  mb: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    bgcolor: "info.main",
+                    borderRadius: 2,
+                    p: 1.5,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 48,
+                    height: 48,
+                    flexShrink: 0,
+                    boxShadow: "0 4px 12px rgba(33, 150, 243, 0.25)",
+                  }}
+                >
+                  <BookIcon
+                    sx={{
+                      fontSize: 24,
+                      color: "white",
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 600,
+                      lineHeight: 1.2,
+                      mb: 0.5,
+                      fontSize: {
+                        xs: "1.75rem",
+                        sm: "2rem",
+                        md: "2.5rem",
+                        lg: "3rem",
+                      },
+                    }}
+                  >
+                    {reservedComputers}
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{
+                      fontWeight: 400,
+                      fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    Reserved Systems
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+          <Card
+            sx={{
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              background:
                 "linear-gradient(135deg, rgba(251, 146, 60, 0.05) 0%, rgba(251, 146, 60, 0.01) 100%)",
               border: "1px solid rgba(251, 146, 60, 0.12)",
               transition: "all 0.3s ease",
@@ -885,6 +981,7 @@ const ComputerGrid: React.FC = () => {
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="available">Available</MenuItem>
             <MenuItem value="booked">Booked</MenuItem>
+            <MenuItem value="reserved">Reserved</MenuItem>
             <MenuItem value="maintenance">Maintenance</MenuItem>
           </Select>
         </FormControl>
@@ -949,7 +1046,7 @@ const ComputerGrid: React.FC = () => {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            Click on a computer to view its bookings
+            Click on available computers to view their bookings
           </Typography>
         </Box>
 
@@ -972,6 +1069,44 @@ const ComputerGrid: React.FC = () => {
               (b) => b.status === "approved"
             ).length || 0;
 
+            // Determine the display status and color
+            const getDisplayInfo = () => {
+              switch (computer.status) {
+                case "available":
+                  return {
+                    iconColor: "success.main",
+                    chipLabel: activeBookings > 0 ? `${activeBookings} Active Booking${activeBookings !== 1 ? "s" : ""}` : "Available",
+                    chipColor: activeBookings > 0 ? "warning" : "success"
+                  };
+                case "reserved":
+                  return {
+                    iconColor: "info.main",
+                    chipLabel: "Reserved",
+                    chipColor: "info"
+                  };
+                case "maintenance":
+                  return {
+                    iconColor: "warning.main",
+                    chipLabel: "Under Maintenance",
+                    chipColor: "warning"
+                  };
+                case "booked":
+                  return {
+                    iconColor: "error.main",
+                    chipLabel: "Occupied",
+                    chipColor: "error"
+                  };
+                default:
+                  return {
+                    iconColor: "grey.500",
+                    chipLabel: "Unknown",
+                    chipColor: "default"
+                  };
+              }
+            };
+
+            const displayInfo = getDisplayInfo();
+
             return (
               <Card
                 key={computer._id}
@@ -981,8 +1116,9 @@ const ComputerGrid: React.FC = () => {
                   flexDirection: "column",
                   borderRadius: 3,
                   transition: "transform 0.2s, box-shadow 0.2s",
-                  cursor: "pointer",
-                  "&:hover": {
+                  cursor: computer.status === "available" ? "pointer" : "default",
+                  opacity: computer.status === "available" ? 1 : 0.7,
+                  "&:hover": computer.status === "available" ? {
                     transform: "translateY(-2px)",
                     boxShadow: (theme) =>
                       `0 8px 24px ${
@@ -990,9 +1126,9 @@ const ComputerGrid: React.FC = () => {
                           ? "rgba(0,0,0,0.3)"
                           : "rgba(0,0,0,0.1)"
                       }`,
-                  },
+                  } : {},
                 }}
-                onClick={() => handleComputerClick(computer)}
+                onClick={() => computer.status === "available" && handleComputerClick(computer)}
               >
                 <CardContent
                   sx={{
@@ -1008,7 +1144,7 @@ const ComputerGrid: React.FC = () => {
                   <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
                     <ComputerIcon
                       sx={{
-                        color: activeBookings > 0 ? "warning.main" : "success.main",
+                        color: displayInfo.iconColor,
                         fontSize: { xs: 36, sm: 40, md: 44 },
                       }}
                     />
@@ -1026,13 +1162,11 @@ const ComputerGrid: React.FC = () => {
                     {computer.name}
                   </Typography>
 
-                  {/* Booking Count */}
+                  {/* Status/Booking Information */}
                   <Box>
                     <Chip
-                      label={`${activeBookings} Active Booking${
-                        activeBookings !== 1 ? "s" : ""
-                      }`}
-                      color={activeBookings > 0 ? "warning" : "success"}
+                      label={displayInfo.chipLabel}
+                      color={displayInfo.chipColor as any}
                       size="small"
                       sx={{ fontWeight: 500 }}
                     />
