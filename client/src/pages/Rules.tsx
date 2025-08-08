@@ -429,10 +429,10 @@ export default function Rules() {
       }}
     >
       <Typography variant="body2" sx={{ fontWeight: 500 }}>
-        &copy; {new Date().getFullYear()} Your Lab Name. All rights reserved.
+        &copy; {new Date().getFullYear()} NEGCES Lab. All rights reserved.
       </Typography>
       <Typography variant="caption" sx={{ display: "block", mt: 1, opacity: 0.8 }}>
-        For support, contact <a href="mailto:k_deepak@amrita.edu" style={{ color: "#fff", textDecoration: "underline" }}>support@yourlab.com</a>
+        For support, contact <a href="mailto:k_deepak@amrita.edu" style={{ color: "#fff", textDecoration: "underline" }}>k_deepak@ch.amrita.edu</a>
       </Typography>
     </Box>
     </Box>
