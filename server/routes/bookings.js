@@ -502,7 +502,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
   }
 });
 
-// Free system (end an active booking early)
+// Free system (end an active booking early or cancel a future booking)
 router.patch('/:id/free', verifyToken, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id).populate('computerId');
@@ -520,34 +520,42 @@ router.patch('/:id/free', verifyToken, async (req, res) => {
       return res.status(403).json({ message: 'You can only free your own bookings' });
     }
 
-    // Only allow freeing of approved bookings that are currently active
+    // Only allow freeing of approved bookings that haven't ended yet (includes both active and future bookings)
     if (booking.status !== 'approved') {
       return res.status(400).json({ message: 'Only approved bookings can be freed' });
     }
 
-    // Check if the booking is currently active (between start and end time)
+    // Check if the booking hasn't ended yet (can free both active and future bookings)
     const now = new Date();
     const currentDate = now.toISOString().split('T')[0];
     const currentTime = now.toTimeString().split(' ')[0].substring(0, 5);
 
-    const bookingStartDate = new Date(booking.startDate).toISOString().split('T')[0];
     const bookingEndDate = new Date(booking.endDate).toISOString().split('T')[0];
 
-    // Check if booking is currently active
-    const isActiveNow = (
-      (bookingStartDate < currentDate || 
-       (bookingStartDate === currentDate && booking.startTime <= currentTime)) &&
-      (bookingEndDate > currentDate || 
-       (bookingEndDate === currentDate && booking.endTime >= currentTime))
+    // Check if booking can be freed (hasn't ended yet)
+    const canBeFreed = (
+      bookingEndDate > currentDate || 
+      (bookingEndDate === currentDate && booking.endTime >= currentTime)
     );
 
-    if (!isActiveNow) {
-      return res.status(400).json({ message: 'Booking is not currently active and cannot be freed' });
+    if (!canBeFreed) {
+      return res.status(400).json({ message: 'Booking has already ended and cannot be freed' });
     }
 
-    // Update the booking to end now and mark as completed
-    booking.endDate = new Date(currentDate);
-    booking.endTime = currentTime;
+    // Check if booking is currently active or future
+    const bookingStartDate = new Date(booking.startDate).toISOString().split('T')[0];
+    const isActiveNow = (
+      (bookingStartDate < currentDate || 
+       (bookingStartDate === currentDate && booking.startTime <= currentTime))
+    );
+
+    // For active bookings, update end date/time to current time
+    // For future bookings, just mark as completed without changing times
+    if (isActiveNow) {
+      booking.endDate = new Date(currentDate);
+      booking.endTime = currentTime;
+    }
+    
     booking.freedAt = new Date();
     booking.freedBy = req.user.firebaseUid;
     booking.status = 'completed'; // Mark as completed when freed
@@ -557,18 +565,22 @@ router.patch('/:id/free', verifyToken, async (req, res) => {
     // Notify admins about the early release
     if (isOwner) {
       const userBookingId = booking._id.toString().slice(-6).toUpperCase();
+      const bookingType = isActiveNow ? 'active' : 'future';
+      const actionMessage = isActiveNow ? 'freed early' : 'cancelled';
+      
       const admins = await User.find({ role: 'admin' });
       const adminNotifications = admins.map(admin => new Notification({
         userId: admin.firebaseUid,
-        title: 'System Freed Early',
-        message: `User has freed ${booking.computerId.name} early (Booking ID: ${userBookingId}). System is now available.`,
+        title: `${isActiveNow ? 'System Freed Early' : 'Future Booking Cancelled'}`,
+        message: `User has ${actionMessage} their ${bookingType} booking for ${booking.computerId.name} (Booking ID: ${userBookingId}). System is now available.`,
         type: 'info',
         metadata: {
           bookingId: userBookingId,
           computerId: booking.computerId._id,
           computerName: booking.computerId.name,
           userId: req.user.firebaseUid,
-          freedAt: booking.freedAt
+          freedAt: booking.freedAt,
+          bookingType
         }
       }));
       if (adminNotifications.length > 0) {
@@ -580,13 +592,13 @@ router.patch('/:id/free', verifyToken, async (req, res) => {
     await booking.populate('user', 'name email');
     
     res.json({ 
-      message: 'System freed successfully', 
+      message: isActiveNow ? 'System freed successfully' : 'Future booking cancelled successfully', 
       booking,
       freedAt: booking.freedAt 
     });
   } catch (error) {
-    console.error('Error freeing system:', error);
-    res.status(500).json({ message: 'Error freeing system', error: error.message });
+    console.error('Error processing booking cancellation/free:', error);
+    res.status(500).json({ message: 'Error processing request', error: error.message });
   }
 });
 

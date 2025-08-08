@@ -186,6 +186,23 @@ const Dashboard: React.FC = () => {
     );
   };
 
+  const canBookingBeFreed = (booking: Booking) => {
+    // Can free if booking is approved and either active or future
+    if (booking.status !== 'approved') return false;
+    
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().split(' ')[0].substring(0, 5);
+
+    const bookingEndDate = new Date(booking.endDate).toISOString().split('T')[0];
+
+    // Can free if booking hasn't ended yet (includes both active and future bookings)
+    return (
+      bookingEndDate > currentDate || 
+      (bookingEndDate === currentDate && booking.endTime >= currentTime)
+    );
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved":
@@ -704,7 +721,7 @@ const Dashboard: React.FC = () => {
                                   Cancel
                                 </Button>
                               )}
-                              {isBookingActive(booking) && (
+                              {canBookingBeFreed(booking) && (
                                 <Button
                                   variant="outlined"
                                   color="warning"
@@ -842,7 +859,7 @@ const Dashboard: React.FC = () => {
               {cancelLoading ? <CircularProgress size={20} color="inherit" /> : "Cancel Booking"}
             </Button>
           )}
-          {selectedBookingDetails && isBookingActive(selectedBookingDetails) && (
+          {selectedBookingDetails && canBookingBeFreed(selectedBookingDetails) && (
             <Button
               color="warning"
               variant="contained"
