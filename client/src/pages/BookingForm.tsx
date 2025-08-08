@@ -584,7 +584,13 @@ const BookingForm: React.FC = (): ReactElement => {
                 onChange={(e) => setSelectedComputer(e.target.value)}
                 label="Computer"
               >
-                {computers.map((computer) => (
+                {computers
+                  .sort((a, b) => {
+                    // Sort by status: available first, then reserved, then maintenance
+                    const statusOrder = { available: 0, reserved: 1, maintenance: 2 };
+                    return statusOrder[a.status] - statusOrder[b.status];
+                  })
+                  .map((computer) => (
                   <MenuItem 
                     key={computer._id} 
                     value={computer._id}
