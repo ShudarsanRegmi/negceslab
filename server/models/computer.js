@@ -14,6 +14,11 @@ const computerSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  status: {
+    type: String,
+    enum: ["available", "maintenance", "reserved"],
+    default: "available", // Default status
+  },
   // Extended system details
   systemDetails: {
     operatingSystem: {

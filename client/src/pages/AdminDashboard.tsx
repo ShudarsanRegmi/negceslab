@@ -58,7 +58,7 @@ interface Computer {
   _id: string;
   name: string;
   location: string;
-  status: "available" | "maintenance" | "booked";
+  status: "available" | "maintenance" | "reserved";
   specifications: string;
   currentBookings?: Booking[];
   nextAvailable?: string;
@@ -1230,6 +1230,7 @@ const AdminDashboard: React.FC = () => {
             <TextField
               label="Name"
               value={newComputer.name}
+              placeholder="e.g. System1"
               onChange={(e) =>
                 setNewComputer({ ...newComputer, name: e.target.value })
               }
@@ -1290,7 +1291,7 @@ const AdminDashboard: React.FC = () => {
               >
                 <MenuItem value="available">Available</MenuItem>
                 <MenuItem value="maintenance">Maintenance</MenuItem>
-                <MenuItem value="booked">Booked</MenuItem>
+                <MenuItem value="reserved">Reserved</MenuItem>
               </Select>
             </FormControl>
           </Box>

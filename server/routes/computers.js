@@ -96,7 +96,7 @@ router.get("/with-bookings", verifyToken, async (req, res) => {
 // Create a new computer
 router.post("/", verifyToken, async (req, res) => {
   try {
-    const { name, location, specifications } = req.body;
+    const { name, location, specifications, status } = req.body;
 
     // Basic validation
     if (!name || !location) {
@@ -108,6 +108,7 @@ router.post("/", verifyToken, async (req, res) => {
     const computer = new Computer({
       name,
       location,
+      status: status || "available", // Default to 'available' if not provided
       specifications: specifications || "",
     });
 
