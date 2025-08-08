@@ -126,7 +126,7 @@ router.post('/', verifyToken, async (req, res) => {
     // Check for booking conflicts
     const conflictingBookings = await Booking.find({
       computerId,
-      status: { $in: ['approved', 'pending'] },
+      status: { $in: ['approved', 'pending'] }, // Exclude completed, cancelled, and rejected
       $or: [
         // Check if new booking overlaps with existing bookings
         {
@@ -293,7 +293,7 @@ router.put('/:id/status', verifyToken, async (req, res) => {
     }
 
     const { status, rejectionReason } = req.body;
-    if (!['approved', 'rejected', 'cancelled'].includes(status)) {
+    if (!['approved', 'rejected', 'cancelled', 'completed'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
@@ -333,13 +333,16 @@ router.put('/:id/status', verifyToken, async (req, res) => {
     } else if (status === 'cancelled') {
       notifTitle = 'Booking Cancelled';
       notifMsg = `Your booking (ID: ${userBookingId}) for computer ${booking.computerId.name} has been cancelled.`;
+    } else if (status === 'completed') {
+      notifTitle = 'Booking Completed';
+      notifMsg = `Your booking (ID: ${userBookingId}) for computer ${booking.computerId.name} has been marked as completed.`;
     }
     if (notifTitle && notifMsg) {
       const userNotification = new Notification({
         userId: booking.userId,
         title: notifTitle,
         message: notifMsg,
-        type: status === 'approved' ? 'success' : 'error',
+        type: status === 'approved' ? 'success' : (status === 'completed' ? 'success' : 'error'),
         metadata: {
           bookingId: userBookingId,
           computerId: booking.computerId._id,
@@ -496,6 +499,94 @@ router.delete('/:id', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Error cancelling booking:', error);
     res.status(500).json({ message: 'Error cancelling booking', error: error.message });
+  }
+});
+
+// Free system (end an active booking early)
+router.patch('/:id/free', verifyToken, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('computerId');
+    
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Check if user owns this booking or is admin
+    const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+    const isOwner = booking.userId === req.user.firebaseUid;
+    const isAdmin = user && user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'You can only free your own bookings' });
+    }
+
+    // Only allow freeing of approved bookings that are currently active
+    if (booking.status !== 'approved') {
+      return res.status(400).json({ message: 'Only approved bookings can be freed' });
+    }
+
+    // Check if the booking is currently active (between start and end time)
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().split(' ')[0].substring(0, 5);
+
+    const bookingStartDate = new Date(booking.startDate).toISOString().split('T')[0];
+    const bookingEndDate = new Date(booking.endDate).toISOString().split('T')[0];
+
+    // Check if booking is currently active
+    const isActiveNow = (
+      (bookingStartDate < currentDate || 
+       (bookingStartDate === currentDate && booking.startTime <= currentTime)) &&
+      (bookingEndDate > currentDate || 
+       (bookingEndDate === currentDate && booking.endTime >= currentTime))
+    );
+
+    if (!isActiveNow) {
+      return res.status(400).json({ message: 'Booking is not currently active and cannot be freed' });
+    }
+
+    // Update the booking to end now and mark as completed
+    booking.endDate = new Date(currentDate);
+    booking.endTime = currentTime;
+    booking.freedAt = new Date();
+    booking.freedBy = req.user.firebaseUid;
+    booking.status = 'completed'; // Mark as completed when freed
+    
+    await booking.save();
+
+    // Notify admins about the early release
+    if (isOwner) {
+      const userBookingId = booking._id.toString().slice(-6).toUpperCase();
+      const admins = await User.find({ role: 'admin' });
+      const adminNotifications = admins.map(admin => new Notification({
+        userId: admin.firebaseUid,
+        title: 'System Freed Early',
+        message: `User has freed ${booking.computerId.name} early (Booking ID: ${userBookingId}). System is now available.`,
+        type: 'info',
+        metadata: {
+          bookingId: userBookingId,
+          computerId: booking.computerId._id,
+          computerName: booking.computerId.name,
+          userId: req.user.firebaseUid,
+          freedAt: booking.freedAt
+        }
+      }));
+      if (adminNotifications.length > 0) {
+        await Notification.insertMany(adminNotifications);
+      }
+    }
+
+    // Populate the response
+    await booking.populate('user', 'name email');
+    
+    res.json({ 
+      message: 'System freed successfully', 
+      booking,
+      freedAt: booking.freedAt 
+    });
+  } catch (error) {
+    console.error('Error freeing system:', error);
+    res.status(500).json({ message: 'Error freeing system', error: error.message });
   }
 });
 

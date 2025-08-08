@@ -72,7 +72,7 @@ interface Booking {
   endDate: string;
   startTime: string;
   endTime: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
 }
 
 const steps = [
@@ -246,7 +246,7 @@ const BookingForm: React.FC = (): ReactElement => {
     });
 
     const conflicts = selectedComputer.bookings?.filter((booking) => {
-      if (booking.status === "rejected" || booking.status === "cancelled") return false;
+      if (booking.status === "rejected" || booking.status === "cancelled" || booking.status === "completed") return false;
 
       const bookingStart = set(parseISO(booking.startDate), {
         hours: parseInt(booking.startTime.split(":")[0]),
@@ -614,7 +614,7 @@ const BookingForm: React.FC = (): ReactElement => {
                         {computer.location} • {computer.specifications}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {computer.bookings?.filter(b => b.status !== "rejected").length || 0} active bookings
+                        {computer.bookings?.filter(b => b.status === "approved").length || 0} active bookings
                       </Typography>
                       {(computer.status === "reserved" || computer.status === "maintenance") && (
                         <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
@@ -677,7 +677,7 @@ const BookingForm: React.FC = (): ReactElement => {
                     </Typography>
                     <Typography variant="body2">
                       <strong>Active Bookings:</strong>{" "}
-                      {computers.find((c) => c._id === selectedComputer)?.bookings?.filter(b => b.status !== "rejected").length || 0}
+                      {computers.find((c) => c._id === selectedComputer)?.bookings?.filter(b => b.status === "approved").length || 0}
                     </Typography>
                   </Box>
                 )}

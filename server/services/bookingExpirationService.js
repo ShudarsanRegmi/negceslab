@@ -39,8 +39,8 @@ const checkExpiredBookings = async () => {
     // Process each expired booking
     for (const booking of expiredBookings) {
       try {
-        // Update booking status to expired (you might want to add 'expired' to your status enum)
-        booking.status = 'cancelled'; // Using cancelled as expired for now
+        // Update booking status to completed (booking naturally ended)
+        booking.status = 'completed'; 
         await booking.save();
 
         // Send email notification

@@ -67,6 +67,8 @@ export const bookingsAPI = {
     api.post('/bookings', data),
   cancelBooking: (bookingId: string) => 
     api.delete(`/bookings/${bookingId}`),
+  freeSystem: (bookingId: string) =>
+    api.patch(`/bookings/${bookingId}/free`),
   // Admin endpoints
   getAllBookings: () => 
     api.get('/bookings'),

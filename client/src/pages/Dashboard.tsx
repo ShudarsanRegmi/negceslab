@@ -38,6 +38,7 @@ import {
   ArrowUpward as ArrowUpIcon,
   AccessTime as ClockIcon,
   Close as CloseIcon,
+  ExitToApp as FreeIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
 import { bookingsAPI, computersAPI } from "../services/api";
@@ -56,11 +57,13 @@ interface Booking {
   endDate: string;
   startTime: string;
   endTime: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
   reason: string;
   rejectionReason?: string;
   createdAt: string;
   mentor?: string; // Added mentor field
+  freedAt?: string; // Added freed tracking
+  freedBy?: string; // Added freed tracking
 }
 
 interface Computer {
@@ -87,6 +90,7 @@ const Dashboard: React.FC = () => {
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [freeLoading, setFreeLoading] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -127,6 +131,22 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleFreeSystem = async (bookingId: string) => {
+    setFreeLoading(true);
+    try {
+      await bookingsAPI.freeSystem(bookingId);
+      // Refresh the data after freeing
+      fetchData();
+      setDetailsDialogOpen(false);
+      setSelectedBookingDetails(null);
+    } catch (error) {
+      console.error("Error freeing system:", error);
+      setError("Failed to free system");
+    } finally {
+      setFreeLoading(false);
+    }
+  };
+
   const openCancelDialog = (bookingId: string) => {
     setSelectedBookingId(bookingId);
     setCancelDialogOpen(true);
@@ -147,6 +167,25 @@ const Dashboard: React.FC = () => {
     setSelectedBookingDetails(null);
   };
 
+  const isBookingActive = (booking: Booking) => {
+    if (booking.status !== 'approved') return false;
+    
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().split(' ')[0].substring(0, 5);
+
+    const bookingStartDate = new Date(booking.startDate).toISOString().split('T')[0];
+    const bookingEndDate = new Date(booking.endDate).toISOString().split('T')[0];
+
+    // Check if booking is currently active
+    return (
+      (bookingStartDate < currentDate || 
+       (bookingStartDate === currentDate && booking.startTime <= currentTime)) &&
+      (bookingEndDate > currentDate || 
+       (bookingEndDate === currentDate && booking.endTime >= currentTime))
+    );
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved":
@@ -157,6 +196,8 @@ const Dashboard: React.FC = () => {
         return "warning";
       case "cancelled":
         return "info";
+      case "completed":
+        return "success";
       default:
         return "info";
     }
@@ -647,21 +688,39 @@ const Dashboard: React.FC = () => {
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            {booking.status === "pending" && (
-                              <Button
-                                variant="outlined"
-                                color="error"
-                                size="small"
-                                startIcon={<CloseIcon />}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openCancelDialog(booking._id);
-                                }}
-                                sx={{ minWidth: "auto", px: 1 }}
-                              >
-                                Cancel
-                              </Button>
-                            )}
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              {booking.status === "pending" && (
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  startIcon={<CloseIcon />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openCancelDialog(booking._id);
+                                  }}
+                                  sx={{ minWidth: "auto", px: 1 }}
+                                >
+                                  Cancel
+                                </Button>
+                              )}
+                              {isBookingActive(booking) && (
+                                <Button
+                                  variant="outlined"
+                                  color="warning"
+                                  size="small"
+                                  startIcon={<FreeIcon />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleFreeSystem(booking._id);
+                                  }}
+                                  disabled={freeLoading}
+                                  sx={{ minWidth: "auto", px: 1 }}
+                                >
+                                  Free
+                                </Button>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -745,6 +804,11 @@ const Dashboard: React.FC = () => {
                 <Typography variant="body1">
                   <strong>Created:</strong> {new Date(selectedBookingDetails.createdAt).toLocaleString()}
                 </Typography>
+                {selectedBookingDetails.freedAt && (
+                  <Typography variant="body1" sx={{ color: 'warning.main' }}>
+                    <strong>System Freed Early:</strong> {new Date(selectedBookingDetails.freedAt).toLocaleString()}
+                  </Typography>
+                )}
               </Box>
 
               {/* Show rejection reason if booking was rejected */}
@@ -776,6 +840,17 @@ const Dashboard: React.FC = () => {
               disabled={cancelLoading}
             >
               {cancelLoading ? <CircularProgress size={20} color="inherit" /> : "Cancel Booking"}
+            </Button>
+          )}
+          {selectedBookingDetails && isBookingActive(selectedBookingDetails) && (
+            <Button
+              color="warning"
+              variant="contained"
+              startIcon={<FreeIcon />}
+              onClick={() => handleFreeSystem(selectedBookingDetails._id)}
+              disabled={freeLoading}
+            >
+              {freeLoading ? <CircularProgress size={20} color="inherit" /> : "Free System"}
             </Button>
           )}
         </DialogActions>

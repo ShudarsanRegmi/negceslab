@@ -84,7 +84,7 @@ interface Booking {
   startTime: string;
   endTime: string;
   reason: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
   createdAt: string;
   // Optional fields
   requiresGPU: boolean;
@@ -325,6 +325,8 @@ const AdminDashboard: React.FC = () => {
         return "warning";
       case "cancelled":
         return "info";
+      case "completed":
+        return "success";
       default:
         return "info";
     }

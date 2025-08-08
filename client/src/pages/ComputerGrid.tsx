@@ -58,7 +58,7 @@ interface Computer {
 
 interface Booking {
   _id: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
   date: string;
   startTime: string;
   endTime: string;

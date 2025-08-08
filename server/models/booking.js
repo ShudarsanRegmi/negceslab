@@ -37,7 +37,7 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', 'cancelled'],
+    enum: ['pending', 'approved', 'rejected', 'cancelled', 'completed'],
     default: 'pending',
     index: true
   },
@@ -87,6 +87,16 @@ const bookingSchema = new mongoose.Schema({
   },
   mentor: {
     type: String,
+    default: undefined
+  },
+  // System freed early tracking
+  freedAt: {
+    type: Date,
+    default: undefined
+  },
+  freedBy: {
+    type: String,
+    ref: 'User',
     default: undefined
   },
   createdAt: {
