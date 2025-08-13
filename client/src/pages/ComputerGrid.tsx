@@ -61,6 +61,7 @@ const LAB_OPEN_MINUTE = 30;
 const LAB_CLOSE_HOUR = 17;
 const LAB_CLOSE_MINUTE = 30;
 const CLOSED_DAYS = [0]; // 0 = Sunday
+const MAX_BOOKING_AHEAD_DAYS = 30; // Only allow booking up to 1 month ahead
 
 interface Computer {
   _id: string;
@@ -622,12 +623,14 @@ const ComputerGrid: React.FC = () => {
 
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
     const [selectedDateAvailability, setSelectedDateAvailability] = useState<DateAvailability | null>(null);
+    const [currentViewMonth, setCurrentViewMonth] = useState<Date>(new Date());
 
     // Initialize with today's date when dialog opens
     useEffect(() => {
       if (selectedComputer && !selectedDate) {
         const today = new Date();
         setSelectedDate(today);
+        setCurrentViewMonth(today);
         const availability = calculateDateAvailability(today, selectedComputer);
         setSelectedDateAvailability(availability);
       }
@@ -653,8 +656,14 @@ const ComputerGrid: React.FC = () => {
       today.setHours(0, 0, 0, 0);
       date.setHours(0, 0, 0, 0);
       
-      // Disable past dates and Sundays (day 0)
-      return date < today || CLOSED_DAYS.includes(date.getDay());
+      // Calculate max booking date
+      const maxBookingDate = new Date(today);
+      maxBookingDate.setDate(today.getDate() + MAX_BOOKING_AHEAD_DAYS);
+      
+      // Disable past dates, Sundays, and dates beyond booking limit
+      return date < today || 
+             CLOSED_DAYS.includes(date.getDay()) || 
+             date > maxBookingDate;
     };
 
     // Style calendar days based on availability
@@ -665,14 +674,13 @@ const ComputerGrid: React.FC = () => {
           try {
             const dayText = dayElement.textContent;
             if (dayText && selectedComputer) {
-              // Get the current month/year from the calendar header or use selected date
-              const currentViewDate = selectedDate || new Date();
-              const year = currentViewDate.getFullYear();
-              const month = currentViewDate.getMonth();
+              // Use currentViewMonth to get the correct year and month
+              const year = currentViewMonth.getFullYear();
+              const month = currentViewMonth.getMonth();
               const day = parseInt(dayText);
               const date = new Date(year, month, day);
               
-              // Skip styling for disabled dates (past dates and Sundays)
+              // Skip styling for disabled dates
               if (shouldDisableDate(date)) {
                 return; // Skip disabled dates
               }
@@ -751,7 +759,7 @@ const ComputerGrid: React.FC = () => {
         clearTimeout(initialTimeout);
         observer.disconnect();
       };
-    }, [selectedComputer, selectedDate]);
+    }, [selectedComputer, currentViewMonth]); // Depend on currentViewMonth instead of selectedDate
 
     return (
       <Dialog
@@ -775,6 +783,12 @@ const ComputerGrid: React.FC = () => {
                   value={selectedDate}
                   onChange={(newValue) => {
                     if (newValue) handleDateClick(newValue);
+                  }}
+                  onMonthChange={(month) => {
+                    setCurrentViewMonth(month);
+                  }}
+                  onYearChange={(year) => {
+                    setCurrentViewMonth(year);
                   }}
                   shouldDisableDate={shouldDisableDate}
                   sx={{
