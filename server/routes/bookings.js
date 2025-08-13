@@ -706,4 +706,43 @@ router.patch('/:id/free', verifyToken, async (req, res) => {
   }
 });
 
+// Update booking time/date (admin only)
+router.put('/:id/time', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { startTime, endTime, startDate, endDate } = req.body;
+    
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Update only the provided fields
+    if (startTime !== undefined) booking.startTime = startTime;
+    if (endTime !== undefined) booking.endTime = endTime;
+    if (startDate !== undefined) booking.startDate = startDate;
+    if (endDate !== undefined) booking.endDate = endDate;
+
+    await booking.save();
+
+    // Populate the response
+    await booking.populate([
+      { path: 'computerId', select: 'name location specifications' },
+      { path: 'user', select: 'name email' }
+    ]);
+
+    res.json({ 
+      message: 'Booking time updated successfully', 
+      booking
+    });
+
+  } catch (error) {
+    console.error('Error updating booking time:', error);
+    res.status(500).json({ message: 'Error updating booking time', error: error.message });
+  }
+});
+
 module.exports = router; 

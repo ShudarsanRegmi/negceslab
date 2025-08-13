@@ -151,7 +151,6 @@ const AdminDashboard: React.FC = () => {
   const [selectedCurrentBooking, setSelectedCurrentBooking] = useState<Booking | null>(null);
   const [extendDialogOpen, setExtendDialogOpen] = useState(false);
   const [extensionData, setExtensionData] = useState({
-    endTime: "",
     endDate: "",
   });
 
@@ -303,7 +302,7 @@ const AdminDashboard: React.FC = () => {
       await bookingsAPI.updateBookingTime(selectedCurrentBooking._id, extensionData);
       setExtendDialogOpen(false);
       setSelectedCurrentBooking(null);
-      setExtensionData({ endTime: "", endDate: "" });
+      setExtensionData({ endDate: "" });
       fetchData();
       setStatusUpdateSuccess("Booking extended successfully!");
       setTimeout(() => setStatusUpdateSuccess(null), 5000);
@@ -1669,6 +1668,9 @@ const AdminDashboard: React.FC = () => {
                 Computer: {selectedCurrentBooking.computerId?.name}
               </Typography>
               <Typography variant="body2">
+                Current Start Time: {selectedCurrentBooking.startTime}
+              </Typography>
+              <Typography variant="body2">
                 Current End Time: {selectedCurrentBooking.endTime}
               </Typography>
               <Typography variant="body2" gutterBottom>
@@ -1676,21 +1678,16 @@ const AdminDashboard: React.FC = () => {
               </Typography>
 
               <TextField
-                label="New End Time"
-                type="time"
-                value={extensionData.endTime}
-                onChange={(e) => setExtensionData({ ...extensionData, endTime: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-
-              <TextField
                 label="New End Date"
                 type="date"
                 value={extensionData.endDate}
                 onChange={(e) => setExtensionData({ ...extensionData, endDate: e.target.value })}
                 InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: selectedCurrentBooking.endDate // Disable dates before current end date
+                }}
                 fullWidth
+                helperText="Select the new end date for the booking (must be after current end date, time will remain the same)"
               />
             </Box>
           )}
@@ -1701,7 +1698,7 @@ const AdminDashboard: React.FC = () => {
             onClick={handleExtendBooking} 
             variant="contained" 
             color="primary"
-            disabled={actionLoading.extend || (!extensionData.endTime && !extensionData.endDate)}
+            disabled={actionLoading.extend || !extensionData.endDate}
           >
             {actionLoading.extend ? <CircularProgress size={20} color="inherit" /> : "Extend Booking"}
           </Button>
