@@ -26,7 +26,14 @@ import {
   ListItem,
   ListItemText,
   Chip,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Badge,
+  Divider,
 } from "@mui/material";
+import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import {
   Computer as ComputerIcon,
   CheckCircle as CheckIcon,
@@ -38,10 +45,14 @@ import {
   GridView as GridViewIcon,
   List as ListIcon,
   Notifications as NotificationIcon,
+  CalendarMonth as CalendarIcon,
+  Schedule as ScheduleIcon,
+  ExitToApp as TempReleaseIcon,
+  Event as EventIcon,
 } from "@mui/icons-material";
-import { computersAPI } from "../services/api";
+import { computersAPI, temporaryReleaseAPI } from "../services/api";
 import { bookingsAPI } from "../services/api";
-import { format } from "date-fns";
+import { format, isWithinInterval, parseISO, isSameDay, addDays, startOfMonth, endOfMonth } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
 
 interface Computer {
@@ -71,7 +82,33 @@ interface Booking {
   };
   user: {
     name: string;
-  }
+  };
+  // Add temporary release info to booking
+  temporaryReleases?: TemporaryRelease[];
+}
+
+interface TemporaryRelease {
+  _id: string;
+  bookingId: string;
+  releasedDates: string[];
+  reason: string;
+  status: "active" | "cancelled" | "partially_booked";
+  originalBooking?: {
+    computerId: {
+      _id: string;
+      name: string;
+    };
+  };
+}
+
+interface CalendarEvent {
+  date: string;
+  type: "booking" | "temp_release" | "available";
+  details: {
+    booking?: Booking;
+    tempRelease?: TemporaryRelease;
+    timeSlot?: string;
+  };
 }
 
 const ComputerGrid: React.FC = () => {
@@ -79,6 +116,7 @@ const ComputerGrid: React.FC = () => {
   const { userRole } = useAuth(); // Get userRole from auth context
   const [computers, setComputers] = useState<Computer[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [temporaryReleases, setTemporaryReleases] = useState<TemporaryRelease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -86,6 +124,8 @@ const ComputerGrid: React.FC = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedComputer, setSelectedComputer] = useState<Computer | null>(null);
   const [showBookingsDialog, setShowBookingsDialog] = useState(false);
+  const [showCalendarDialog, setShowCalendarDialog] = useState(false);
+  const [calendarValue, setCalendarValue] = useState<Date | null>(new Date());
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -102,6 +142,22 @@ const ComputerGrid: React.FC = () => {
       ]);
       setComputers(computersRes.data);
       setBookings(bookingsRes.data);
+
+      // Fetch temporary releases if user is admin or for all users
+      try {
+        const tempReleasesRes = userRole === 'admin' 
+          ? await temporaryReleaseAPI.getAllTemporaryReleases()
+          : await temporaryReleaseAPI.getUserTemporaryReleases();
+        
+        const releaseData = tempReleasesRes.data;
+        const releases = Array.isArray(releaseData) 
+          ? releaseData 
+          : (releaseData?.releaseDetails || []);
+        setTemporaryReleases(releases);
+      } catch (tempError) {
+        console.warn("Error fetching temporary releases:", tempError);
+        setTemporaryReleases([]);
+      }
     } catch (error) {
       console.error("Error fetching computers:", error);
       setError("Failed to load computers");
@@ -187,12 +243,104 @@ const ComputerGrid: React.FC = () => {
     setShowBookingsDialog(true);
   };
 
+  const handleCalendarView = (computer: Computer) => {
+    setSelectedComputer(computer);
+    setShowCalendarDialog(true);
+  };
+
+  // Get temporary releases for a specific computer
+  const getTemporaryReleasesForComputer = (computerId: string) => {
+    return temporaryReleases.filter(release => 
+      release.originalBooking?.computerId?._id === computerId && 
+      release.status === 'active'
+    );
+  };
+
+  // Merge temporary releases with their corresponding bookings
+  const enrichBookingsWithTempReleases = (bookings: Booking[], computerId: string): Booking[] => {
+    const tempReleases = getTemporaryReleasesForComputer(computerId);
+    
+    return bookings.map(booking => {
+      // Find temporary releases for this specific booking
+      const bookingTempReleases = tempReleases.filter(release => release.bookingId === booking._id);
+      
+      return {
+        ...booking,
+        temporaryReleases: bookingTempReleases
+      };
+    });
+  };
+
+  // Get events for calendar display
+  const getCalendarEvents = (computer: Computer): CalendarEvent[] => {
+    const events: CalendarEvent[] = [];
+    const now = new Date();
+    const monthStart = startOfMonth(calendarValue || now);
+    const monthEnd = endOfMonth(calendarValue || now);
+
+    // Enrich bookings with temporary release data
+    const enrichedBookings = enrichBookingsWithTempReleases(computer.bookings || [], computer._id);
+
+    // Add booking events
+    enrichedBookings.forEach(booking => {
+      if (booking.status === "approved" || booking.status === "pending") {
+        const startDate = parseISO(booking.startDate);
+        const endDate = parseISO(booking.endDate);
+        
+        // Generate events for each day in the booking period
+        let currentDate = startDate;
+        while (currentDate <= endDate && currentDate <= monthEnd) {
+          if (currentDate >= monthStart) {
+            const dateStr = format(currentDate, 'yyyy-MM-dd');
+            
+            // Check if this date has a temporary release
+            const hasActiveTempRelease = booking.temporaryReleases?.some(release => 
+              release.status === 'active' && release.releasedDates.includes(dateStr)
+            );
+            
+            events.push({
+              date: dateStr,
+              type: hasActiveTempRelease ? "temp_release" : "booking",
+              details: {
+                booking,
+                timeSlot: `${booking.startTime} - ${booking.endTime}`,
+                tempRelease: hasActiveTempRelease ? booking.temporaryReleases?.find(release => 
+                  release.status === 'active' && release.releasedDates.includes(dateStr)
+                ) : undefined
+              }
+            });
+          }
+          currentDate = addDays(currentDate, 1);
+        }
+      }
+    });
+
+    return events;
+  };
+
+  // Check if a date has events
+  const hasEvents = (date: Date, computer: Computer) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const events = getCalendarEvents(computer);
+    return events.some(event => event.date === dateStr);
+  };
+
+  // Get events for a specific date
+  const getEventsForDate = (date: Date, computer: Computer) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const events = getCalendarEvents(computer);
+    return events.filter(event => event.date === dateStr);
+  };
+
   const BookingsDialog = () => {
     if (!selectedComputer) return null;
 
     const activeBookings = (selectedComputer.bookings || []).filter(
       (b) => b.status !== "rejected" && b.status !== "cancelled"
     );
+
+    // Enrich bookings with temporary release data
+    const enrichedBookings = enrichBookingsWithTempReleases(activeBookings, selectedComputer._id);
 
     return (
       <Dialog
@@ -204,39 +352,41 @@ const ComputerGrid: React.FC = () => {
         <DialogTitle>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Typography variant="h6">
-              Bookings for {selectedComputer.name}
+              Schedule for {selectedComputer.name}
             </Typography>
-            <Chip
-              label={`${activeBookings.length} Active Booking${activeBookings.length !== 1 ? 's' : ''}`}
-              color="primary"
-              variant="outlined"
-            />
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Chip
+                label={`${enrichedBookings.length} Booking${enrichedBookings.length !== 1 ? 's' : ''}`}
+                color="primary"
+                variant="outlined"
+                size="small"
+              />
+              <Chip
+                label={`${enrichedBookings.reduce((acc, booking) => acc + (booking.temporaryReleases?.length || 0), 0)} Temp Release${enrichedBookings.reduce((acc, booking) => acc + (booking.temporaryReleases?.length || 0), 0) !== 1 ? 's' : ''}`}
+                color="secondary"
+                variant="outlined"
+                size="small"
+              />
+            </Box>
           </Box>
         </DialogTitle>
         <DialogContent>
-          {activeBookings.length > 0 ? (
-            <List>
-              {activeBookings.map((booking) => (
-                <ListItem
-                  key={booking._id}
-                  sx={{
-                    mb: 2,
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 1,
-                  }}
-                >
-                  <Box sx={{ width: "100%" }}>
+          {enrichedBookings.length > 0 ? (
+            <Box>
+              {enrichedBookings.map((booking) => (
+                <Card key={booking._id} sx={{ mb: 3, border: "1px solid", borderColor: "divider" }}>
+                  <CardContent>
+                    {/* Booking Header */}
                     <Box
                       sx={{
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
-                        mb: 1,
+                        mb: 2,
                       }}
                     >
-                      <Typography variant="subtitle1" fontWeight="bold">
-                        {userRole === 'admin' ? (booking.user?.name || "Unknown User") : "Unknown User"}
+                      <Typography variant="h6" fontWeight="bold">
+                        {userRole === 'admin' ? (booking.user?.name || "Unknown User") : "Booking"}
                       </Typography>
                       <Chip
                         label={booking.status}
@@ -244,31 +394,263 @@ const ComputerGrid: React.FC = () => {
                         size="small"
                       />
                     </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {format(new Date(booking.startDate), "MMM d, yyyy")} -{" "}
-                      {format(new Date(booking.endDate), "MMM d, yyyy")}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Time: {booking.startTime} - {booking.endTime}
-                    </Typography>
-                  </Box>
-                </ListItem>
+
+                    {/* Booking Details */}
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {format(new Date(booking.startDate), "MMM d, yyyy")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Time: {booking.startTime} - {booking.endTime}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        <strong>Purpose:</strong> {booking.reason}
+                      </Typography>
+                    </Box>
+
+                    {/* Temporary Releases for this booking */}
+                    {booking.temporaryReleases && booking.temporaryReleases.length > 0 && (
+                      <>
+                        <Divider sx={{ my: 2 }} />
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ mb: 1, color: "secondary.main" }}>
+                            Released Dates:
+                          </Typography>
+                          
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {booking.temporaryReleases
+                              .flatMap(release => release.releasedDates)
+                              .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+                              .map((dateStr, index) => (
+                                <Typography key={index} variant="body2" color="secondary">
+                                  {format(new Date(dateStr), "MMM d")}
+                                  {index < booking.temporaryReleases.flatMap(release => release.releasedDates).length - 1 && ", "}
+                                </Typography>
+                              ))
+                            }
+                          </Box>
+                        </Box>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
               ))}
-            </List>
+            </Box>
           ) : (
-            <Box
-              sx={{
-                py: 4,
-                textAlign: "center",
-                color: "text.secondary",
-              }}
-            >
+            <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
               <Typography variant="body1">No active bookings</Typography>
             </Box>
           )}
         </DialogContent>
         <DialogActions>
+          <Button 
+            onClick={() => {
+              setShowBookingsDialog(false);
+              handleCalendarView(selectedComputer);
+            }}
+            startIcon={<CalendarIcon />}
+            variant="outlined"
+          >
+            Calendar View
+          </Button>
           <Button onClick={() => setShowBookingsDialog(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
+  // Calendar Dialog Component
+  const CalendarDialog = () => {
+    if (!selectedComputer) return null;
+
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedDateEvents, setSelectedDateEvents] = useState<CalendarEvent[]>([]);
+
+    const handleDateClick = (date: Date) => {
+      setSelectedDate(date);
+      const events = getEventsForDate(date, selectedComputer);
+      setSelectedDateEvents(events);
+    };
+
+    return (
+      <Dialog
+        open={showCalendarDialog}
+        onClose={() => setShowCalendarDialog(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <CalendarIcon />
+            Availability Calendar - {selectedComputer.name}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
+            {/* Calendar */}
+            <Box sx={{ flex: 1 }}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DateCalendar
+                  value={calendarValue}
+                  onChange={(newValue) => {
+                    setCalendarValue(newValue);
+                    if (newValue) handleDateClick(newValue);
+                  }}
+                  sx={{
+                    '& .MuiPickersDay-root': {
+                      position: 'relative',
+                    },
+                    '& .booking-day': {
+                      backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                      }
+                    },
+                    '& .temp-release-day': {
+                      backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(156, 39, 176, 0.2)',
+                      }
+                    },
+                    '& .both-day': {
+                      backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                      }
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+              
+              {/* Legend */}
+              <Box sx={{ mt: 2, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                <Typography variant="subtitle2" gutterBottom>Legend:</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, backgroundColor: 'primary.main', borderRadius: '50%' }} />
+                    <Typography variant="caption">Booking</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, backgroundColor: 'secondary.main', borderRadius: '50%' }} />
+                    <Typography variant="caption">Temp Release</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, backgroundColor: 'orange', borderRadius: '50%' }} />
+                    <Typography variant="caption">Both</Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Selected Date Details */}
+            <Box sx={{ flex: 1, minWidth: 300 }}>
+              {selectedDate ? (
+                <Box>
+                  <Typography variant="h6" gutterBottom>
+                    {format(selectedDate, "MMMM d, yyyy")}
+                  </Typography>
+                  
+                  {selectedDateEvents.length > 0 ? (
+                    <Box>
+                      {selectedDateEvents.map((event, index) => (
+                        <Card key={index} sx={{ mb: 2, p: 2 }}>
+                          {event.type === "booking" && event.details.booking && (
+                            <Box>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <BookIcon color="primary" fontSize="small" />
+                                <Typography variant="subtitle2" color="primary">
+                                  Booking
+                                </Typography>
+                                <Chip
+                                  label={event.details.booking.status}
+                                  color={getStatusColor(event.details.booking.status)}
+                                  size="small"
+                                />
+                              </Box>
+                              <Typography variant="body2">
+                                <strong>Time:</strong> {event.details.timeSlot}
+                              </Typography>
+                              <Typography variant="body2">
+                                <strong>Purpose:</strong> {event.details.booking.reason}
+                              </Typography>
+                              {userRole === 'admin' && (
+                                <Typography variant="body2">
+                                  <strong>User:</strong> {event.details.booking.user?.name || "Unknown"}
+                                </Typography>
+                              )}
+                            </Box>
+                          )}
+                          
+                          {event.type === "temp_release" && event.details.tempRelease && (
+                            <Box>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <TempReleaseIcon color="secondary" fontSize="small" />
+                                <Typography variant="subtitle2" color="secondary">
+                                  Temporary Release
+                                </Typography>
+                                <Chip
+                                  label={event.details.tempRelease.status}
+                                  color={event.details.tempRelease.status === "active" ? "success" : "default"}
+                                  size="small"
+                                />
+                              </Box>
+                              <Typography variant="body2">
+                                <strong>Available for booking</strong>
+                              </Typography>
+                              <Typography variant="body2">
+                                <strong>Reason:</strong> {event.details.tempRelease.reason}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Card>
+                      ))}
+                      
+                      {/* Available for booking button */}
+                      {selectedDateEvents.some(e => e.type === "temp_release") && (
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          startIcon={<BookIcon />}
+                          fullWidth
+                          onClick={() => navigate("/book")}
+                          sx={{ mt: 2 }}
+                        >
+                          Book This Date
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+                      <EventIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+                      <Typography variant="body1">
+                        No events on this date
+                      </Typography>
+                      <Typography variant="body2">
+                        This date is available for booking
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<BookIcon />}
+                        onClick={() => navigate("/book")}
+                        sx={{ mt: 2 }}
+                      >
+                        Book Computer
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+                  <Typography variant="body1">
+                    Click on a date to view details
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCalendarDialog(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     );
@@ -1128,7 +1510,12 @@ const ComputerGrid: React.FC = () => {
                       }`,
                   } : {},
                 }}
-                onClick={() => computer.status === "available" && handleComputerClick(computer)}
+                onClick={(e) => {
+                  // Only handle click if not clicking on action buttons
+                  if (computer.status === "available" && !e.defaultPrevented) {
+                    handleComputerClick(computer);
+                  }
+                }}
               >
                 <CardContent
                   sx={{
@@ -1183,6 +1570,65 @@ const ComputerGrid: React.FC = () => {
                   >
                     {computer.location}
                   </Typography>
+
+                  {/* Action Buttons */}
+                  <Box sx={{ mt: 2, display: "flex", gap: 1, justifyContent: "center" }}>
+                    <Tooltip title="View Schedule">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleComputerClick(computer);
+                        }}
+                        sx={{ 
+                          backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                          '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.2)' }
+                        }}
+                      >
+                        <ScheduleIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Calendar View">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCalendarView(computer);
+                        }}
+                        sx={{ 
+                          backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                          '&:hover': { backgroundColor: 'rgba(156, 39, 176, 0.2)' }
+                        }}
+                      >
+                        <CalendarIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+
+                  {/* Temporary Release Indicator */}
+                  {(() => {
+                    const activeBookings = computer.bookings?.filter(b => b.status !== "rejected" && b.status !== "cancelled") || [];
+                    const enrichedBookings = enrichBookingsWithTempReleases(activeBookings, computer._id);
+                    const totalTempReleases = enrichedBookings.reduce((acc, booking) => acc + (booking.temporaryReleases?.length || 0), 0);
+                    const totalAvailableDays = enrichedBookings.reduce((acc, booking) => acc + (booking.temporaryReleases?.reduce((sum, release) => sum + release.releasedDates.length, 0) || 0), 0);
+                    
+                    if (totalTempReleases > 0) {
+                      return (
+                        <Box sx={{ mt: 1 }}>
+                          <Chip
+                            label={`${totalAvailableDays} days available (${totalTempReleases} release${totalTempReleases !== 1 ? 's' : ''})`}
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem' }}
+                          />
+                        </Box>
+                      );
+                    }
+                    return null;
+                  })()}
                 </CardContent>
               </Card>
             );
@@ -1191,6 +1637,7 @@ const ComputerGrid: React.FC = () => {
       </Paper>
 
       <BookingsDialog />
+      <CalendarDialog />
 
       {filteredComputers.length === 0 && (
         <Box sx={{ textAlign: "center", py: 8 }}>
