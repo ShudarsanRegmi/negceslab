@@ -445,15 +445,6 @@ const BookingForm: React.FC = (): ReactElement => {
     const conflicts = selectedComputer.bookings?.filter((booking) => {
       if (booking.status === "rejected" || booking.status === "cancelled" || booking.status === "completed") return false;
 
-      const bookingStart = set(parseISO(booking.startDate), {
-        hours: parseInt(booking.startTime.split(":")[0]),
-        minutes: parseInt(booking.startTime.split(":")[1]),
-      });
-      const bookingEnd = set(parseISO(booking.endDate), {
-        hours: parseInt(booking.endTime.split(":")[0]),
-        minutes: parseInt(booking.endTime.split(":")[1]),
-      });
-
       console.log(`\nChecking booking ${booking._id}:`, {
         booking: {
           startDate: booking.startDate,
@@ -461,27 +452,10 @@ const BookingForm: React.FC = (): ReactElement => {
           startTime: booking.startTime,
           endTime: booking.endTime,
           status: booking.status
-        },
-        bookingStart: bookingStart.toISOString(),
-        bookingEnd: bookingEnd.toISOString()
+        }
       });
 
-      // Check if there's a time overlap
-      const hasTimeOverlap = (
-        isWithinInterval(proposedStart, { start: bookingStart, end: bookingEnd }) ||
-        isWithinInterval(proposedEnd, { start: bookingStart, end: bookingEnd }) ||
-        isWithinInterval(bookingStart, { start: proposedStart, end: proposedEnd }) ||
-        isWithinInterval(bookingEnd, { start: proposedStart, end: proposedEnd })
-      );
-
-      console.log('Has time overlap:', hasTimeOverlap);
-
-      if (!hasTimeOverlap) {
-        console.log('✅ No time overlap - no conflict');
-        return false;
-      }
-
-      // If there's a time overlap, check if ALL overlapping dates are covered by temporary releases
+      // Get booking date range
       const bookingDates = [];
       const bookingDateStart = new Date(booking.startDate);
       bookingDateStart.setHours(0, 0, 0, 0);
@@ -505,12 +479,34 @@ const BookingForm: React.FC = (): ReactElement => {
         return false;
       }
 
-      // Check if all overlapping dates are covered by temporary releases
-      const allOverlappingDatesCovered = overlappingDates.every(date => {
+      // For each overlapping date, check if there's a time conflict
+      const hasTimeConflictOnAnyDate = overlappingDates.some(date => {
+        // Convert times to minutes for easier comparison
+        const proposedStartMinutes = startTime.getHours() * 60 + startTime.getMinutes();
+        const proposedEndMinutes = endTime.getHours() * 60 + endTime.getMinutes();
+        
+        const bookingStartMinutes = parseInt(booking.startTime.split(":")[0]) * 60 + parseInt(booking.startTime.split(":")[1]);
+        const bookingEndMinutes = parseInt(booking.endTime.split(":")[0]) * 60 + parseInt(booking.endTime.split(":")[1]);
+        
+        console.log(`Checking time conflict for date ${date}:`, {
+          proposedTime: `${format(startTime, 'HH:mm')} - ${format(endTime, 'HH:mm')} (${proposedStartMinutes}-${proposedEndMinutes} minutes)`,
+          bookingTime: `${booking.startTime} - ${booking.endTime} (${bookingStartMinutes}-${bookingEndMinutes} minutes)`
+        });
+
+        // Check if time ranges overlap on this date
+        const timeOverlap = !(proposedEndMinutes <= bookingStartMinutes || proposedStartMinutes >= bookingEndMinutes);
+        
+        console.log(`Time overlap on ${date}:`, timeOverlap);
+        
+        if (!timeOverlap) {
+          console.log(`✅ No time overlap on ${date} - no conflict on this date`);
+          return false; // No time conflict on this date
+        }
+
+        // There's a time overlap on this date, check if it's covered by temporary release
         const isDateCovered = availableReleaseDatesMap.has(date);
         console.log(`Date ${date} covered by temp release:`, isDateCovered);
         
-        // If date is covered by temp release, also check if the time slots match
         if (isDateCovered) {
           const releaseInfo = availableReleaseDatesMap.get(date);
           const releaseStartTime = releaseInfo.startTime;
@@ -530,21 +526,24 @@ const BookingForm: React.FC = (): ReactElement => {
           );
           
           console.log(`Times match for ${date}:`, timesMatch);
-          return timesMatch;
+          
+          if (timesMatch) {
+            console.log(`✅ Time conflict on ${date} resolved by temporary release`);
+            return false; // Conflict resolved by temp release
+          }
         }
         
-        return false;
+        console.log(`❌ Time conflict on ${date} - not resolved by temp release`);
+        return true; // There's a time conflict on this date
       });
 
-      console.log('All overlapping dates covered with matching times:', allOverlappingDatesCovered);
-
-      if (allOverlappingDatesCovered && overlappingDates.length > 0) {
-        console.log('✅ Conflict resolved by temporary releases');
-        return false; // No conflict because all overlapping dates/times are covered by temp releases
+      if (hasTimeConflictOnAnyDate) {
+        console.log('❌ Conflict remains - time conflicts found on some dates');
+        return true; // There's a conflict
+      } else {
+        console.log('✅ No time conflicts - booking is allowed');
+        return false; // No conflict
       }
-
-      console.log('❌ Conflict remains - not all dates/times covered by temp releases');
-      return true; // There's a conflict
     }) || [];
 
     console.log('Final conflicts:', conflicts);
