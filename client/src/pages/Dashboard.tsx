@@ -86,19 +86,19 @@ interface Computer {
 
 interface TemporaryRelease {
   _id: string;
-  originalBookingId: string;
+  bookingId: string; // Changed from originalBookingId to match backend model
   userId: string;
-  computerId: {
+  computerId?: {
     _id: string;
     name: string;
     location: string;
   };
-  releaseDates: string[];
+  releasedDates: string[]; // Changed from releaseDates to match backend model
   reason: string;
-  status: "active" | "cancelled";
-  tempBookings: string[];
+  status: "active" | "cancelled" | "partially_booked"; // Added partially_booked status
+  tempBookings?: string[];
   createdAt: string;
-  originalBooking?: Booking;
+  originalBooking?: Booking; // This is populated by the backend
 }
 
 const Dashboard: React.FC = () => {
@@ -142,10 +142,13 @@ const Dashboard: React.FC = () => {
       // Fetch temporary releases separately to handle potential API errors
       try {
         const tempReleasesRes = await temporaryReleaseAPI.getUserTemporaryReleases();
-        const list = Array.isArray((tempReleasesRes as any)?.data?.data)
-          ? (tempReleasesRes as any).data.data
-          : (Array.isArray((tempReleasesRes as any)?.data) ? (tempReleasesRes as any).data : []);
-        setTemporaryReleases(list);
+        console.log('Raw temporary releases response:', tempReleasesRes);
+        console.log('Response data:', (tempReleasesRes as any)?.data);
+        
+        // The backend returns { releaseDetails: [...], bookingSummaries: [...] }
+        const releaseDetails = (tempReleasesRes as any)?.data?.releaseDetails || [];
+        console.log('Parsed temporary releases (releaseDetails):', releaseDetails);
+        setTemporaryReleases(releaseDetails);
       } catch (tempError) {
         console.warn("Error fetching temporary releases:", tempError);
         setTemporaryReleases([]);
@@ -312,6 +315,21 @@ const Dashboard: React.FC = () => {
       console.error("Error cancelling temporary release:", error);
       setError(error.response?.data?.message || "Failed to cancel temporary release");
     }
+  };
+
+  // Helper function to get temporary releases for a specific booking
+  const getTemporaryReleasesForBooking = (bookingId: string) => {
+    console.log('Filtering releases for booking ID:', bookingId);
+    console.log('Available releases:', temporaryReleases);
+    
+    const filtered = temporaryReleases.filter(release => {
+      console.log('Checking release:', release);
+      console.log('Release bookingId:', release.bookingId);
+      return release.bookingId === bookingId;
+    });
+    
+    console.log('Filtered releases:', filtered);
+    return filtered;
   };
 
   const isBookingActive = (booking: Booking) => {
@@ -895,98 +913,6 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* Temporary Releases - Only show for non-admin users */}
-        {userRole !== 'admin' && (
-          <Card sx={{ mt: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                My Temporary Releases
-              </Typography>
-              {(temporaryReleases || []).length === 0 ? (
-                <Typography
-                  color="text.secondary"
-                  sx={{ textAlign: "center", py: 4 }}
-                >
-                  No temporary releases yet
-                </Typography>
-              ) : (
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size={isMobile ? "small" : "medium"}>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Computer</TableCell>
-                        <TableCell>Release Dates</TableCell>
-                        <TableCell>Time Period</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Temp Bookings</TableCell>
-                        <TableCell>Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {(temporaryReleases || []).slice(0, 5).map((release) => (
-                        <TableRow key={release._id}>
-                          <TableCell>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold">
-                                {release.computerId?.name || "Unknown Computer"}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {release.computerId?.location || "Unknown Location"}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {release.releaseDates.length} day(s)
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {release.releaseDates.length > 0 && format(new Date(release.releaseDates[0]), "MMM d")}
-                              {release.releaseDates.length > 1 && ` - ${format(new Date(release.releaseDates[release.releaseDates.length - 1]), "MMM d, yyyy")}`}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {release.originalBooking ? 
-                                `${release.originalBooking.startTime} - ${release.originalBooking.endTime}` :
-                                'Full Day'
-                              }
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={release.status}
-                              color={release.status === 'active' ? 'success' : 'default'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {release.tempBookings?.length || 0}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            {release.status === 'active' && (
-                              <Button
-                                variant="outlined"
-                                color="error"
-                                size="small"
-                                onClick={() => handleCancelTemporaryRelease(release._id)}
-                                sx={{ minWidth: "auto", px: 1 }}
-                              >
-                                Cancel
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </Box>
 
       {/* Booking Details Dialog */}
@@ -1081,6 +1007,87 @@ const Dashboard: React.FC = () => {
                   </Box>
                 </>
               )}
+
+              {/* Show temporary releases for this booking */}
+              {(() => {
+                const bookingReleases = getTemporaryReleasesForBooking(selectedBookingDetails._id);
+                console.log('Booking ID:', selectedBookingDetails._id);
+                console.log('All temporary releases:', temporaryReleases);
+                console.log('Filtered releases for this booking:', bookingReleases);
+                // Always show the section, even if empty, for debugging
+                return (
+                  <>
+                    <Divider sx={{ my: 2 }} />
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6" gutterBottom color="primary">
+                        Temporary Releases ({bookingReleases.length})
+                      </Typography>
+                      {bookingReleases.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          No temporary releases for this booking yet.
+                        </Typography>
+                      ) : (
+                        bookingReleases.map((release) => (
+                          <Card key={release._id} variant="outlined" sx={{ mb: 2, p: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" gutterBottom>
+                                  <strong>Released Dates:</strong> {release.releasedDates.length} day(s)
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                                  {release.releasedDates
+                                    .sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime())
+                                    .map((dateStr: string, index: number) => (
+                                      <Chip
+                                        key={index}
+                                        label={format(new Date(dateStr), "MMM d")}
+                                        size="small"
+                                        color="primary"
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.75rem' }}
+                                      />
+                                    ))
+                                  }
+                                </Box>
+                                <Typography variant="body2" gutterBottom>
+                                  <strong>Reason:</strong> {release.reason}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  <strong>Created:</strong> {new Date(release.createdAt).toLocaleDateString()} at {new Date(release.createdAt).toLocaleTimeString()}
+                                </Typography>
+                                <Typography variant="body2" gutterBottom>
+                                  <strong>Temporary Bookings:</strong> {release.tempBookings?.length || 0}
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                                  <Typography variant="body2">
+                                    <strong>Status:</strong>
+                                  </Typography>
+                                  <Chip
+                                    label={release.status}
+                                    color={release.status === 'active' ? 'success' : 'default'}
+                                    size="small"
+                                  />
+                                </Box>
+                              </Box>
+                              {release.status === 'active' && (
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  onClick={() => handleCancelTemporaryRelease(release._id)}
+                                  sx={{ ml: 2 }}
+                                >
+                                  Cancel Release
+                                </Button>
+                              )}
+                            </Box>
+                          </Card>
+                        ))
+                      )}
+                    </Box>
+                  </>
+                );
+              })()}
             </Box>
           )}
         </DialogContent>
