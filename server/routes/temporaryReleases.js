@@ -108,21 +108,33 @@ router.post('/create', verifyToken, async (req, res) => {
       { path: 'originalBooking', select: 'startDate endDate startTime endTime', populate: { path: 'computerId', select: 'name location' } }
     ]);
 
+    // Get user information for notification
+    const User = require('../models/user');
+    const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+    const userName = user?.name || user?.email || 'Unknown User';
+
     // Create notification for admin
     try {
       await Notification.create({
-        type: 'temp_release_created',
-        message: `User has created temporary release #${releaseNumber} for ${originalBooking.computerId.name} on ${releaseDates.length} day(s)`,
-        userId: req.user.firebaseUid,
+        userId: 'admin', // Send to admin
+        title: 'New Temporary Release Request',
+        message: `${userName} has created a temporary release request for ${originalBooking.computerId.name} (${originalBooking.computerId.location}) covering ${releaseDates.length} day(s). Reason: ${reason.trim()}`,
+        type: 'info',
         metadata: {
           bookingId: originalBooking._id,
           computerId: originalBooking.computerId._id,
+          computerName: originalBooking.computerId.name,
+          computerLocation: originalBooking.computerId.location,
           releaseNumber,
-          releaseDates
+          releaseDates,
+          userEmail: user?.email,
+          userName: userName,
+          userId: req.user.firebaseUid,
+          temporaryReleaseId: temporaryReleaseDetail._id
         }
       });
     } catch (notifError) {
-      console.error('Error creating notification:', notifError);
+      console.error('Error creating admin notification:', notifError);
     }
 
     res.status(201).json({
@@ -284,23 +296,33 @@ router.patch('/:id/cancel', verifyToken, async (req, res) => {
       await originalBooking.save();
     }
 
+    // Get user information for notification
+    const User = require('../models/user');
+    const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+    const userName = user?.name || user?.email || 'Unknown User';
+
     // Notify admins about the cancellation
-    const userBookingId = originalBooking._id.toString().slice(-6).toUpperCase();
     try {
       await Notification.create({
-        type: 'temp_release_cancelled',
-        message: `Temporary release #${releaseDetail.releaseNumber} for ${releaseDetail.originalBooking.computerId.name} has been cancelled`,
-        userId: req.user.firebaseUid,
+        userId: 'admin', // Send to admin
+        title: 'Temporary Release Cancelled',
+        message: `${userName} has cancelled temporary release #${releaseDetail.releaseNumber} for ${releaseDetail.originalBooking.computerId.name} (${releaseDetail.originalBooking.computerId.location}) covering ${releaseDetail.releasedDates.length} day(s).`,
+        type: 'warning',
         metadata: {
-          bookingId: userBookingId,
-          bookingDbId: originalBooking._id.toString(),
+          bookingId: originalBooking._id,
           computerId: releaseDetail.originalBooking.computerId._id,
           computerName: releaseDetail.originalBooking.computerId.name,
-          releaseNumber: releaseDetail.releaseNumber
+          computerLocation: releaseDetail.originalBooking.computerId.location,
+          releaseNumber: releaseDetail.releaseNumber,
+          releasedDates: releaseDetail.releasedDates,
+          userEmail: user?.email,
+          userName: userName,
+          userId: req.user.firebaseUid,
+          temporaryReleaseId: releaseDetail._id
         }
       });
     } catch (notifError) {
-      console.error('Error creating notification:', notifError);
+      console.error('Error creating cancellation notification:', notifError);
     }
 
     res.json({

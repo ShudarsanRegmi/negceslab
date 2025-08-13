@@ -96,21 +96,9 @@ const AdminTemporaryReleases: React.FC = () => {
     try {
       setLoading(true);
       const response = await temporaryReleaseAPI.getAllTemporaryReleases();
-      console.log('Admin temporary releases response:', response);
       
       // The backend now returns an array directly
       const releasesList = Array.isArray(response.data) ? response.data : [];
-      console.log('Parsed releases list:', releasesList);
-      
-      // Log user info for debugging
-      releasesList.forEach((release, index) => {
-        console.log(`Release ${index}:`, {
-          userId: release.userId,
-          userInfo: release.userInfo,
-          hasUserInfo: !!release.userInfo
-        });
-      });
-      
       setReleases(releasesList);
     } catch (error: any) {
       console.error("Error fetching temporary releases:", error);
