@@ -26,6 +26,7 @@ import {
   Divider,
   Chip,
   Tooltip,
+  Collapse,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -45,6 +46,7 @@ import {
   Settings,
   AccountCircle,
   KeyboardArrowDown,
+  KeyboardArrowUp,
   Help,
   Info as InfoIcon,
   LightMode,
@@ -53,6 +55,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Storage as StorageIcon,
+  CalendarToday as CalendarIcon,
+  ManageAccounts as ManageAccountsIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -71,6 +75,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [adminMenuExpanded, setAdminMenuExpanded] = useState(false);
   const [notificationAnchor, setNotificationAnchor] =
     useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(
@@ -185,12 +190,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       roles: ["user"],
     },
     {
-      text: "Admin Dashboard",
-      icon: <AdminPanelSettings />,
-      path: "/admin",
-      roles: ["admin"],
-    },
-    {
       text: "System Details",
       icon: <StorageIcon />,
       path: "/system-details",
@@ -198,8 +197,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     },
   ];
 
+  const adminMenuItems = [
+    {
+      text: "Admin Dashboard",
+      icon: <AdminPanelSettings />,
+      path: "/admin",
+      roles: ["admin"],
+    },
+    {
+      text: "Temporary Releases",
+      icon: <CalendarIcon />,
+      path: "/admin/temporary-releases",
+      roles: ["admin"],
+    },
+    {
+      text: "User Management",
+      icon: <ManageAccountsIcon />,
+      path: "/admin/users",
+      roles: ["admin"],
+    },
+  ];
+
   const getPageTitle = () => {
-    const currentItem = menuItems.find(
+    const allItems = [...menuItems, ...adminMenuItems];
+    const currentItem = allItems.find(
       (item) => item.path === location.pathname
     );
     return currentItem ? currentItem.text : "Dashboard";
@@ -261,6 +282,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Navigation Menu */}
       <List sx={{ flexGrow: 1, pt: 1 }}>
+        {/* Regular menu items */}
         {menuItems
           .filter((item) => item.roles.includes(userRole || ""))
           .map((item) => (
@@ -307,6 +329,128 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </Tooltip>
             </ListItem>
           ))}
+
+        {/* Admin Menu Section */}
+        {userRole === "admin" && (
+          <>
+            <ListItem disablePadding>
+              <Tooltip
+                title={sidebarCollapsed ? "Admin Panel" : ""}
+                placement="right"
+                arrow
+              >
+                <ListItemButton
+                  onClick={() => setAdminMenuExpanded(!adminMenuExpanded)}
+                  sx={{
+                    mx: 1,
+                    borderRadius: 1,
+                    justifyContent: sidebarCollapsed ? "center" : "initial",
+                    px: sidebarCollapsed ? 1 : 2,
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: "text.secondary",
+                      minWidth: sidebarCollapsed ? "auto" : 40,
+                      justifyContent: "center",
+                    }}
+                  >
+                    <AdminPanelSettings />
+                  </ListItemIcon>
+                  {!sidebarCollapsed && (
+                    <>
+                      <ListItemText primary="Admin Panel" />
+                      {adminMenuExpanded ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                    </>
+                  )}
+                </ListItemButton>
+              </Tooltip>
+            </ListItem>
+
+            {/* Expandable Admin Submenu */}
+            <Collapse in={adminMenuExpanded && !sidebarCollapsed} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {adminMenuItems.map((item) => (
+                  <ListItem key={item.text} disablePadding>
+                    <ListItemButton
+                      selected={location.pathname === item.path}
+                      onClick={() => {
+                        navigate(item.path);
+                        if (isMobile) setMobileOpen(false);
+                      }}
+                      sx={{
+                        mx: 1,
+                        ml: 3,
+                        borderRadius: 1,
+                        "&.Mui-selected": {
+                          backgroundColor: "primary.main",
+                          color: "primary.contrastText",
+                          "&:hover": {
+                            backgroundColor: "primary.dark",
+                          },
+                        },
+                      }}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          color:
+                            location.pathname === item.path
+                              ? "inherit"
+                              : "text.secondary",
+                          minWidth: 40,
+                        }}
+                      >
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText primary={item.text} />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            </Collapse>
+
+            {/* Show admin items directly when sidebar is collapsed */}
+            {sidebarCollapsed && adminMenuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <Tooltip title={item.text} placement="right" arrow>
+                  <ListItemButton
+                    selected={location.pathname === item.path}
+                    onClick={() => {
+                      navigate(item.path);
+                      if (isMobile) setMobileOpen(false);
+                    }}
+                    sx={{
+                      mx: 1,
+                      borderRadius: 1,
+                      justifyContent: "center",
+                      px: 1,
+                      "&.Mui-selected": {
+                        backgroundColor: "primary.main",
+                        color: "primary.contrastText",
+                        "&:hover": {
+                          backgroundColor: "primary.dark",
+                        },
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        color:
+                          location.pathname === item.path
+                            ? "inherit"
+                            : "text.secondary",
+                        minWidth: "auto",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+            ))}
+          </>
+        )}
       </List>
 
       {/* Collapse/Expand Button */}

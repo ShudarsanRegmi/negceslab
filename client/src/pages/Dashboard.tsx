@@ -142,12 +142,9 @@ const Dashboard: React.FC = () => {
       // Fetch temporary releases separately to handle potential API errors
       try {
         const tempReleasesRes = await temporaryReleaseAPI.getUserTemporaryReleases();
-        console.log('Raw temporary releases response:', tempReleasesRes);
-        console.log('Response data:', (tempReleasesRes as any)?.data);
         
         // The backend returns { releaseDetails: [...], bookingSummaries: [...] }
         const releaseDetails = (tempReleasesRes as any)?.data?.releaseDetails || [];
-        console.log('Parsed temporary releases (releaseDetails):', releaseDetails);
         setTemporaryReleases(releaseDetails);
       } catch (tempError) {
         console.warn("Error fetching temporary releases:", tempError);
@@ -319,16 +316,7 @@ const Dashboard: React.FC = () => {
 
   // Helper function to get temporary releases for a specific booking
   const getTemporaryReleasesForBooking = (bookingId: string) => {
-    console.log('Filtering releases for booking ID:', bookingId);
-    console.log('Available releases:', temporaryReleases);
-    
-    const filtered = temporaryReleases.filter(release => {
-      console.log('Checking release:', release);
-      console.log('Release bookingId:', release.bookingId);
-      return release.bookingId === bookingId;
-    });
-    
-    console.log('Filtered releases:', filtered);
+    const filtered = temporaryReleases.filter(release => release.bookingId === bookingId);
     return filtered;
   };
 
@@ -1011,9 +999,6 @@ const Dashboard: React.FC = () => {
               {/* Show temporary releases for this booking */}
               {(() => {
                 const bookingReleases = getTemporaryReleasesForBooking(selectedBookingDetails._id);
-                console.log('Booking ID:', selectedBookingDetails._id);
-                console.log('All temporary releases:', temporaryReleases);
-                console.log('Filtered releases for this booking:', bookingReleases);
                 // Always show the section, even if empty, for debugging
                 return (
                   <>

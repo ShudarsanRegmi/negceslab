@@ -21,6 +21,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminTemporaryReleases from "./pages/AdminTemporaryReleases";
 import BookingForm from "./pages/BookingForm";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
@@ -111,6 +112,16 @@ const AppContent = () => {
                     <ProtectedRoute requiredRole="admin">
                       <Layout>
                         <AdminDashboard />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/temporary-releases"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <Layout>
+                        <AdminTemporaryReleases />
                       </Layout>
                     </ProtectedRoute>
                   }

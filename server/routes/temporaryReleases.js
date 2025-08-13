@@ -182,32 +182,48 @@ router.get('/all', verifyToken, async (req, res) => {
     }
 
     const allReleases = await TemporaryReleaseDetail.find({
-      status: { $in: ['active', 'partially_booked'] }
+      status: { $in: ['active', 'partially_booked', 'cancelled'] }
     })
     .populate({
-      path: 'originalBooking',
-      select: 'startDate endDate startTime endTime computerId userId',
+      path: 'bookingId',
+      select: 'startDate endDate startTime endTime computerId userId reason',
       populate: {
         path: 'computerId',
         select: 'name location specifications'
       }
     })
-    .populate('user', 'name email')
     .sort({ createdAt: -1 });
 
-    // Also get bookings summary for admin overview
-    const bookingsWithReleases = await Booking.find({
-      'temporaryRelease.hasActiveReleases': true
-    })
-    .populate('computerId', 'name location specifications')
-    .populate('user', 'name email')
-    .select('userId computerId startDate endDate temporaryRelease')
-    .sort({ 'temporaryRelease.lastUpdated': -1 });
+    // Get user information for each release
+    const User = require('../models/user');
+    const releasesWithUserInfo = await Promise.all(
+      allReleases.map(async (release) => {
+        let userInfo = null;
+        try {
+          userInfo = await User.findById(release.userId);
+        } catch (err) {
+          console.warn(`Could not fetch user info for ${release.userId}:`, err.message);
+        }
 
-    res.json({ 
-      releaseDetails: allReleases,
-      bookingSummaries: bookingsWithReleases
-    });
+        return {
+          _id: release._id,
+          bookingId: release.bookingId?._id,
+          userId: release.userId,
+          releasedDates: release.releasedDates,
+          reason: release.reason,
+          status: release.status,
+          createdAt: release.createdAt,
+          originalBooking: release.bookingId,
+          userInfo: userInfo ? {
+            uid: userInfo._id,
+            email: userInfo.email,
+            displayName: userInfo.displayName
+          } : null
+        };
+      })
+    );
+
+    res.json(releasesWithUserInfo);
   } catch (error) {
     console.error('Error fetching all temporary releases:', error);
     res.status(500).json({ message: 'Error fetching temporary releases', error: error.message });
