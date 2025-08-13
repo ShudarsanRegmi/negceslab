@@ -89,6 +89,40 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     default: undefined
   },
+  
+  // CORE TEMPORARY RELEASE INFO - Just the basics for fast queries
+  temporaryRelease: {
+    hasActiveReleases: {
+      type: Boolean,
+      default: false,
+      index: true  // Fast querying for available slots
+    },
+    totalReleasedDays: {
+      type: Number,
+      default: 0
+    },
+    // Quick lookup array for released dates (for fast availability checking)
+    releasedDates: [{
+      date: {
+        type: String, // YYYY-MM-DD format
+        required: true
+      },
+      isBooked: {
+        type: Boolean,
+        default: false
+      },
+      tempBookingId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking',
+        default: null
+      }
+    }],
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  
   // System freed early tracking
   freedAt: {
     type: Date,
@@ -99,6 +133,19 @@ const bookingSchema = new mongoose.Schema({
     ref: 'User',
     default: undefined
   },
+  
+  // For temporary bookings made on released dates
+  isTemporaryBooking: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  originalBookingId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Booking',
+    default: null
+  },
+  
   createdAt: {
     type: Date,
     default: Date.now,
@@ -121,13 +168,43 @@ bookingSchema.virtual('user', {
   justOne: true
 });
 
+// Virtual for temporary release details
+bookingSchema.virtual('temporaryReleaseDetails', {
+  ref: 'TemporaryReleaseDetail',
+  localField: '_id',
+  foreignField: 'bookingId'
+});
+
+// Virtual for temporary bookings made on this booking's released dates
+bookingSchema.virtual('temporaryBookings', {
+  ref: 'Booking',
+  localField: '_id',
+  foreignField: 'originalBookingId'
+});
+
 // Pre-save middleware
 bookingSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
+  
+  // Update temporary release summary
+  if (this.temporaryRelease && this.isModified('temporaryRelease')) {
+    this.temporaryRelease.lastUpdated = Date.now();
+    this.temporaryRelease.totalReleasedDays = this.temporaryRelease.releasedDates?.length || 0;
+    this.temporaryRelease.hasActiveReleases = this.temporaryRelease.totalReleasedDays > 0;
+  }
+  
   next();
 });
 
-// Add index for common queries
+// Indexes for efficient querying
+bookingSchema.index({ computerId: 1, status: 1, startDate: 1, endDate: 1 });
+bookingSchema.index({ userId: 1, status: 1 });
+bookingSchema.index({ 
+  'temporaryRelease.hasActiveReleases': 1, 
+  'temporaryRelease.releasedDates.date': 1,
+  'temporaryRelease.releasedDates.isBooked': 1
+});
+bookingSchema.index({ isTemporaryBooking: 1, originalBookingId: 1 });
 bookingSchema.index({ computerId: 1, status: 1, startDate: 1, endDate: 1 });
 bookingSchema.index({ userId: 1, status: 1 });
 

@@ -4,6 +4,8 @@ const Booking = require('../models/booking');
 const Computer = require('../models/computer');
 const User = require('../models/user');
 const Notification = require('../models/notification');
+const TemporaryRelease = require('../models/temporaryRelease');
+const TemporaryReleaseDetail = require('../models/temporaryReleaseDetail');
 const { verifyToken } = require('../middleware/auth');
 const policy = require('../../shared/policy');
 const { 
@@ -136,8 +138,57 @@ router.post('/', verifyToken, async (req, res) => {
       ]
     });
 
+    console.log('Found conflicting bookings:', conflictingBookings.length);
+
+    // Generate all dates in the requested booking period
+    const requestStart = new Date(startDate);
+    const requestEnd = new Date(endDate);
+    const requestDates = [];
+    const currentDate = new Date(requestStart);
+    while (currentDate <= requestEnd) {
+      requestDates.push(currentDate.toISOString().split('T')[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    console.log('Requested dates:', requestDates);
+
+    // Filter out bookings that are covered by temporary releases
+    const nonReleasedConflicts = [];
+    
+    for (const booking of conflictingBookings) {
+      console.log('Checking booking:', booking._id, 'dates:', booking.startDate, 'to', booking.endDate);
+      
+      // Check if this booking has temporary releases that cover the requested dates
+      let isFullyCovered = false;
+      
+      if (booking.temporaryRelease && booking.temporaryRelease.hasActiveReleases) {
+        // Check if all requested dates are in the booking's released dates
+        const releasedDates = booking.temporaryRelease.releasedDates || [];
+        console.log('Booking has released dates:', releasedDates);
+        
+        // Extract date strings from the release objects
+        const releasedDateStrings = releasedDates.map(releaseItem => {
+          // Handle both string format and object format
+          return typeof releaseItem === 'string' ? releaseItem : releaseItem.date;
+        });
+        console.log('Extracted released date strings:', releasedDateStrings);
+        
+        isFullyCovered = requestDates.every(date => releasedDateStrings.includes(date));
+        console.log('All requested dates covered by releases:', isFullyCovered);
+      }
+      
+      if (!isFullyCovered) {
+        console.log('Booking', booking._id, 'is not fully covered by releases, adding to conflicts');
+        nonReleasedConflicts.push(booking);
+      } else {
+        console.log('Booking', booking._id, 'is fully covered by releases, excluding from conflicts');
+      }
+    }
+
+    console.log('Non-released conflicts after filtering:', nonReleasedConflicts.length);
+
     // Filter out adjacent bookings (end time == start time is allowed)
-    const overlaps = conflictingBookings.filter(existing => {
+    const overlaps = nonReleasedConflicts.filter(existing => {
       // If not same day, skip time check
       if (existing.endDate < startDate || existing.startDate > endDate) return false;
       // For each overlapping day, check time
@@ -152,12 +203,40 @@ router.post('/', verifyToken, async (req, res) => {
       return true;
     });
 
+    console.log('Final overlaps after time filtering:', overlaps.length);
+
     if (overlaps.length > 0) {
+      console.log('Returning conflict response for overlapping bookings:', overlaps.map(b => b._id));
       return res.status(400).json({
         message: 'Time slot conflict with existing booking',
         conflicts: overlaps
       });
     }
+
+    // Before creating the booking, check if this will be a temporary booking
+    // Find bookings that have temporary releases covering the requested dates
+    const bookingsWithReleases = await Booking.find({
+      computerId,
+      status: { $in: ['approved', 'pending'] },
+      'temporaryRelease.hasActiveReleases': true,
+      'temporaryRelease.releasedDates.date': { $in: requestDates }
+    });
+
+    console.log('Found bookings with releases for pre-creation check:', bookingsWithReleases.length);
+
+    // Check if any booking fully covers our requested dates
+    const relevantBookingWithRelease = bookingsWithReleases.find(existingBooking => {
+      const releasedDates = existingBooking.temporaryRelease.releasedDates || [];
+      // Extract date strings from the release objects
+      const releasedDateStrings = releasedDates.map(releaseItem => {
+        return typeof releaseItem === 'string' ? releaseItem : releaseItem.date;
+      });
+      const isFullyCovered = requestDates.every(date => releasedDateStrings.includes(date));
+      console.log('Pre-creation check - Booking', existingBooking._id, 'covers all dates:', isFullyCovered);
+      return isFullyCovered;
+    });
+
+    console.log('Pre-creation check - Relevant booking with release:', relevantBookingWithRelease?._id);
 
     // Parse dates and times
     const startDateObj = new Date(startDate + 'T00:00:00');
@@ -242,19 +321,44 @@ router.post('/', verifyToken, async (req, res) => {
 
     await booking.save();
 
+    // If this booking uses temporary release slots, mark them as booked
+    if (relevantBookingWithRelease) {
+      console.log('Marking temporary release slots as booked for booking:', booking._id);
+      
+      // Update the isBooked flag for the covered dates
+      requestDates.forEach(requestDate => {
+        const releaseItem = relevantBookingWithRelease.temporaryRelease.releasedDates.find(rd => rd.date === requestDate);
+        if (releaseItem) {
+          releaseItem.isBooked = true;
+          releaseItem.tempBookingId = booking._id;
+          console.log('Marked date', requestDate, 'as booked with booking ID:', booking._id);
+        }
+      });
+      
+      await relevantBookingWithRelease.save();
+      console.log('Updated original booking with temporary release booking info');
+    }
+
+    const isTemporaryBooking = relevantBookingWithRelease !== undefined;
+    console.log('Is temporary booking:', isTemporaryBooking);
+
     // Notify all admins about the new booking
     const userBookingId = booking._id.toString().slice(-6).toUpperCase();
+    const bookingType = isTemporaryBooking ? 'temporary booking (during release period)' : 'booking';
+    
     const admins = await User.find({ role: 'admin' });
     const adminNotifications = admins.map(admin => new Notification({
       userId: admin.firebaseUid,
-      title: 'New Booking Request',
-      message: `A new booking (ID: ${userBookingId}) has been made for computer ${computer.name} by user ${req.user.name}(${req.user.email}).`,
+      title: isTemporaryBooking ? 'New Temporary Booking Request' : 'New Booking Request',
+      message: `A new ${bookingType} (ID: ${userBookingId}) has been made for computer ${computer.name} by user ${req.user.name}(${req.user.email}).`,
       type: 'info',
       metadata: {
         bookingId: userBookingId,
         computerId: computer._id,
         computerName: computer.name,
-        userId: req.user.firebaseUid
+        userId: req.user.firebaseUid,
+        isTemporaryBooking,
+        originalBookingId: relevantBookingWithRelease?._id
       }
     }));
     if (adminNotifications.length > 0) {

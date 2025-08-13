@@ -41,7 +41,7 @@ import {
   parseISO,
   set,
 } from "date-fns";
-import { computersAPI, bookingsAPI } from "../services/api";
+import { computersAPI, bookingsAPI, temporaryReleaseAPI } from "../services/api";
 import Warning from "@mui/icons-material/Warning";
 import Info from "@mui/icons-material/Info";
 import { alpha } from "@mui/material/styles";
@@ -73,6 +73,15 @@ interface Booking {
   startTime: string;
   endTime: string;
   status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
+}
+
+interface TemporaryRelease {
+  date: string; // Single date for available slot (YYYY-MM-DD format)
+  startTime: string; // HH:mm format
+  endTime: string; // HH:mm format
+  originalBookingId: string;
+  computerName: string;
+  location: string;
 }
 
 const steps = [
@@ -122,6 +131,8 @@ const BookingForm: React.FC = (): ReactElement => {
   const [timeValidationError, setTimeValidationError] = useState<string | null>(null);
   const [fullDay, setFullDay] = useState(false);
   const [mentor, setMentor] = useState("");
+  const [availableTemporarySlots, setAvailableTemporarySlots] = useState<TemporaryRelease[]>([]);
+  const [showTemporarySlots, setShowTemporarySlots] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -223,6 +234,13 @@ const BookingForm: React.FC = (): ReactElement => {
     }
   }, [fullDay, startDate, endDate]);
 
+  // Fetch temporary slots when dates or computer changes
+  useEffect(() => {
+    if (selectedComputer && startDate && endDate) {
+      fetchAvailableTemporarySlots(selectedComputer);
+    }
+  }, [selectedComputer, startDate, endDate]);
+
   const fetchComputers = async () => {
     try {
       const response = await computersAPI.getAllComputers();
@@ -233,8 +251,148 @@ const BookingForm: React.FC = (): ReactElement => {
     }
   };
 
-  const checkTimeSlotConflicts = (selectedComputer: Computer): Booking[] => {
+  const fetchAvailableTemporarySlots = async (computerId: string) => {
+    if (!startDate || !endDate) return;
+    
+    console.log('=== FETCHING TEMPORARY SLOTS DEBUG ===');
+    console.log('Computer ID:', computerId);
+    console.log('Start Date:', format(startDate, "yyyy-MM-dd"));
+    console.log('End Date:', format(endDate, "yyyy-MM-dd"));
+    
+    try {
+      const response = await temporaryReleaseAPI.getAvailableSlots(
+        computerId,
+        format(startDate, "yyyy-MM-dd"),
+        format(endDate, "yyyy-MM-dd")
+      );
+      console.log('Full API Response:', response);
+      console.log('Response Data:', response.data);
+      console.log('Response Status:', response.status);
+      
+      // The new API returns { data: [...] } format
+      const slots = Array.isArray(response.data?.data) ? response.data.data : [];
+      console.log('Extracted slots:', slots);
+      console.log('Number of slots found:', slots.length);
+      
+      if (slots.length > 0) {
+        console.log('Sample slot structure:', slots[0]);
+        slots.forEach((slot, index) => {
+          console.log(`Slot ${index + 1}:`, {
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            location: slot.location,
+            originalBookingId: slot.originalBookingId
+          });
+        });
+      } else {
+        console.log('❌ No temporary release slots found for this computer and date range');
+      }
+      
+      setAvailableTemporarySlots(slots);
+    } catch (error: any) {
+      console.error("❌ Error fetching temporary slots:", error);
+      console.error("Error details:", error.response?.data || error.message);
+      console.error("Error status:", error.response?.status);
+      setAvailableTemporarySlots([]);
+    }
+    console.log('=== END FETCHING TEMPORARY SLOTS DEBUG ===\n');
+  };
+
+  // Helper function to check if the entire proposed booking can be resolved with temporary releases
+  const canBookingBeResolvedWithTempReleases = (): boolean => {
+    if (!startDate || !endDate || !startTime || !endTime || !Array.isArray(availableTemporarySlots) || !selectedComputer) {
+      return false;
+    }
+
+    console.log('=== CHECKING IF BOOKING CAN BE RESOLVED ===');
+    console.log('Available temporary slots:', availableTemporarySlots);
+
+    // Get the actual conflicts first
+    const selectedComp = computers.find(c => c._id === selectedComputer);
+    if (!selectedComp) return false;
+
+    const conflicts = checkTimeSlotConflicts(selectedComp);
+    console.log('Current conflicts:', conflicts);
+
+    if (conflicts.length === 0) {
+      console.log('No conflicts, so can proceed normally');
+      return false; // No conflicts, so no need for temporary releases
+    }
+
+    // Generate all dates in the proposed booking range
+    const proposedDates = [];
+    const currentDate = new Date(startDate);
+    currentDate.setHours(0, 0, 0, 0);
+    const endDateNormalized = new Date(endDate);
+    endDateNormalized.setHours(0, 0, 0, 0);
+    
+    while (currentDate <= endDateNormalized) {
+      proposedDates.push(currentDate.toISOString().split('T')[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    console.log('Proposed dates:', proposedDates);
+
+    const proposedStartTime = format(startTime, 'HH:mm');
+    const proposedEndTime = format(endTime, 'HH:mm');
+
+    console.log('Proposed time range:', proposedStartTime, '-', proposedEndTime);
+
+    // Check if ALL proposed dates that have conflicts can be covered by temporary releases
+    const canResolve = proposedDates.every(proposedDate => {
+      console.log(`Checking proposed date ${proposedDate}:`);
+      
+      // Check if this proposed date overlaps with any conflict booking
+      const hasConflictOnThisDate = conflicts.some(conflict => {
+        const conflictStartDate = conflict.startDate;
+        const conflictEndDate = conflict.endDate;
+        
+        const proposedDateObj = new Date(proposedDate);
+        const conflictStart = new Date(conflictStartDate);
+        const conflictEnd = new Date(conflictEndDate);
+        
+        // Normalize all dates to compare just the date part
+        proposedDateObj.setHours(0, 0, 0, 0);
+        conflictStart.setHours(0, 0, 0, 0);
+        conflictEnd.setHours(0, 0, 0, 0);
+        
+        const isInConflictRange = proposedDateObj >= conflictStart && proposedDateObj <= conflictEnd;
+        console.log(`  - Conflict ${conflict._id}: ${conflictStartDate} to ${conflictEndDate}, proposed date in range: ${isInConflictRange}`);
+        return isInConflictRange;
+      });
+
+      if (!hasConflictOnThisDate) {
+        console.log(`  - No conflict on proposed date ${proposedDate}, so no temp release needed`);
+        return true; // No conflict on this date, so it's fine
+      }
+
+      // This proposed date has a conflict, check if there's a matching temporary release for THIS specific date
+      const matchingSlot = availableTemporarySlots.find(slot => {
+        const dateMatches = slot.date === proposedDate;
+        const timeMatches = proposedStartTime >= slot.startTime && proposedEndTime <= slot.endTime;
+        console.log(`  - Checking slot ${slot.date}: date match = ${dateMatches}, time match = ${timeMatches}`);
+        return dateMatches && timeMatches;
+      });
+      
+      const hasMatchingSlot = !!matchingSlot;
+      console.log(`  - Proposed date ${proposedDate} has conflict, temp slot available: ${hasMatchingSlot}`);
+      
+      return hasMatchingSlot;
+    });
+
+    console.log('Final result - can be resolved:', canResolve);
+    console.log('=== END CHECKING IF BOOKING CAN BE RESOLVED ===');
+    
+    return canResolve;
+  };
+
+  const checkTimeSlotConflicts = (selectedComputer: any) => {
     if (!startDate || !endDate || !startTime || !endTime) return [];
+
+    console.log('=== CONFLICT CHECK DEBUG ===');
+    console.log('Available temporary slots:', availableTemporarySlots);
+    console.log('Selected computer bookings:', selectedComputer.bookings);
 
     const proposedStart = set(startDate, {
       hours: startTime.getHours(),
@@ -244,6 +402,45 @@ const BookingForm: React.FC = (): ReactElement => {
       hours: endTime.getHours(),
       minutes: endTime.getMinutes(),
     });
+
+    console.log('Proposed booking:', {
+      start: proposedStart.toISOString(),
+      end: proposedEnd.toISOString(),
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: format(endDate, 'yyyy-MM-dd')
+    });
+
+    // Generate all dates in the proposed booking range
+    const proposedDates = [];
+    
+    // Use format() to get consistent date strings regardless of timezone
+    const startDateStr = format(startDate, 'yyyy-MM-dd');
+    const endDateStr = format(endDate, 'yyyy-MM-dd');
+    
+    // Create dates in local timezone for iteration
+    const currentDate = new Date(startDateStr + 'T00:00:00');
+    const endDateNormalized = new Date(endDateStr + 'T00:00:00');
+    
+    while (currentDate <= endDateNormalized) {
+      proposedDates.push(format(currentDate, 'yyyy-MM-dd'));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    console.log('Proposed booking dates:', proposedDates);
+
+    // Create a map of available temporary release dates for fast lookup
+    const availableReleaseDatesMap = new Map();
+    if (Array.isArray(availableTemporarySlots)) {
+      availableTemporarySlots.forEach(slot => {
+        availableReleaseDatesMap.set(slot.date, {
+          originalBookingId: slot.originalBookingId,
+          startTime: slot.startTime,
+          endTime: slot.endTime
+        });
+      });
+    }
+
+    console.log('Available release dates map:', availableReleaseDatesMap);
 
     const conflicts = selectedComputer.bookings?.filter((booking) => {
       if (booking.status === "rejected" || booking.status === "cancelled" || booking.status === "completed") return false;
@@ -257,14 +454,101 @@ const BookingForm: React.FC = (): ReactElement => {
         minutes: parseInt(booking.endTime.split(":")[1]),
       });
 
-      return (
+      console.log(`\nChecking booking ${booking._id}:`, {
+        booking: {
+          startDate: booking.startDate,
+          endDate: booking.endDate,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          status: booking.status
+        },
+        bookingStart: bookingStart.toISOString(),
+        bookingEnd: bookingEnd.toISOString()
+      });
+
+      // Check if there's a time overlap
+      const hasTimeOverlap = (
         isWithinInterval(proposedStart, { start: bookingStart, end: bookingEnd }) ||
         isWithinInterval(proposedEnd, { start: bookingStart, end: bookingEnd }) ||
         isWithinInterval(bookingStart, { start: proposedStart, end: proposedEnd }) ||
         isWithinInterval(bookingEnd, { start: proposedStart, end: proposedEnd })
       );
+
+      console.log('Has time overlap:', hasTimeOverlap);
+
+      if (!hasTimeOverlap) {
+        console.log('✅ No time overlap - no conflict');
+        return false;
+      }
+
+      // If there's a time overlap, check if ALL overlapping dates are covered by temporary releases
+      const bookingDates = [];
+      const bookingDateStart = new Date(booking.startDate);
+      bookingDateStart.setHours(0, 0, 0, 0);
+      const bookingDateEnd = new Date(booking.endDate);
+      bookingDateEnd.setHours(0, 0, 0, 0);
+      
+      const tempDate = new Date(bookingDateStart);
+      while (tempDate <= bookingDateEnd) {
+        bookingDates.push(tempDate.toISOString().split('T')[0]);
+        tempDate.setDate(tempDate.getDate() + 1);
+      }
+
+      console.log('Booking dates:', bookingDates);
+
+      // Find overlapping dates between proposed booking and existing booking
+      const overlappingDates = proposedDates.filter(date => bookingDates.includes(date));
+      console.log('Overlapping dates:', overlappingDates);
+
+      if (overlappingDates.length === 0) {
+        console.log('✅ No overlapping dates - no conflict');
+        return false;
+      }
+
+      // Check if all overlapping dates are covered by temporary releases
+      const allOverlappingDatesCovered = overlappingDates.every(date => {
+        const isDateCovered = availableReleaseDatesMap.has(date);
+        console.log(`Date ${date} covered by temp release:`, isDateCovered);
+        
+        // If date is covered by temp release, also check if the time slots match
+        if (isDateCovered) {
+          const releaseInfo = availableReleaseDatesMap.get(date);
+          const releaseStartTime = releaseInfo.startTime;
+          const releaseEndTime = releaseInfo.endTime;
+          const proposedStartTime = format(startTime, 'HH:mm');
+          const proposedEndTime = format(endTime, 'HH:mm');
+          
+          console.log(`Checking time compatibility for ${date}:`, {
+            releaseTime: `${releaseStartTime} - ${releaseEndTime}`,
+            proposedTime: `${proposedStartTime} - ${proposedEndTime}`
+          });
+          
+          // Check if proposed times are within the released time slot
+          const timesMatch = (
+            proposedStartTime >= releaseStartTime && 
+            proposedEndTime <= releaseEndTime
+          );
+          
+          console.log(`Times match for ${date}:`, timesMatch);
+          return timesMatch;
+        }
+        
+        return false;
+      });
+
+      console.log('All overlapping dates covered with matching times:', allOverlappingDatesCovered);
+
+      if (allOverlappingDatesCovered && overlappingDates.length > 0) {
+        console.log('✅ Conflict resolved by temporary releases');
+        return false; // No conflict because all overlapping dates/times are covered by temp releases
+      }
+
+      console.log('❌ Conflict remains - not all dates/times covered by temp releases');
+      return true; // There's a conflict
     }) || [];
 
+    console.log('Final conflicts:', conflicts);
+    console.log('=== END CONFLICT CHECK DEBUG ===\n');
     return conflicts;
   };
 
@@ -448,7 +732,7 @@ const BookingForm: React.FC = (): ReactElement => {
       <Dialog 
         open={showConflictDialog} 
         onClose={() => setShowConflictDialog(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: {
@@ -460,8 +744,8 @@ const BookingForm: React.FC = (): ReactElement => {
       >
         <DialogTitle sx={{ 
           borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-          background: theme.palette.error.light,
-          color: theme.palette.error.dark,
+          background: canBookingBeResolvedWithTempReleases() ? theme.palette.warning.light : theme.palette.error.light,
+          color: canBookingBeResolvedWithTempReleases() ? theme.palette.warning.dark : theme.palette.error.dark,
           display: 'flex',
           alignItems: 'center',
           gap: 1,
@@ -472,21 +756,23 @@ const BookingForm: React.FC = (): ReactElement => {
             alignItems: 'center',
             gap: 1,
           }}>
-            <Warning sx={{ color: theme.palette.error.main }} />
+            <Warning sx={{ color: canBookingBeResolvedWithTempReleases() ? theme.palette.warning.main : theme.palette.error.main }} />
             <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
-              Time Slot Unavailable
+              {canBookingBeResolvedWithTempReleases() ? 'Booking Conflict - Can be Resolved' : 'Time Slot Unavailable'}
             </Typography>
           </Box>
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Typography variant="body1" gutterBottom sx={{ mb: 3, fontWeight: 500 }}>
-            The selected time slot conflicts with existing bookings for this computer:
+            Your requested booking period ({startDate ? format(startDate, 'MMM d, yyyy') : 'N/A'} to {endDate ? format(endDate, 'MMM d, yyyy') : 'N/A'}, {startTime ? format(startTime, 'HH:mm') : 'N/A'} - {endTime ? format(endTime, 'HH:mm') : 'N/A'}) conflicts with existing bookings:
           </Typography>
+          
           <List sx={{ 
             bgcolor: '#fff',
             borderRadius: 1,
             border: '1px solid rgba(0, 0, 0, 0.1)',
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+            mb: 3,
           }}>
             {conflictingBookings.map((booking, index) => (
               <ListItem 
@@ -504,7 +790,7 @@ const BookingForm: React.FC = (): ReactElement => {
                     mb: 1,
                   }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      {format(parseISO(booking.startDate), 'MMM d, yyyy')}
+                      {format(parseISO(booking.startDate), 'MMM d, yyyy')} - {format(parseISO(booking.endDate), 'MMM d, yyyy')}
                     </Typography>
                     <Chip
                       label={booking.status}
@@ -520,45 +806,114 @@ const BookingForm: React.FC = (): ReactElement => {
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                     Time: {booking.startTime} - {booking.endTime}
                   </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Duration: {differenceInDays(parseISO(booking.endDate), parseISO(booking.startDate)) + 1} day(s)
+                  </Typography>
                 </Box>
               </ListItem>
             ))}
           </List>
-          <Box sx={{ 
-            mt: 3,
-            p: 2,
-            borderRadius: 1,
-            bgcolor: alpha(theme.palette.error.light, 0.1),
-            border: `1px solid ${theme.palette.error.light}`,
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 1,
-          }}>
-            <Info fontSize="small" color="error" sx={{ mt: 0.5 }} />
-            <Typography variant="body2" color="error.main" sx={{ fontWeight: 500 }}>
-              Please select a different time slot that doesn't overlap with existing bookings. You can try adjusting your start or end time to find an available slot.
-            </Typography>
-          </Box>
+          
+          {/* Show resolution options */}
+          {canBookingBeResolvedWithTempReleases() ? (
+            <Box sx={{ 
+              p: 3,
+              borderRadius: 2,
+              bgcolor: alpha(theme.palette.success.light, 0.1),
+              border: `2px solid ${theme.palette.success.light}`,
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Info sx={{ color: theme.palette.success.main }} />
+                <Typography variant="h6" color="success.main" sx={{ fontWeight: 600 }}>
+                  Good News! This conflict can be resolved
+                </Typography>
+              </Box>
+              
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                All conflicting dates are available through temporary releases from other users. You can proceed with your booking using these available slots:
+              </Typography>
+              
+              <Box sx={{ 
+                pl: 2,
+                borderLeft: `3px solid ${theme.palette.success.main}`,
+                bgcolor: 'rgba(255, 255, 255, 0.7)',
+                borderRadius: 1,
+                p: 2,
+              }}>
+                {availableTemporarySlots.slice(0, 5).map((slot, index) => (
+                  <Typography key={index} variant="body2" color="success.dark" sx={{ mb: 0.5, fontWeight: 500 }}>
+                    ✓ {format(new Date(slot.date), "MMM d, yyyy")} ({slot.startTime} - {slot.endTime}) at {slot.location}
+                  </Typography>
+                ))}
+                {availableTemporarySlots.length > 5 && (
+                  <Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }}>
+                    ... and {availableTemporarySlots.length - 5} more dates
+                  </Typography>
+                )}
+              </Box>
+              
+              <Typography variant="body2" color="success.dark" sx={{ mt: 2, fontStyle: 'italic', fontWeight: 500 }}>
+                💡 Your booking will be automatically approved for these dates since the original users have temporarily released them.
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ 
+              p: 2,
+              borderRadius: 1,
+              bgcolor: alpha(theme.palette.error.light, 0.1),
+              border: `1px solid ${theme.palette.error.light}`,
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 1,
+            }}>
+              <Info fontSize="small" color="error" sx={{ mt: 0.5 }} />
+              <Typography variant="body2" color="error.main" sx={{ fontWeight: 500 }}>
+                No temporary release slots are available for your requested time period. Please select a different time slot or adjust your booking dates.
+              </Typography>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions sx={{ 
           p: 2,
           borderTop: '1px solid rgba(0, 0, 0, 0.1)',
           bgcolor: 'rgba(0, 0, 0, 0.02)',
+          justifyContent: 'flex-end',
+          gap: 1,
         }}>
+          {/* Show "Book with Temporary Slots" button if conflicts can be resolved */}
+          {canBookingBeResolvedWithTempReleases() && (
+            <Button 
+              onClick={() => {
+                console.log('User chose to book with temporary slots');
+                setShowConflictDialog(false);
+                // Proceed to next step since conflicts can be resolved
+                setActiveStep(activeStep + 1);
+              }}
+              variant="contained"
+              color="success"
+              sx={{
+                px: 3,
+                py: 1,
+                fontWeight: 600,
+                '&:hover': {
+                  bgcolor: 'success.dark',
+                },
+              }}
+            >
+              Proceed with Booking
+            </Button>
+          )}
           <Button 
             onClick={() => setShowConflictDialog(false)}
-            variant="contained"
-            color="error"
+            variant={canBookingBeResolvedWithTempReleases() ? "outlined" : "contained"}
+            color={canBookingBeResolvedWithTempReleases() ? "primary" : "error"}
             sx={{
               px: 3,
               py: 1,
               fontWeight: 600,
-              '&:hover': {
-                bgcolor: theme.palette.error.dark,
-              },
             }}
           >
-            Choose Different Time
+            {canBookingBeResolvedWithTempReleases() ? "Choose Different Time" : "Cancel"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -656,7 +1011,7 @@ const BookingForm: React.FC = (): ReactElement => {
                       <strong>Location:</strong>{" "}
                       {computers.find((c) => c._id === selectedComputer)?.location}
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" component="div">
                       <strong>Status:</strong>{" "}
                       <Chip 
                         label={computers.find((c) => c._id === selectedComputer)?.status || "unknown"}
@@ -847,6 +1202,46 @@ const BookingForm: React.FC = (): ReactElement => {
                       ⚠️ Duration is less than 1 hour
                     </Typography>
                   )}
+              </Paper>
+            )}
+
+            {/* Available Temporary Slots */}
+            {Array.isArray(availableTemporarySlots) && availableTemporarySlots.length > 0 && (
+              <Paper sx={{ p: 2, mt: 2, bgcolor: "#e8f5e8" }}>
+                <Typography variant="subtitle2" gutterBottom color="success.main">
+                  ✨ Available Temporary Release Slots
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  These dates are temporarily available from other users who have released their bookings:
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {availableTemporarySlots.map((slot) => (
+                    <Box 
+                      key={`${slot.temporaryReleaseId}-${slot.date}`}
+                      sx={{ 
+                        p: 1.5, 
+                        border: '1px solid', 
+                        borderColor: 'success.light',
+                        borderRadius: 1,
+                        bgcolor: 'background.paper'
+                      }}
+                    >
+                      <Typography variant="body2" fontWeight="bold">
+                        {format(new Date(slot.date), "MMM d, yyyy")}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {slot.startTime} - {slot.endTime} • {slot.computerName}
+                      </Typography>
+                      <Typography variant="caption" color="success.main" sx={{ display: 'block' }}>
+                        📍 {slot.location} • Temporarily available
+                        {slot.hasExistingBookings && " (Some bookings exist)"}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  * You can book during these periods as they are temporarily released by other users
+                </Typography>
               </Paper>
             )}
 

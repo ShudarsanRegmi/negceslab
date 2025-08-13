@@ -144,4 +144,26 @@ export const systemDetailsAPI = {
     api.delete(`/system-details/${computerId}/software/${softwareIndex}`),
 };
 
+// Temporary Release API endpoints - Updated for hybrid system
+export const temporaryReleaseAPI = {
+  createTemporaryRelease: (data: {
+    bookingId: string;
+    releaseDates: string[];
+    reason: string;
+    userMessage?: string;
+    releaseType?: 'single_day' | 'multiple_days' | 'range';
+    isEmergency?: boolean;
+  }) => api.post('/temporary-releases/create', data),
+  getUserTemporaryReleases: () => api.get('/temporary-releases/user'),
+  getAllTemporaryReleases: () => api.get('/temporary-releases/all'),
+  cancelTemporaryRelease: (releaseId: string) => api.patch(`/temporary-releases/${releaseId}/cancel`),
+  getAvailableSlots: (computerId: string, startDate: string, endDate: string) => 
+    api.get(`/temporary-releases/available/${computerId}?startDate=${startDate}&endDate=${endDate}`),
+  bookTemporarySlot: (data: {
+    originalBookingId: string;
+    date: string;
+    reason: string;
+  }) => api.post('/temporary-releases/book', data),
+};
+
 export default api; 

@@ -23,7 +23,13 @@ import {
   DialogActions,
   Divider,
   CircularProgress,
+  TextField,
+  FormControl,
+  InputLabel,
+  FormHelperText,
 } from "@mui/material";
+import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import Grid from '@mui/material/Grid';
 import {
   Computer as ComputerIcon,
@@ -39,9 +45,10 @@ import {
   AccessTime as ClockIcon,
   Close as CloseIcon,
   ExitToApp as FreeIcon,
+  CalendarMonth as CalendarIcon,
 } from "@mui/icons-material";
-import { format } from "date-fns";
-import { bookingsAPI, computersAPI } from "../services/api";
+import { format, addDays, isBefore, startOfDay, isWithinInterval, parseISO } from "date-fns";
+import { bookingsAPI, computersAPI, temporaryReleaseAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
 
@@ -77,6 +84,23 @@ interface Computer {
   nextAvailableDate?: string;
 }
 
+interface TemporaryRelease {
+  _id: string;
+  originalBookingId: string;
+  userId: string;
+  computerId: {
+    _id: string;
+    name: string;
+    location: string;
+  };
+  releaseDates: string[];
+  reason: string;
+  status: "active" | "cancelled";
+  tempBookings: string[];
+  createdAt: string;
+  originalBooking?: Booking;
+}
+
 const Dashboard: React.FC = () => {
   const { userRole } = useAuth(); // Get userRole from auth context
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -91,6 +115,13 @@ const Dashboard: React.FC = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [freeLoading, setFreeLoading] = useState(false);
+  const [tempReleaseDialogOpen, setTempReleaseDialogOpen] = useState(false);
+  const [tempReleaseLoading, setTempReleaseLoading] = useState(false);
+  const [temporaryReleases, setTemporaryReleases] = useState<TemporaryRelease[]>([]);
+  // Temporary release form state - now calendar based
+  const [selectedReleaseDates, setSelectedReleaseDates] = useState<Date[]>([]);
+  const [tempReleaseReason, setTempReleaseReason] = useState("");
+  const [calendarValue, setCalendarValue] = useState<Date | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -105,11 +136,27 @@ const Dashboard: React.FC = () => {
         bookingsAPI.getUserBookings(),
         computersAPI.getComputersWithBookings(),
       ]);
-      setBookings(bookingsRes.data);
-      setComputers(computersRes.data);
+      setBookings(bookingsRes.data || []);
+      setComputers(computersRes.data || []);
+      
+      // Fetch temporary releases separately to handle potential API errors
+      try {
+        const tempReleasesRes = await temporaryReleaseAPI.getUserTemporaryReleases();
+        const list = Array.isArray((tempReleasesRes as any)?.data?.data)
+          ? (tempReleasesRes as any).data.data
+          : (Array.isArray((tempReleasesRes as any)?.data) ? (tempReleasesRes as any).data : []);
+        setTemporaryReleases(list);
+      } catch (tempError) {
+        console.warn("Error fetching temporary releases:", tempError);
+        setTemporaryReleases([]);
+      }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       setError("Failed to load dashboard data");
+      // Set fallback empty arrays on error
+      setBookings([]);
+      setComputers([]);
+      setTemporaryReleases([]);
     } finally {
       setLoading(false);
     }
@@ -165,6 +212,106 @@ const Dashboard: React.FC = () => {
   const handleCloseDetails = () => {
     setDetailsDialogOpen(false);
     setSelectedBookingDetails(null);
+  };
+
+  const handleCreateTemporaryRelease = async () => {
+    if (!selectedBookingDetails || selectedReleaseDates.length === 0 || !tempReleaseReason.trim()) {
+      setError("Please select at least one date and provide a reason");
+      return;
+    }
+
+    setTempReleaseLoading(true);
+    try {
+      await temporaryReleaseAPI.createTemporaryRelease({
+        bookingId: selectedBookingDetails._id,
+        // Use local date-only strings to avoid timezone off-by-one
+        releaseDates: selectedReleaseDates.map(date => format(date, 'yyyy-MM-dd')),
+        reason: tempReleaseReason.trim(),
+      });
+      
+      // Refresh data and close dialogs
+      fetchData();
+      setTempReleaseDialogOpen(false);
+      setDetailsDialogOpen(false);
+      resetTempReleaseForm();
+    } catch (error: any) {
+      console.error("Error creating temporary release:", error);
+      setError(error.response?.data?.message || "Failed to create temporary release");
+    } finally {
+      setTempReleaseLoading(false);
+    }
+  };
+
+  const resetTempReleaseForm = () => {
+    setSelectedReleaseDates([]);
+    setTempReleaseReason("");
+    setCalendarValue(null);
+  };
+
+  const openTempReleaseDialog = () => {
+    setTempReleaseDialogOpen(true);
+  };
+
+  const closeTempReleaseDialog = () => {
+    setTempReleaseDialogOpen(false);
+    resetTempReleaseForm();
+  };
+
+  // Calendar helper functions
+  const handleDateSelect = (date: Date | null) => {
+    if (!date || !selectedBookingDetails) return;
+    
+    // Compare using local yyyy-MM-dd strings to avoid timezone drift
+    const bookingStartStr = selectedBookingDetails.startDate;
+    const bookingEndStr = selectedBookingDetails.endDate;
+    const dateStr = format(date, 'yyyy-MM-dd');
+
+    // Check if date is within booking period (inclusive)
+    if (dateStr < bookingStartStr || dateStr > bookingEndStr) {
+      return;
+    }
+    
+    const isSelected = selectedReleaseDates.some(d => format(d, 'yyyy-MM-dd') === dateStr);
+    
+    if (isSelected) {
+      // Remove date if already selected
+      setSelectedReleaseDates(prev => prev.filter(d => format(d, 'yyyy-MM-dd') !== dateStr));
+    } else {
+      // Add date if not selected
+      setSelectedReleaseDates(prev => [...prev, date]);
+    }
+  };
+
+  const isDateInBookingRange = (date: Date) => {
+    if (!selectedBookingDetails) return false;
+    const bookingStart = parseISO(selectedBookingDetails.startDate);
+    const bookingEnd = parseISO(selectedBookingDetails.endDate);
+    return isWithinInterval(date, { start: bookingStart, end: bookingEnd });
+  };
+
+  const isDateSelected = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return selectedReleaseDates.some(d => format(d, 'yyyy-MM-dd') === dateStr);
+  };
+
+  const shouldDisableDate = (date: Date) => {
+    // Disable if date is not in booking range
+    if (!isDateInBookingRange(date)) return true;
+    
+    // Disable Sundays (getDay() returns 0 for Sunday)
+    if (date.getDay() === 0) return true;
+    
+    return false;
+  };
+
+  const handleCancelTemporaryRelease = async (releaseId: string) => {
+    try {
+      await temporaryReleaseAPI.cancelTemporaryRelease(releaseId);
+      fetchData(); // Refresh the data
+    } catch (error: any) {
+      console.error("Error cancelling temporary release:", error);
+      setError(error.response?.data?.message || "Failed to cancel temporary release");
+    }
   };
 
   const isBookingActive = (booking: Booking) => {
@@ -748,6 +895,98 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Temporary Releases - Only show for non-admin users */}
+        {userRole !== 'admin' && (
+          <Card sx={{ mt: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                My Temporary Releases
+              </Typography>
+              {(temporaryReleases || []).length === 0 ? (
+                <Typography
+                  color="text.secondary"
+                  sx={{ textAlign: "center", py: 4 }}
+                >
+                  No temporary releases yet
+                </Typography>
+              ) : (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size={isMobile ? "small" : "medium"}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Computer</TableCell>
+                        <TableCell>Release Dates</TableCell>
+                        <TableCell>Time Period</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Temp Bookings</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(temporaryReleases || []).slice(0, 5).map((release) => (
+                        <TableRow key={release._id}>
+                          <TableCell>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">
+                                {release.computerId?.name || "Unknown Computer"}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {release.computerId?.location || "Unknown Location"}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {release.releaseDates.length} day(s)
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {release.releaseDates.length > 0 && format(new Date(release.releaseDates[0]), "MMM d")}
+                              {release.releaseDates.length > 1 && ` - ${format(new Date(release.releaseDates[release.releaseDates.length - 1]), "MMM d, yyyy")}`}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {release.originalBooking ? 
+                                `${release.originalBooking.startTime} - ${release.originalBooking.endTime}` :
+                                'Full Day'
+                              }
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={release.status}
+                              color={release.status === 'active' ? 'success' : 'default'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {release.tempBookings?.length || 0}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {release.status === 'active' && (
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                onClick={() => handleCancelTemporaryRelease(release._id)}
+                                sx={{ minWidth: "auto", px: 1 }}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </Box>
 
       {/* Booking Details Dialog */}
@@ -860,15 +1099,25 @@ const Dashboard: React.FC = () => {
             </Button>
           )}
           {selectedBookingDetails && canBookingBeFreed(selectedBookingDetails) && (
-            <Button
-              color="warning"
-              variant="contained"
-              startIcon={<FreeIcon />}
-              onClick={() => handleFreeSystem(selectedBookingDetails._id)}
-              disabled={freeLoading}
-            >
-              {freeLoading ? <CircularProgress size={20} color="inherit" /> : "Free System"}
-            </Button>
+            <>
+              <Button
+                color="info"
+                variant="outlined"
+                onClick={openTempReleaseDialog}
+                disabled={tempReleaseLoading}
+              >
+                Temporary Release
+              </Button>
+              <Button
+                color="warning"
+                variant="contained"
+                startIcon={<FreeIcon />}
+                onClick={() => handleFreeSystem(selectedBookingDetails._id)}
+                disabled={freeLoading}
+              >
+                {freeLoading ? <CircularProgress size={20} color="inherit" /> : "Free System"}
+              </Button>
+            </>
           )}
         </DialogActions>
       </Dialog>
@@ -893,6 +1142,112 @@ const Dashboard: React.FC = () => {
             disabled={cancelLoading}
           >
             {cancelLoading ? <CircularProgress size={20} color="inherit" /> : "Confirm Cancel"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Temporary Release Dialog */}
+      <Dialog 
+        open={tempReleaseDialogOpen} 
+        onClose={closeTempReleaseDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CalendarIcon />
+            Create Temporary Release
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select the days within your booking period that you want to temporarily release to other users.
+            Each selected day will be available for full-day bookings by others. 
+            <strong>Note: Sundays are not available for release.</strong>
+          </Typography>
+          
+          {selectedBookingDetails && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Your booking period: {format(new Date(selectedBookingDetails.startDate), "MMM d, yyyy")} to {format(new Date(selectedBookingDetails.endDate), "MMM d, yyyy")} ({selectedBookingDetails.startTime} - {selectedBookingDetails.endTime})
+            </Alert>
+          )}
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <DateCalendar
+                  value={calendarValue}
+                  onChange={(newValue) => {
+                    setCalendarValue(newValue);
+                    handleDateSelect(newValue);
+                  }}
+                  shouldDisableDate={shouldDisableDate}
+                  sx={{
+                    '& .MuiPickersDay-root': {
+                      position: 'relative',
+                    },
+                    '& .Mui-selected': {
+                      backgroundColor: isDateSelected(calendarValue || new Date()) ? 'primary.main' : 'inherit',
+                    },
+                    '& .MuiPickersDay-root.Mui-disabled': {
+                      color: 'text.disabled',
+                      backgroundColor: 'transparent',
+                    }
+                  }}
+                />
+              </Box>
+            </LocalizationProvider>
+            
+            {selectedReleaseDates.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Selected Dates ({selectedReleaseDates.length}):
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {selectedReleaseDates
+                    .sort((a, b) => a.getTime() - b.getTime())
+                    .map((date, index) => (
+                    <Chip
+                      key={index}
+                      label={format(date, "MMM d")}
+                      size="small"
+                      onDelete={() => {
+                        const ds = format(date, 'yyyy-MM-dd');
+                        setSelectedReleaseDates(prev => 
+                          prev.filter(d => format(d, 'yyyy-MM-dd') !== ds)
+                        );
+                      }}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+            
+            <TextField
+              fullWidth
+              label="Reason for Temporary Release"
+              value={tempReleaseReason}
+              onChange={(e) => setTempReleaseReason(e.target.value)}
+              multiline
+              rows={3}
+              size="small"
+              placeholder="Why do you want to temporarily release these dates? (e.g., 'Going out of town', 'Don't need system during this period')"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeTempReleaseDialog} disabled={tempReleaseLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateTemporaryRelease}
+            variant="contained"
+            disabled={tempReleaseLoading || selectedReleaseDates.length === 0 || !tempReleaseReason.trim()}
+            startIcon={tempReleaseLoading ? <CircularProgress size={20} color="inherit" /> : <CalendarIcon />}
+          >
+            Release {selectedReleaseDates.length} Day{selectedReleaseDates.length !== 1 ? 's' : ''}
           </Button>
         </DialogActions>
       </Dialog>

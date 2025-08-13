@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate:temp-releases": "node migrate-temporary-releases.js",
+    "migrate:rollback": "node migrate-temporary-releases.js rollback",
+    "test:temp-releases": "node test-temporary-release-system.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
