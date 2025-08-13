@@ -71,12 +71,22 @@ const temporaryReleaseDetailSchema = new mongoose.Schema({
     userMessage: String, // e.g., "Need to release tomorrow for personal work"
     releaseType: {
       type: String,
-      enum: ['single_day', 'multiple_days', 'range'],
+      enum: ['single_day', 'multiple_days', 'range', 'admin_created'],
       default: 'single_day'
     },
     isEmergency: {
       type: Boolean,
       default: false
+    },
+    // Admin-specific fields
+    createdByAdmin: {
+      type: Boolean,
+      default: false
+    },
+    adminId: {
+      type: String,
+      ref: 'User',
+      default: null
     }
   },
   

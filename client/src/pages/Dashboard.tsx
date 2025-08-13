@@ -1040,10 +1040,10 @@ const Dashboard: React.FC = () => {
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                   <strong>Created:</strong> {new Date(release.createdAt).toLocaleDateString()} at {new Date(release.createdAt).toLocaleTimeString()}
                                 </Typography>
-                                <Typography variant="body2" gutterBottom>
+                                {/* <Typography variant="body2" gutterBottom>
                                   <strong>Temporary Bookings:</strong> {release.tempBookings?.length || 0}
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                                </Typography> */}
+                                {/* <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                                   <Typography variant="body2">
                                     <strong>Status:</strong>
                                   </Typography>
@@ -1052,9 +1052,9 @@ const Dashboard: React.FC = () => {
                                     color={release.status === 'active' ? 'success' : 'default'}
                                     size="small"
                                   />
-                                </Box>
+                                </Box> */}
                               </Box>
-                              {release.status === 'active' && (
+                              {/* {release.status === 'active' && (
                                 <Button
                                   variant="outlined"
                                   color="error"
@@ -1064,7 +1064,7 @@ const Dashboard: React.FC = () => {
                                 >
                                   Cancel Release
                                 </Button>
-                              )}
+                              )} */}
                             </Box>
                           </Card>
                         ))

@@ -38,6 +38,8 @@ import {
   Badge,
   CircularProgress,
 } from "@mui/material";
+import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -50,8 +52,11 @@ import {
   Block as RevokeIcon,
   Update as ExtendIcon,
   Refresh as RefreshIcon,
+  CalendarMonth as CalendarIcon,
+  ExitToApp as TempReleaseIcon,
 } from "@mui/icons-material";
-import { computersAPI, bookingsAPI, feedbackAPI } from "../services/api";
+import { format, addDays, isWithinInterval, parseISO } from "date-fns";
+import { computersAPI, bookingsAPI, feedbackAPI, temporaryReleaseAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
 
 interface Computer {
@@ -187,7 +192,15 @@ const AdminDashboard: React.FC = () => {
     reject: false,
     revoke: false,
     extend: false,
+    tempRelease: false,
   });
+
+  // Temporary release state
+  const [tempReleaseDialogOpen, setTempReleaseDialogOpen] = useState(false);
+  const [selectedReleaseDates, setSelectedReleaseDates] = useState<Date[]>([]);
+  const [tempReleaseReason, setTempReleaseReason] = useState("");
+  const [tempReleaseAdminNote, setTempReleaseAdminNote] = useState("");
+  const [calendarValue, setCalendarValue] = useState<Date | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -312,6 +325,99 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setActionLoading((prev) => ({ ...prev, extend: false }));
     }
+  };
+
+  // Temporary release handler functions
+  const handleCreateTemporaryRelease = async () => {
+    if (!selectedBookingDetails || selectedReleaseDates.length === 0 || !tempReleaseReason.trim()) {
+      setError("Please select at least one date and provide a reason");
+      return;
+    }
+
+    setActionLoading((prev) => ({ ...prev, tempRelease: true }));
+    try {
+      await temporaryReleaseAPI.adminCreateTemporaryRelease({
+        bookingId: selectedBookingDetails._id,
+        releaseDates: selectedReleaseDates.map(date => format(date, 'yyyy-MM-dd')),
+        reason: tempReleaseReason.trim(),
+        adminNote: tempReleaseAdminNote.trim() || undefined,
+      });
+      
+      // Refresh data and close dialogs
+      fetchData();
+      setTempReleaseDialogOpen(false);
+      setDetailsDialogOpen(false);
+      resetTempReleaseForm();
+      setStatusUpdateSuccess("Temporary release created successfully!");
+      setTimeout(() => setStatusUpdateSuccess(null), 5000);
+    } catch (error: any) {
+      console.error("Error creating temporary release:", error);
+      setError(error.response?.data?.message || "Failed to create temporary release");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, tempRelease: false }));
+    }
+  };
+
+  const resetTempReleaseForm = () => {
+    setSelectedReleaseDates([]);
+    setTempReleaseReason("");
+    setTempReleaseAdminNote("");
+    setCalendarValue(null);
+  };
+
+  const openTempReleaseDialog = () => {
+    setTempReleaseDialogOpen(true);
+  };
+
+  const closeTempReleaseDialog = () => {
+    setTempReleaseDialogOpen(false);
+    resetTempReleaseForm();
+  };
+
+  // Calendar helper functions for temporary release
+  const handleDateSelect = (date: Date | null) => {
+    if (!date || !selectedBookingDetails) return;
+    
+    const bookingStartStr = selectedBookingDetails.startDate;
+    const bookingEndStr = selectedBookingDetails.endDate;
+    const dateStr = format(date, 'yyyy-MM-dd');
+
+    // Check if date is within booking period (inclusive)
+    if (dateStr < bookingStartStr || dateStr > bookingEndStr) {
+      return;
+    }
+    
+    const isSelected = selectedReleaseDates.some(d => format(d, 'yyyy-MM-dd') === dateStr);
+    
+    if (isSelected) {
+      // Remove date if already selected
+      setSelectedReleaseDates(prev => prev.filter(d => format(d, 'yyyy-MM-dd') !== dateStr));
+    } else {
+      // Add date if not selected
+      setSelectedReleaseDates(prev => [...prev, date]);
+    }
+  };
+
+  const isDateInBookingRange = (date: Date) => {
+    if (!selectedBookingDetails) return false;
+    const bookingStart = parseISO(selectedBookingDetails.startDate);
+    const bookingEnd = parseISO(selectedBookingDetails.endDate);
+    return isWithinInterval(date, { start: bookingStart, end: bookingEnd });
+  };
+
+  const isDateSelected = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return selectedReleaseDates.some(d => format(d, 'yyyy-MM-dd') === dateStr);
+  };
+
+  const shouldDisableDate = (date: Date) => {
+    // Disable if date is not in booking range
+    if (!isDateInBookingRange(date)) return true;
+    
+    // Disable Sundays (getDay() returns 0 for Sunday)
+    if (date.getDay() === 0) return true;
+    
+    return false;
   };
 
   const getStatusColor = (status: string) => {
@@ -1647,6 +1753,17 @@ const AdminDashboard: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+          {selectedBookingDetails?.status === 'approved' && (
+            <Button
+              color="info"
+              variant="outlined"
+              onClick={openTempReleaseDialog}
+              startIcon={<TempReleaseIcon />}
+              disabled={actionLoading.tempRelease}
+            >
+              Create Temporary Release
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -1763,6 +1880,126 @@ const AdminDashboard: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setFeedbackDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Admin Temporary Release Dialog */}
+      <Dialog 
+        open={tempReleaseDialogOpen} 
+        onClose={closeTempReleaseDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CalendarIcon />
+            Create Temporary Release (Admin)
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select the days within the booking period that you want to temporarily release to other users.
+            Each selected day will be available for full-day bookings by others. 
+            <strong>Note: Sundays are not available for release.</strong>
+          </Typography>
+          
+          {selectedBookingDetails && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Booking period: {format(new Date(selectedBookingDetails.startDate), "MMM d, yyyy")} to {format(new Date(selectedBookingDetails.endDate), "MMM d, yyyy")} ({selectedBookingDetails.startTime} - {selectedBookingDetails.endTime})
+              <br />
+              Computer: {selectedBookingDetails.computerId.name} | User: {getBookingUserName(selectedBookingDetails)}
+            </Alert>
+          )}
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <DateCalendar
+                  value={calendarValue}
+                  onChange={(newValue) => {
+                    setCalendarValue(newValue);
+                    handleDateSelect(newValue);
+                  }}
+                  shouldDisableDate={shouldDisableDate}
+                  sx={{
+                    '& .MuiPickersDay-root': {
+                      position: 'relative',
+                    },
+                    '& .Mui-selected': {
+                      backgroundColor: isDateSelected(calendarValue || new Date()) ? 'primary.main' : 'inherit',
+                    },
+                    '& .MuiPickersDay-root.Mui-disabled': {
+                      color: 'text.disabled',
+                      backgroundColor: 'transparent',
+                    }
+                  }}
+                />
+              </Box>
+            </LocalizationProvider>
+            
+            {selectedReleaseDates.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Selected Dates ({selectedReleaseDates.length}):
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {selectedReleaseDates
+                    .sort((a, b) => a.getTime() - b.getTime())
+                    .map((date, index) => (
+                    <Chip
+                      key={index}
+                      label={format(date, "MMM d")}
+                      size="small"
+                      onDelete={() => {
+                        const ds = format(date, 'yyyy-MM-dd');
+                        setSelectedReleaseDates(prev => 
+                          prev.filter(d => format(d, 'yyyy-MM-dd') !== ds)
+                        );
+                      }}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+            
+            <TextField
+              fullWidth
+              label="Reason for Temporary Release"
+              value={tempReleaseReason}
+              onChange={(e) => setTempReleaseReason(e.target.value)}
+              multiline
+              rows={3}
+              size="small"
+              required
+              placeholder="Why is this temporary release being created? (e.g., 'User requested', 'System maintenance', 'Emergency release')"
+            />
+
+            <TextField
+              fullWidth
+              label="Admin Note (Optional)"
+              value={tempReleaseAdminNote}
+              onChange={(e) => setTempReleaseAdminNote(e.target.value)}
+              multiline
+              rows={2}
+              size="small"
+              placeholder="Additional notes for this admin action (e.g., 'Per user request via email', 'Emergency situation')"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeTempReleaseDialog} disabled={actionLoading.tempRelease}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateTemporaryRelease}
+            variant="contained"
+            disabled={actionLoading.tempRelease || selectedReleaseDates.length === 0 || !tempReleaseReason.trim()}
+            startIcon={actionLoading.tempRelease ? <CircularProgress size={20} color="inherit" /> : <CalendarIcon />}
+          >
+            Create Release ({selectedReleaseDates.length} Day{selectedReleaseDates.length !== 1 ? 's' : ''})
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -154,6 +154,13 @@ export const temporaryReleaseAPI = {
     releaseType?: 'single_day' | 'multiple_days' | 'range';
     isEmergency?: boolean;
   }) => api.post('/temporary-releases/create', data),
+  // Admin function to create temporary release for any booking
+  adminCreateTemporaryRelease: (data: {
+    bookingId: string;
+    releaseDates: string[];
+    reason: string;
+    adminNote?: string;
+  }) => api.post('/temporary-releases/admin/create', data),
   getUserTemporaryReleases: () => api.get('/temporary-releases/user'),
   getAllTemporaryReleases: () => api.get('/temporary-releases/all'),
   cancelTemporaryRelease: (releaseId: string) => api.patch(`/temporary-releases/${releaseId}/cancel`),

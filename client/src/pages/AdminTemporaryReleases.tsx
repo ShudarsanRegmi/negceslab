@@ -404,7 +404,7 @@ const AdminTemporaryReleases: React.FC = () => {
                 <Typography variant="body1">
                   <strong>Reason for Release:</strong> {selectedRelease.reason}
                 </Typography>
-                <Typography variant="body1" sx={{ mt: 1 }}>
+                {/* <Typography variant="body1" sx={{ mt: 1 }}>
                   <strong>Status:</strong>{" "}
                   <Chip
                     label={getStatusLabel(selectedRelease.status)}
@@ -412,7 +412,7 @@ const AdminTemporaryReleases: React.FC = () => {
                     size="small"
                     sx={{ ml: 1 }}
                   />
-                </Typography>
+                </Typography> */}
                 <Typography variant="body1" sx={{ mt: 1 }}>
                   <strong>Created:</strong> {new Date(selectedRelease.createdAt).toLocaleString()}
                 </Typography>

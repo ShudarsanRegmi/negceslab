@@ -494,4 +494,144 @@ router.post('/book', verifyToken, async (req, res) => {
   }
 });
 
+// Admin-specific endpoint to create temporary release for any booking
+router.post('/admin/create', verifyToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin role required.' });
+    }
+
+    const { bookingId, releaseDates, reason, adminNote } = req.body;
+
+    // Validate required fields
+    if (!bookingId || !releaseDates || !Array.isArray(releaseDates) || releaseDates.length === 0 || !reason?.trim()) {
+      return res.status(400).json({ 
+        message: 'Booking ID, release dates array, and reason are required' 
+      });
+    }
+
+    // Find the original booking
+    const originalBooking = await Booking.findById(bookingId).populate('computerId');
+    if (!originalBooking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Check if booking is approved
+    if (originalBooking.status !== 'approved') {
+      return res.status(400).json({ message: 'Can only create temporary releases for approved bookings' });
+    }
+
+    // Validate that all release dates are within the booking period
+    const bookingStart = new Date(originalBooking.startDate);
+    const bookingEnd = new Date(originalBooking.endDate);
+    
+    const invalidDates = releaseDates.filter(dateStr => {
+      const releaseDate = new Date(dateStr);
+      return releaseDate < bookingStart || releaseDate > bookingEnd;
+    });
+
+    if (invalidDates.length > 0) {
+      return res.status(400).json({ 
+        message: 'All release dates must be within the booking period',
+        invalidDates 
+      });
+    }
+
+    // Check for existing temporary releases on these dates
+    const existingReleasedDates = originalBooking.temporaryRelease?.releasedDates?.map(rd => rd.date) || [];
+    const duplicateDates = releaseDates.filter(date => existingReleasedDates.includes(date));
+
+    if (duplicateDates.length > 0) {
+      return res.status(400).json({ 
+        message: 'Some of these dates already have active temporary releases',
+        duplicateDates 
+      });
+    }
+
+    // Get next release number for this booking
+    const releaseNumber = await TemporaryReleaseDetail.getNextReleaseNumber(bookingId);
+
+    // Create the temporary release detail record with admin context
+    const temporaryReleaseDetail = new TemporaryReleaseDetail({
+      bookingId,
+      userId: originalBooking.userId, // Keep original user as the owner
+      releaseNumber,
+      releasedDates: releaseDates,
+      reason: `[Admin Release] ${reason.trim()}`,
+      releaseContext: {
+        userMessage: adminNote || `Admin-created release #${releaseNumber} for ${releaseDates.length} day(s)`,
+        releaseType: 'admin_created',
+        isEmergency: false,
+        createdByAdmin: true,
+        adminId: req.user.firebaseUid
+      }
+    });
+
+    await temporaryReleaseDetail.save();
+
+    // Update the main booking's temporary release summary
+    const newReleasedDates = releaseDates.map(date => ({
+      date,
+      isBooked: false,
+      tempBookingId: null
+    }));
+
+    if (!originalBooking.temporaryRelease) {
+      originalBooking.temporaryRelease = {
+        hasActiveReleases: true,
+        totalReleasedDays: releaseDates.length,
+        releasedDates: newReleasedDates,
+        lastUpdated: new Date()
+      };
+    } else {
+      originalBooking.temporaryRelease.releasedDates.push(...newReleasedDates);
+      originalBooking.temporaryRelease.totalReleasedDays = originalBooking.temporaryRelease.releasedDates.length;
+      originalBooking.temporaryRelease.hasActiveReleases = true;
+      originalBooking.temporaryRelease.lastUpdated = new Date();
+    }
+
+    await originalBooking.save();
+
+    // Get user information for notification
+    const user = await User.findOne({ firebaseUid: originalBooking.userId });
+    
+    // Create notification for the user (not admin in this case)
+    try {
+      await Notification.create({
+        userId: originalBooking.userId,
+        type: 'temporary_release_created_by_admin',
+        title: 'Temporary Release Created by Admin',
+        message: `Admin has created a temporary release for your booking of ${originalBooking.computerId.name} for ${releaseDates.length} day(s). Reason: ${reason.trim()}`,
+        data: {
+          bookingId: originalBooking._id,
+          temporaryReleaseId: temporaryReleaseDetail._id,
+          releaseDates,
+          computerName: originalBooking.computerId.name,
+          adminNote: adminNote || 'No additional notes',
+          createdByAdmin: true
+        }
+      });
+    } catch (notifError) {
+      console.error('Error creating user notification:', notifError);
+    }
+
+    res.status(201).json({
+      message: 'Temporary release created successfully by admin',
+      temporaryRelease: temporaryReleaseDetail,
+      releasedDates: releaseDates.length,
+      bookingInfo: {
+        computerId: originalBooking.computerId._id,
+        computerName: originalBooking.computerId.name,
+        userId: originalBooking.userId,
+        userName: user?.name || 'Unknown User'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating admin temporary release:', error);
+    res.status(500).json({ message: 'Error creating temporary release', error: error.message });
+  }
+});
+
 module.exports = router;
