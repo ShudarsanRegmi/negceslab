@@ -200,7 +200,8 @@ router.get('/all', verifyToken, async (req, res) => {
       allReleases.map(async (release) => {
         let userInfo = null;
         try {
-          userInfo = await User.findById(release.userId);
+          // Use firebaseUid to find user since userId in release is Firebase UID
+          userInfo = await User.findOne({ firebaseUid: release.userId });
         } catch (err) {
           console.warn(`Could not fetch user info for ${release.userId}:`, err.message);
         }
@@ -217,7 +218,7 @@ router.get('/all', verifyToken, async (req, res) => {
           userInfo: userInfo ? {
             uid: userInfo._id,
             email: userInfo.email,
-            displayName: userInfo.displayName
+            displayName: userInfo.name // Changed from userInfo.displayName to userInfo.name
           } : null
         };
       })

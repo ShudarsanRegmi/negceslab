@@ -42,6 +42,7 @@ import {
   Check as ApproveIcon,
   Close as RejectIcon,
   Info as InfoIcon,
+  BookOnline as BookingIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
 import { temporaryReleaseAPI } from "../services/api";
@@ -80,6 +81,7 @@ const AdminTemporaryReleases: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedRelease, setSelectedRelease] = useState<TemporaryRelease | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [originalBookingDialogOpen, setOriginalBookingDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
@@ -98,6 +100,17 @@ const AdminTemporaryReleases: React.FC = () => {
       
       // The backend now returns an array directly
       const releasesList = Array.isArray(response.data) ? response.data : [];
+      console.log('Parsed releases list:', releasesList);
+      
+      // Log user info for debugging
+      releasesList.forEach((release, index) => {
+        console.log(`Release ${index}:`, {
+          userId: release.userId,
+          userInfo: release.userInfo,
+          hasUserInfo: !!release.userInfo
+        });
+      });
+      
       setReleases(releasesList);
     } catch (error: any) {
       console.error("Error fetching temporary releases:", error);
@@ -114,6 +127,16 @@ const AdminTemporaryReleases: React.FC = () => {
 
   const handleCloseDetails = () => {
     setDetailsDialogOpen(false);
+    setSelectedRelease(null);
+  };
+
+  const handleViewOriginalBooking = (release: TemporaryRelease) => {
+    setSelectedRelease(release);
+    setOriginalBookingDialogOpen(true);
+  };
+
+  const handleCloseOriginalBooking = () => {
+    setOriginalBookingDialogOpen(false);
     setSelectedRelease(null);
   };
 
@@ -248,12 +271,10 @@ const AdminTemporaryReleases: React.FC = () => {
               <Table size={isMobile ? "small" : "medium"}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>User</TableCell>
+                    <TableCell>User Details</TableCell>
                     <TableCell>Computer</TableCell>
-                    <TableCell>Release Period</TableCell>
-                    <TableCell>Dates Count</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Created</TableCell>
+                    <TableCell>Released Dates</TableCell>
+                    <TableCell>Reason</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -263,10 +284,10 @@ const AdminTemporaryReleases: React.FC = () => {
                       <TableCell>
                         <Box>
                           <Typography variant="body2" fontWeight="bold">
-                            {release.userInfo?.displayName || "Unknown User"}
+                            {release.userInfo?.displayName || release.userInfo?.email || "Unknown User"}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {release.userInfo?.email || "No email"}
+                            {release.userInfo?.email || "No email provided"}
                           </Typography>
                         </Box>
                       </TableCell>
@@ -281,50 +302,71 @@ const AdminTemporaryReleases: React.FC = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        {release.originalBooking ? (
-                          <Box>
-                            <Typography variant="body2">
-                              {format(new Date(release.originalBooking.startDate), "MMM d")} - {format(new Date(release.originalBooking.endDate), "MMM d, yyyy")}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {release.originalBooking.startTime} - {release.originalBooking.endTime}
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            Booking details unavailable
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold" color="primary">
+                            {release.releasedDates.length} day{release.releasedDates.length !== 1 ? 's' : ''}
                           </Typography>
-                        )}
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            {release.releasedDates
+                              .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+                              .slice(0, 3) // Show only first 3 dates
+                              .map((dateStr, index) => (
+                                <Chip
+                                  key={index}
+                                  label={format(new Date(dateStr), "MMM d")}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ fontSize: '0.7rem', height: '20px' }}
+                                />
+                              ))
+                            }
+                            {release.releasedDates.length > 3 && (
+                              <Chip
+                                label={`+${release.releasedDates.length - 3} more`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ fontSize: '0.7rem', height: '20px' }}
+                                color="primary"
+                              />
+                            )}
+                          </Box>
+                        </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" fontWeight="bold">
-                          {release.releasedDates.length} day{release.releasedDates.length !== 1 ? 's' : ''}
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            maxWidth: 150,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {release.reason}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={getStatusLabel(release.status)}
-                          color={getStatusColor(release.status) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {format(new Date(release.createdAt), "MMM d, yyyy")}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {format(new Date(release.createdAt), "HH:mm")}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Tooltip title="View Details">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleViewDetails(release)}
-                          >
-                            <ViewIcon />
-                          </IconButton>
-                        </Tooltip>
+                        <Stack direction="row" spacing={1}>
+                          <Tooltip title="View Release Details">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleViewDetails(release)}
+                            >
+                              <ViewIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="View Original Booking">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleViewOriginalBooking(release)}
+                              color="primary"
+                            >
+                              <InfoIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -357,45 +399,12 @@ const AdminTemporaryReleases: React.FC = () => {
               </Typography>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body1">
-                  <strong>Name:</strong> {selectedRelease.userInfo?.displayName || "Not provided"}
+                  <strong>Name:</strong> {selectedRelease.userInfo?.displayName || selectedRelease.userInfo?.email || "Not provided"}
                 </Typography>
                 <Typography variant="body1">
                   <strong>Email:</strong> {selectedRelease.userInfo?.email || "Not provided"}
                 </Typography>
-                <Typography variant="body1">
-                  <strong>User ID:</strong> {selectedRelease.userId}
-                </Typography>
               </Box>
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Original Booking Information */}
-              <Typography variant="h6" gutterBottom color="primary">
-                Original Booking
-              </Typography>
-              {selectedRelease.originalBooking ? (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body1">
-                    <strong>Computer:</strong> {selectedRelease.originalBooking.computerId.name}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Location:</strong> {selectedRelease.originalBooking.computerId.location}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Booking Period:</strong> {format(new Date(selectedRelease.originalBooking.startDate), "MMMM d, yyyy")} to {format(new Date(selectedRelease.originalBooking.endDate), "MMMM d, yyyy")}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Time:</strong> {selectedRelease.originalBooking.startTime} - {selectedRelease.originalBooking.endTime}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Purpose:</strong> {selectedRelease.originalBooking.reason}
-                  </Typography>
-                </Box>
-              ) : (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  Original booking information is not available
-                </Alert>
-              )}
 
               <Divider sx={{ my: 2 }} />
 
@@ -443,6 +452,82 @@ const AdminTemporaryReleases: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDetails}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Original Booking Dialog */}
+      <Dialog
+        open={originalBookingDialogOpen}
+        onClose={handleCloseOriginalBooking}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <BookingIcon />
+            Original Booking Details
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedRelease?.originalBooking ? (
+            <Box sx={{ py: 1 }}>
+              {/* Computer Information */}
+              <Typography variant="h6" gutterBottom color="primary">
+                Computer Details
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body1">
+                  <strong>Name:</strong> {selectedRelease.originalBooking.computerId.name}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Location:</strong> {selectedRelease.originalBooking.computerId.location}
+                </Typography>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Booking Information */}
+              <Typography variant="h6" gutterBottom color="primary">
+                Booking Information
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body1">
+                  <strong>Start Date:</strong> {format(new Date(selectedRelease.originalBooking.startDate), "MMMM d, yyyy")}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>End Date:</strong> {format(new Date(selectedRelease.originalBooking.endDate), "MMMM d, yyyy")}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Time:</strong> {selectedRelease.originalBooking.startTime} - {selectedRelease.originalBooking.endTime}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Purpose:</strong> {selectedRelease.originalBooking.reason}
+                </Typography>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* User Information */}
+              <Typography variant="h6" gutterBottom color="primary">
+                User Information
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body1">
+                  <strong>Name:</strong> {selectedRelease.userInfo?.displayName || "Not provided"}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Email:</strong> {selectedRelease.userInfo?.email || "Not provided"}
+                </Typography>
+              </Box>
+            </Box>
+          ) : (
+            <Alert severity="warning">
+              Original booking information is not available
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseOriginalBooking}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>
