@@ -132,24 +132,86 @@ const AdminTemporaryReleases: React.FC = () => {
               <Table size={isMobile ? "small" : "medium"}>
                 <TableHead>
                   <TableRow>
+                    <TableCell>User</TableCell>
+                    <TableCell>Computer</TableCell>
+                    <TableCell>Original Booking</TableCell>
                     <TableCell>Released Dates</TableCell>
+                    <TableCell>Reason</TableCell>
+                    <TableCell>Created</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {releases.map((release) => (
                     <TableRow key={release._id}>
                       <TableCell>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {release.userInfo?.displayName || release.userInfo?.email || 'Unknown User'}
+                          </Typography>
+                          {release.userInfo?.email && release.userInfo?.displayName && (
+                            <Typography variant="caption" color="text.secondary">
+                              {release.userInfo.email}
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {release.originalBooking?.computerId.name || 'N/A'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {release.originalBooking?.computerId.location || ''}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        {release.originalBooking ? (
+                          <Box>
+                            <Typography variant="body2">
+                              {format(new Date(release.originalBooking.startDate), "MMM d")} - {format(new Date(release.originalBooking.endDate), "MMM d, yyyy")}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {release.originalBooking.startTime} - {release.originalBooking.endTime}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">N/A</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxWidth: 200 }}>
                           {release.releasedDates
                             .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
                             .map((dateStr, index) => (
-                              <Typography key={index} variant="body2">
-                                {format(new Date(dateStr), "MMM d, yyyy")}
-                                {index < release.releasedDates.length - 1 && ", "}
+                              <Typography 
+                                key={index} 
+                                variant="caption" 
+                                sx={{ 
+                                  backgroundColor: 'primary.light',
+                                  color: 'primary.contrastText',
+                                  px: 1,
+                                  py: 0.25,
+                                  borderRadius: 1,
+                                  fontSize: '0.75rem'
+                                }}
+                              >
+                                {format(new Date(dateStr), "MMM d")}
                               </Typography>
                             ))
                           }
                         </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ maxWidth: 150 }}>
+                          {release.reason || 'No reason provided'}
+                        </Typography>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <Typography variant="caption">
+                          {format(new Date(release.createdAt), "MMM d, yyyy")}
+                        </Typography>
                       </TableCell>
                     </TableRow>
                   ))}
