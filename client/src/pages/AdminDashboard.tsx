@@ -1431,11 +1431,11 @@ const AdminDashboard: React.FC = () => {
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   <strong>User:</strong>{" "}
-                  {selectedBooking.userInfo?.name || "Unknown User"}
+                  {selectedBooking.userInfo?.name || getBookingUserName(selectedBooking) || "Unknown User"}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Email:</strong>{" "}
-                  {selectedBooking.userInfo?.email || selectedBooking.userId}
+                  {selectedBooking.userInfo?.email || getBookingUserEmail(selectedBooking) || selectedBooking.userId}
                 </Typography>
                 {/* Booking Date */}
                 <Typography variant="body2" color="text.secondary">
