@@ -210,12 +210,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       path: "/admin/temporary-releases",
       roles: ["admin"],
     },
-    {
-      text: "User Management",
-      icon: <ManageAccountsIcon />,
-      path: "/admin/users",
-      roles: ["admin"],
-    },
+    // {
+    //   text: "User Management",
+    //   icon: <ManageAccountsIcon />,
+    //   path: "/admin/users",
+    //   roles: ["admin"],
+    // },
   ];
 
   const getPageTitle = () => {
