@@ -542,12 +542,26 @@ const AdminDashboard: React.FC = () => {
         {/* <Tab label="Computers" /> */}
         <Tab label="Current Bookings" />
         <Tab
-          label={
-            <Badge color="error" badgeContent={pendingBookingsList.length} max={99}>
-              New Booking Requests
-            </Badge>
-          }
-        />
+        label={
+          <Badge
+            color="error"
+            badgeContent={pendingBookingsList.length}
+            max={99}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            sx={{
+              '& .MuiBadge-badge': {
+                top: -3,   // move upward
+                right: -13 // move right
+              },
+            }}
+          >
+            Pending Requests
+          </Badge>
+        }
+      />
         <Tab label="All Bookings" />
         <Tab label="Feedback" />
         {/* <Tab label="Notifications" /> */}
@@ -797,7 +811,7 @@ const AdminDashboard: React.FC = () => {
       )} */}
 
       {/* Current Bookings Tab */}
-      {activeTab === 2 && (
+      {activeTab === 1 && (
         <Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
             <Typography variant="h6">Current Bookings Management</Typography>
@@ -945,7 +959,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* New Booking Requests Tab */}
-      {activeTab === 3 && (
+      {activeTab === 2 && (
         <Box>
           <Typography variant="h6" sx={{ mb: 2 }}>
             New Booking Requests
@@ -1070,7 +1084,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* All Bookings Tab (remove pending bookings) */}
-      {activeTab === 4 && (
+      {activeTab === 3 && (
         <Box>
           {/* Header and Search Section */}
           <Box sx={{ 
@@ -1244,7 +1258,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* Add Feedback Tab */}
-      {activeTab === 5 && (
+      {activeTab === 4 && (
         <Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
             <Typography variant="h6">Feedback Management</Typography>
