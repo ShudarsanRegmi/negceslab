@@ -22,6 +22,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTemporaryReleases from "./pages/AdminTemporaryReleases";
+import AdminComputerManagement from "./pages/AdminComputerManagement";
 import BookingForm from "./pages/BookingForm";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
@@ -122,6 +123,16 @@ const AppContent = () => {
                     <ProtectedRoute requiredRole="admin">
                       <Layout>
                         <AdminTemporaryReleases />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/computers"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <Layout>
+                        <AdminComputerManagement />
                       </Layout>
                     </ProtectedRoute>
                   }

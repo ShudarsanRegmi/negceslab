@@ -205,6 +205,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       roles: ["admin"],
     },
     {
+      text: "Computer Management",
+      icon: <Computer />,
+      path: "/admin/computers",
+      roles: ["admin"],
+    },
+    {
       text: "Temporary Releases",
       icon: <CalendarIcon />,
       path: "/admin/temporary-releases",
@@ -216,6 +222,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     //   path: "/admin/users",
     //   roles: ["admin"],
     // },
+
+    
   ];
 
   const getPageTitle = () => {

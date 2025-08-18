@@ -539,7 +539,7 @@ const AdminDashboard: React.FC = () => {
         scrollButtons={isMobile ? "auto" : false}
       >
         <Tab label="Overview" />
-        <Tab label="Computers" />
+        {/* <Tab label="Computers" /> */}
         <Tab label="Current Bookings" />
         <Tab
           label={
@@ -647,7 +647,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* Computers Tab */}
-      {activeTab === 1 && (
+      {/* {activeTab === 1 && (
         <Box>
           <Box
             sx={{
@@ -794,7 +794,7 @@ const AdminDashboard: React.FC = () => {
             </TableContainer>
           )}
         </Box>
-      )}
+      )} */}
 
       {/* Current Bookings Tab */}
       {activeTab === 2 && (
