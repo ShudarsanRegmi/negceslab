@@ -25,6 +25,14 @@ dist/
 build/
 coverage/
 
+# Production data
+nginx/ssl/
+nginx/logs/
+
+# Docker volumes and data
+mongo_data_prod/
+nginx_logs/
+
 # Logs
 logs
 *.log

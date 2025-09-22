@@ -19,7 +19,7 @@ services:
     container_name: backend
     restart: unless-stopped
     environment:
-      - MONGO_URI=mongodb://mongoadmin:secret@mongo:27017/
+      - MONGODB_URI=mongodb://mongoadmin:secret@mongo:27017/
     depends_on:
       - mongo
     ports:
