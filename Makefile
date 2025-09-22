@@ -1,4 +1,4 @@
-.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend prod-services
+.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh prod-services
 
 # Default target
 help:
@@ -8,6 +8,7 @@ help:
 	@echo "  build-dev    - Build development containers"
 	@echo "  build-prod   - Build production containers"
 	@echo "  build-frontend - Build frontend and extract to ./client/dist/"
+	@echo "  build-frontend-fresh - Build frontend without cache (force rebuild)"
 	@echo "  prod-services - Start only backend services (mongo + backend)"
 	@echo "  up-dev       - Start development containers"
 	@echo "  up-prod      - Start production containers"
@@ -50,7 +51,18 @@ logs-prod:
 # Build frontend and extract to host
 build-frontend:
 	@echo "Building frontend and extracting to ./client/dist/..."
+	@rm -rf ./client/dist
 	@mkdir -p ./client/dist
+	podman-compose -f docker-compose.prod.yml up frontend-builder
+	@echo "Frontend built and extracted to ./client/dist/"
+	@echo "Files ready to serve from Apache HTTPD at /negces/ path"
+
+# Build frontend without cache (force rebuild)
+build-frontend-fresh:
+	@echo "Building frontend without cache and extracting to ./client/dist/..."
+	@rm -rf ./client/dist
+	@mkdir -p ./client/dist
+	podman-compose -f docker-compose.prod.yml build --no-cache frontend-builder
 	podman-compose -f docker-compose.prod.yml up frontend-builder
 	@echo "Frontend built and extracted to ./client/dist/"
 	@echo "Files ready to serve from Apache HTTPD at /negces/ path"
