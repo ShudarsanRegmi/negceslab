@@ -1,7 +1,13 @@
+# Manual
+mongo-data/
+
+
 # Dependencies
 node_modules/
 .pnp/
 .pnp.js
+
+
 
 # Environment files
 .env

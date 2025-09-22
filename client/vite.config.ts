@@ -8,6 +8,10 @@ export default defineConfig({
   build: {
     outDir: 'dist'
   },
+  preview: {
+    port: 5173,
+    host: true
+  },
   resolve: {
     alias: {
       '@images': path.resolve(__dirname, 'src/assets/'),
