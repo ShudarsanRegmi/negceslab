@@ -5,8 +5,8 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // base: '/negces/',
-  base: '/negces/negceslab/client/dist/',
+  base: '/negces/',
+  // base: '/negces/negceslab/client/dist/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

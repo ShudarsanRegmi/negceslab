@@ -47,7 +47,7 @@ const AppContent = () => {
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Router>
+        <Router basename="/negces">
           <Routes>
                 <Route
                   path="/login"
