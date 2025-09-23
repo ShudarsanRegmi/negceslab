@@ -6,20 +6,15 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   base: '/negces/',
-  // base: '/negces/negceslab/client/dist/',
+  // base: process.env.VITE_BASE_PATH || '/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-  },
-  preview: {
-    port: 5173,
-    host: true
   },
   resolve: {
     alias: {
       '@images': path.resolve(__dirname, 'src/assets/'),
       '@': '/src'
-      // You can add more aliases here
     },
   },
 })

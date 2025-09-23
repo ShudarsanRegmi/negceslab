@@ -7,7 +7,10 @@ WORKDIR /app
 COPY client/package*.json ./
 RUN npm install
 
-# Copy vite config first (this will bust cache when config changes)
+# Copy environment files first (this will bust cache when env changes)
+COPY client/.env* ./
+
+# Copy vite config (this will bust cache when config changes)
 COPY client/vite.config.ts ./
 
 # Copy source code
@@ -16,23 +19,6 @@ COPY shared ../shared
 
 # Build the application
 RUN npm run build
-
-# Development stage (for local development)
-FROM docker.io/node:20-alpine AS development
-
-WORKDIR /app
-
-# Copy package files
-COPY client/package*.json ./
-RUN npm install
-
-# Copy source code
-COPY client/ ./
-COPY shared ../shared
-
-EXPOSE 5173
-
-CMD ["npm", "run", "preview"]
 
 # Output stage - just holds the built files for extraction
 FROM docker.io/library/alpine:latest AS output
