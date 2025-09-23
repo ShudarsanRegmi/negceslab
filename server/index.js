@@ -14,13 +14,16 @@ app.use(express.json());
 
 // Initialize Firebase Admin
 try {
-  const serviceAccount = require("./config/serviceAccountKey.json");
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "./config/serviceAccountKey.json";
+  const serviceAccount = require(serviceAccountPath);
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
+  console.log("Firebase Admin initialized successfully");
 } catch (error) {
   console.error("Error initializing Firebase Admin:", error.message);
-  console.log("Please ensure serviceAccountKey.json is properly configured");
+  console.log("Please ensure Firebase service account key is properly configured");
+  console.log(`Looking for service account at: ${process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "./config/serviceAccountKey.json"}`);
 }
 
 // MongoDB Connection

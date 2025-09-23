@@ -1,16 +1,15 @@
 # Manual
 mongo-data/
 
-
 # Dependencies
 node_modules/
 .pnp/
 .pnp.js
 
-
-
 # Environment files
 .env
+.env.development
+.env.production
 .env.local
 .env.development.local
 .env.test.local

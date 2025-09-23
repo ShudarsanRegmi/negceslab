@@ -1,4 +1,4 @@
-.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh prod-services
+.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh prod-services setup-env
 
 # Default target
 help:
@@ -10,6 +10,7 @@ help:
 	@echo "  build-frontend - Build frontend and extract to ./client/dist/"
 	@echo "  build-frontend-fresh - Build frontend without cache (force rebuild)"
 	@echo "  prod-services - Start only backend services (mongo + backend)"
+	@echo "  setup-env    - Copy example environment files for first-time setup"
 	@echo "  up-dev       - Start development containers"
 	@echo "  up-prod      - Start production containers"
 	@echo "  down-dev     - Stop development containers"
@@ -72,6 +73,44 @@ prod-services:
 	@echo "Starting production backend services..."
 	podman-compose -f docker-compose.prod.yml up mongo backend -d
 	@echo "Services started: MongoDB (port 27018), Backend (port 5001)"
+
+# Setup environment files for first-time use
+setup-env:
+	@echo "Setting up environment files..."
+	@if [ ! -f server/.env.production ]; then \
+		cp server/.env.example server/.env.production; \
+		echo "Created server/.env.production from example"; \
+	else \
+		echo "server/.env.production already exists"; \
+	fi
+	@if [ ! -f server/.env.development ]; then \
+		cp server/.env.example server/.env.development; \
+		echo "Created server/.env.development from example"; \
+	else \
+		echo "server/.env.development already exists"; \
+	fi
+	@if [ ! -f client/.env.production ]; then \
+		cp client/.env.example client/.env.production; \
+		echo "Created client/.env.production from example"; \
+	else \
+		echo "client/.env.production already exists"; \
+	fi
+	@if [ ! -f client/.env.development ]; then \
+		cp client/.env.example client/.env.development; \
+		echo "Created client/.env.development from example"; \
+	else \
+		echo "client/.env.development already exists"; \
+	fi
+	@if [ ! -f server/config/serviceAccountKey.json ]; then \
+		echo "⚠️  Firebase service account key not found!"; \
+		echo "Please copy your Firebase service account key to:"; \
+		echo "   server/config/serviceAccountKey.json"; \
+		echo "You can use server/config/serviceAccountKey.json.example as a template"; \
+	else \
+		echo "✅ Firebase service account key found"; \
+	fi
+	@echo "Environment files setup complete!"
+	@echo "Please edit the .env files with your actual values before starting services."
 
 # Cleanup commands
 clean:
