@@ -7,6 +7,9 @@ WORKDIR /app
 COPY client/package*.json ./
 RUN npm install
 
+# Copy vite config first (this will bust cache when config changes)
+COPY client/vite.config.ts ./
+
 # Copy source code
 COPY client/ ./
 COPY shared ../shared

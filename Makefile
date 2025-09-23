@@ -53,7 +53,7 @@ build-frontend:
 	@echo "Building frontend and extracting to ./client/dist/..."
 	@rm -rf ./client/dist
 	@mkdir -p ./client/dist
-	podman-compose -f docker-compose.prod.yml up frontend-builder
+	podman-compose -f docker-compose.prod.yml up --force-recreate frontend-builder
 	@echo "Frontend built and extracted to ./client/dist/"
 	@echo "Files ready to serve from Apache HTTPD at /negces/ path"
 
