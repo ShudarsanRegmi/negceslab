@@ -1,4 +1,4 @@
-.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh prod-services setup-env
+.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh prod-services setup-env build-backend up-backend down-backend logs-backend build-mongo up-mongo down-mongo logs-mongo build-backend-dev up-backend-dev down-backend-dev up-mongo-dev down-mongo-dev
 
 # Default target
 help:
@@ -11,6 +11,23 @@ help:
 	@echo "  build-frontend-fresh - Build frontend without cache (force rebuild)"
 	@echo "  prod-services - Start only backend services (mongo + backend)"
 	@echo "  setup-env    - Copy example environment files for first-time setup"
+	@echo ""
+	@echo "Individual Service Commands:"
+	@echo "  build-backend - Build only backend container"
+	@echo "  up-backend   - Start only backend service"
+	@echo "  down-backend - Stop only backend service"
+	@echo "  logs-backend - Show backend logs"
+	@echo "  build-mongo  - Pull/prepare MongoDB container"
+	@echo "  up-mongo     - Start only MongoDB service"
+	@echo "  down-mongo   - Stop only MongoDB service"
+	@echo "  logs-mongo   - Show MongoDB logs"
+	@echo ""
+	@echo "Development Service Commands:"
+	@echo "  build-backend-dev - Build backend container for development"
+	@echo "  up-backend-dev   - Start backend service (development)"
+	@echo "  down-backend-dev - Stop backend service (development)"
+	@echo "  up-mongo-dev     - Start MongoDB service (development)"
+	@echo "  down-mongo-dev   - Stop MongoDB service (development)"
 	@echo "  up-dev       - Start development containers"
 	@echo "  up-prod      - Start production containers"
 	@echo "  down-dev     - Stop development containers"
@@ -131,3 +148,139 @@ health-prod:
 	@echo "Checking production services..."
 	@echo "Backend (via container network): "
 	@podman exec backend-prod wget --no-verbose --tries=1 --spider http://localhost:5000/ 2>/dev/null && echo "✅ Backend responding" || echo "❌ Backend not responding"
+
+# Individual Backend Commands (Production)
+build-backend:
+	@echo "Building backend container..."
+	podman-compose -f docker-compose.prod.yml build backend
+	@echo "Backend container built successfully"
+
+up-backend:
+	@echo "Starting backend service..."
+	podman-compose -f docker-compose.prod.yml up backend -d
+	@echo "Backend service started"
+
+down-backend:
+	@echo "Stopping backend service..."
+	podman-compose -f docker-compose.prod.yml stop backend
+	podman-compose -f docker-compose.prod.yml rm -f backend
+	@echo "Backend service stopped"
+
+logs-backend:
+	@echo "Showing backend logs..."
+	podman-compose -f docker-compose.prod.yml logs -f backend
+
+# Individual MongoDB Commands (Production)
+build-mongo:
+	@echo "Preparing MongoDB container..."
+	podman-compose -f docker-compose.prod.yml pull mongo
+	@echo "MongoDB container ready"
+
+up-mongo:
+	@echo "Starting MongoDB service..."
+	podman-compose -f docker-compose.prod.yml up mongo -d
+	@echo "MongoDB service started (port 27018)"
+
+down-mongo:
+	@echo "Stopping MongoDB service..."
+	podman-compose -f docker-compose.prod.yml stop mongo
+	podman-compose -f docker-compose.prod.yml rm -f mongo
+	@echo "MongoDB service stopped"
+
+logs-mongo:
+	@echo "Showing MongoDB logs..."
+	podman-compose -f docker-compose.prod.yml logs -f mongo
+
+# Individual Backend Commands (Development)
+build-backend-dev:
+	@echo "Building backend container for development..."
+	podman-compose -f podman-compose.yml build backend
+	@echo "Backend development container built successfully"
+
+up-backend-dev:
+	@echo "Starting backend service (development)..."
+	podman-compose -f podman-compose.yml up backend -d
+	@echo "Backend development service started"
+
+down-backend-dev:
+	@echo "Stopping backend service (development)..."
+	podman-compose -f podman-compose.yml stop backend
+	podman-compose -f podman-compose.yml rm -f backend
+	@echo "Backend development service stopped"
+
+# Individual MongoDB Commands (Development)
+up-mongo-dev:
+	@echo "Starting MongoDB service (development)..."
+	podman-compose -f podman-compose.yml up mongo -d
+	@echo "MongoDB development service started (port 27017)"
+
+down-mongo-dev:
+	@echo "Stopping MongoDB service (development)..."
+	podman-compose -f podman-compose.yml stop mongo
+	podman-compose -f podman-compose.yml rm -f mongo
+	@echo "MongoDB development service stopped"
+
+# Individual Backend Commands
+build-backend:
+	@echo "Building backend container..."
+	podman-compose -f docker-compose.prod.yml build backend
+	@echo "Backend container built successfully"
+
+up-backend:
+	@echo "Starting backend service..."
+	podman-compose -f docker-compose.prod.yml up backend -d
+	@echo "Backend service started"
+
+down-backend:
+	@echo "Stopping backend service..."
+	podman-compose -f docker-compose.prod.yml stop backend
+	podman-compose -f docker-compose.prod.yml rm -f backend
+	@echo "Backend service stopped"
+
+logs-backend:
+	@echo "Showing backend logs..."
+	podman-compose -f docker-compose.prod.yml logs -f backend
+
+# Individual MongoDB Commands  
+build-mongo:
+	@echo "Preparing MongoDB container..."
+	podman-compose -f docker-compose.prod.yml pull mongo
+	@echo "MongoDB container ready"
+
+up-mongo:
+	@echo "Starting MongoDB service..."
+	podman-compose -f docker-compose.prod.yml up mongo -d
+	@echo "MongoDB service started (port 27018)"
+
+down-mongo:
+	@echo "Stopping MongoDB service..."
+	podman-compose -f docker-compose.prod.yml stop mongo
+	podman-compose -f docker-compose.prod.yml rm -f mongo
+	@echo "MongoDB service stopped"
+
+logs-mongo:
+	@echo "Showing MongoDB logs..."
+	podman-compose -f docker-compose.prod.yml logs -f mongo
+
+# Development versions (for completeness)
+build-backend-dev:
+	@echo "Building backend container for development..."
+	podman-compose -f podman-compose.yml build backend
+
+up-backend-dev:
+	@echo "Starting backend service (development)..."
+	podman-compose -f podman-compose.yml up backend -d
+
+down-backend-dev:
+	@echo "Stopping backend service (development)..."
+	podman-compose -f podman-compose.yml stop backend
+	podman-compose -f podman-compose.yml rm -f backend
+
+up-mongo-dev:
+	@echo "Starting MongoDB service (development)..."
+	podman-compose -f podman-compose.yml up mongo -d
+
+down-mongo-dev:
+	@echo "Stopping MongoDB service (development)..."
+	podman-compose -f podman-compose.yml stop mongo
+	podman-compose -f podman-compose.yml rm -f mongo
