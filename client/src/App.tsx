@@ -35,6 +35,9 @@ import Contact from "./pages/Contact";
 import SystemDetails from "./pages/SystemDetails";
 import Achievement from "./pages/Achievement";
 
+const basename = import.meta.env.VITE_ROUTER_BASE_CONFIG || '/';
+console.log("Basename is: ", basename);
+
 const AppContent = () => {
   const { theme } = useTheme();
   const { loading } = useAuth();
@@ -47,7 +50,7 @@ const AppContent = () => {
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Router basename="/negces">
+        <Router basename={basename}>
           <Routes>
                 <Route
                   path="/login"
