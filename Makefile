@@ -10,7 +10,7 @@ help:
 	@echo "  build-frontend - Build frontend and extract to ./client/dist/"
 	@echo "  build-frontend-fresh - Build frontend without cache (force rebuild)"
 	@echo "  prod-services - Start only backend services (mongo + backend)"
-	@echo "  setup-env    - Copy example environment files for first-time setup"
+	@echo "  setup-env    - Copy .env.example to .env for client and server"
 	@echo ""
 	@echo "Individual Service Commands:"
 	@echo "  build-backend - Build only backend container"
@@ -94,29 +94,17 @@ prod-services:
 # Setup environment files for first-time use
 setup-env:
 	@echo "Setting up environment files..."
-	@if [ ! -f server/.env.production ]; then \
-		cp server/.env.example server/.env.production; \
-		echo "Created server/.env.production from example"; \
+	@if [ ! -f client/.env ]; then \
+		cp client/.env.example client/.env; \
+		echo "✅ Created client/.env from example"; \
 	else \
-		echo "server/.env.production already exists"; \
+		echo "client/.env already exists"; \
 	fi
-	@if [ ! -f server/.env.development ]; then \
-		cp server/.env.example server/.env.development; \
-		echo "Created server/.env.development from example"; \
+	@if [ ! -f server/.env ]; then \
+		cp server/.env.example server/.env; \
+		echo "✅ Created server/.env from example"; \
 	else \
-		echo "server/.env.development already exists"; \
-	fi
-	@if [ ! -f client/.env.production ]; then \
-		cp client/.env.example client/.env.production; \
-		echo "Created client/.env.production from example"; \
-	else \
-		echo "client/.env.production already exists"; \
-	fi
-	@if [ ! -f client/.env.development ]; then \
-		cp client/.env.example client/.env.development; \
-		echo "Created client/.env.development from example"; \
-	else \
-		echo "client/.env.development already exists"; \
+		echo "server/.env already exists"; \
 	fi
 	@if [ ! -f server/config/serviceAccountKey.json ]; then \
 		echo "⚠️  Firebase service account key not found!"; \
@@ -126,8 +114,12 @@ setup-env:
 	else \
 		echo "✅ Firebase service account key found"; \
 	fi
-	@echo "Environment files setup complete!"
-	@echo "Please edit the .env files with your actual values before starting services."
+	@echo ""
+	@echo "🎯 NEXT STEPS:"
+	@echo "1. Edit client/.env with your configuration"
+	@echo "2. Edit server/.env with your configuration" 
+	@echo "3. Replace environment variables with your actual values"
+	@echo "4. Start the build process with: make build-frontend && make prod-services"
 
 # Cleanup commands
 clean:

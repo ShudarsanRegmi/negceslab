@@ -4,7 +4,12 @@ WORKDIR /app
 
 # Copy package files first for better caching
 COPY server/package*.json ./
-RUN npm install --only=production
+
+# Install dependencies
+RUN npm install --production=false
+
+# Clean up dev dependencies for production (optional)
+RUN if [ "$NODE_ENV" = "production" ]; then npm prune --production; fi
 
 # Copy environment files (if they exist)
 COPY server/.env* ./

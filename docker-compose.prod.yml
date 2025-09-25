@@ -42,8 +42,6 @@ services:
       dockerfile: client/Dockerfile
       target: output
     container_name: frontend-builder
-    environment:
-      - NODE_ENV=production
     volumes:
       - ./client/dist:/output
     restart: "no"

@@ -7,8 +7,8 @@ WORKDIR /app
 COPY client/package*.json ./
 RUN npm install
 
-# Copy environment files first (this will bust cache when env changes)
-COPY client/.env* ./
+# Copy environment file (this will bust cache when env changes)
+COPY client/.env ./
 
 # Copy vite config (this will bust cache when config changes)
 COPY client/vite.config.ts ./
