@@ -6,13 +6,13 @@ WORKDIR /app
 COPY server/package*.json ./
 
 # Install dependencies
-RUN npm install --production=false
+RUN npm install
 
 # Clean up dev dependencies for production (optional)
 RUN if [ "$NODE_ENV" = "production" ]; then npm prune --production; fi
 
 # Copy environment files (if they exist)
-COPY server/.env* ./
+COPY server/.env ./
 
 # Copy config directory (for Firebase service account key)
 COPY server/config ./config
