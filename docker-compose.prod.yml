@@ -29,7 +29,7 @@ services:
     environment:
       - NODE_ENV=production
     env_file:
-      - ./server/.env.production
+      - ./server/.env
     ports:
       - "5001:5000"
     # depends_on:

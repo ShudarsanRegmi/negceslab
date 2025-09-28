@@ -2,24 +2,12 @@ FROM node:20-bullseye
 
 WORKDIR /app
 
-# Copy package files first for better caching
-COPY server/package*.json ./
-
-# Install dependencies
-RUN npm install
-
-# Clean up dev dependencies for production (optional)
-RUN if [ "$NODE_ENV" = "production" ]; then npm prune --production; fi
-
-# Copy environment files (if they exist)
-COPY server/.env ./
-
-# Copy config directory (for Firebase service account key)
-COPY server/config ./config
-
-# Copy source code
+# Copy all source code first
 COPY server/ ./
 COPY shared ../shared
+
+# Install all dependencies after copying source
+RUN npm install
 
 # Create non-root user for security
 RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
