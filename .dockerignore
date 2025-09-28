@@ -1,0 +1,30 @@
+# Dependency directories
+node_modules/
+*/node_modules/
+
+# Build directories
+dist/
+build/
+
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
