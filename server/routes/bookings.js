@@ -7,7 +7,7 @@ const Notification = require('../models/notification');
 const TemporaryRelease = require('../models/temporaryRelease');
 const TemporaryReleaseDetail = require('../models/temporaryReleaseDetail');
 const { verifyToken } = require('../middleware/auth');
-const policy = require('../../shared/policy');
+const policy = require('../shared/policy');
 const { 
   sendBookingApprovedEmail, 
   sendBookingRejectedEmail, 
