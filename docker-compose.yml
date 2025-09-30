@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: docker.io/library/mongo:7
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-mongoadmin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-secret}
+      - MONGO_INITDB_DATABASE=${MONGO_DB_NAME:-negsus_lab_prod}
+    volumes:
+      - mongo_data_prod:/data/db
+    ports:
+      - "27018:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - ./server/.env
+    ports:
+      - "5001:5000"
+    # depends_on:
+    #   mongo:
+    #     condition: service_healthy
+
+  frontend-builder:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      target: output
+    container_name: frontend-builder
+    volumes:
+      - ./client/dist:/output
+    restart: "no"
+
+volumes:
+  mongo_data_prod:
+    driver: local
