@@ -1,23 +1,36 @@
-FROM node:20-bullseye
+# -------------------------
+# Build stage
+# -------------------------
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
-# Copy all source code first
-COPY server/ ./
-COPY shared ../shared
+# Copy package files first (only from server, since deps are there)
+COPY server/package*.json ./server/
 
-# Install all dependencies after copying source
+# Install dependencies inside /app/server
+WORKDIR /app/server
 RUN npm install
 
-# Create non-root user for security
-RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
-RUN chown -R nodejs:nodejs /app
-USER nodejs
+# Back to /app root
+WORKDIR /app
+
+# Copy server and shared folders with correct structure
+COPY server ./server
+COPY shared ./shared
+
+# -------------------------
+# Runtime stage
+# -------------------------
+FROM node:20-bullseye-slim AS runtime
+
+WORKDIR /app
+
+# Copy built app from builder stage
+COPY --from=builder /app ./
+
+WORKDIR /app/server
 
 EXPOSE 5000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5000/ || exit 1
 
 CMD ["node", "index.js"]
