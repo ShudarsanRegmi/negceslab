@@ -10,7 +10,7 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-secret}
       - MONGO_INITDB_DATABASE=${MONGO_DB_NAME:-negsus_lab_prod}
     volumes:
-      - mongo_data_prod:/data/db
+      - mongo_data:/data/db
     ports:
       - "27018:27017"
     healthcheck:
