@@ -47,5 +47,5 @@ services:
     restart: "no"
 
 volumes:
-  mongo_data_prod:
+  mongo_data:
     driver: local
