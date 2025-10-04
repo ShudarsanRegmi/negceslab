@@ -26,10 +26,10 @@ echo "Username: $MONGO_INITDB_ROOT_USERNAME"
 echo "Backup location: $BACKUP_DIR"
 
 # Run mongodump inside the container with authentication
-podman exec mongodb mongodump 
-    --username "$MONGO_INITDB_ROOT_USERNAME" 
-    --password "$MONGO_INITDB_ROOT_PASSWORD" 
-    --authenticationDatabase admin 
+podman exec mongodb mongodump \
+    --username "$MONGO_INITDB_ROOT_USERNAME" \
+    --password "$MONGO_INITDB_ROOT_PASSWORD" \
+    --authenticationDatabase admin \
     --out /tmp/backup-temp
 
 # Check if mongodump succeeded
