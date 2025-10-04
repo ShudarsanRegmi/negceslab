@@ -122,7 +122,7 @@ build-mongo:
 
 up-mongo:
 	@echo "Starting MongoDB service..."
-	podman-compose -f docker-compose.yml up mongo -d
+	podman-compose -f docker-compose.yml --env-file server/.env up mongo -d
 	@echo "MongoDB service started (port 27018)"
 
 down-mongo:
