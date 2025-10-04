@@ -107,7 +107,7 @@ up-backend:
 down-backend:
 	@echo "Stopping backend service..."
 	podman-compose -f docker-compose.yml stop backend
-	podman-compose -f docker-compose.yml rm -f backend
+	podman rm -f backend
 	@echo "Backend service stopped"
 
 logs-backend:
@@ -128,7 +128,7 @@ up-mongo:
 down-mongo:
 	@echo "Stopping MongoDB service..."
 	podman-compose -f docker-compose.yml stop mongo
-	podman-compose -f docker-compose.yml rm -f mongo
+	podman rm -f mongodb
 	@echo "MongoDB service stopped"
 
 logs-mongo:
