@@ -10,4 +10,3 @@ podman exec -it backend node makeAdmin.js
 echo "secret" | podman secret create mongo-root-password -
 podman secret ls
 ```
-
