@@ -47,6 +47,7 @@ import Warning from "@mui/icons-material/Warning";
 import Info from "@mui/icons-material/Info";
 import { alpha } from "@mui/material/styles";
 import TermsAndConditionsDialog, { type TermsAccepted } from "../components/TermsAndConditionsDialog";
+import { useAuth } from "../contexts/AuthContext";
 // Import shared policy constants
 import {
   LAB_OPEN_HOUR,
@@ -107,6 +108,7 @@ const datasetTypes = [
 const datasetSizeUnits = ["MB", "GB", "TB"];
 
 const BookingForm: React.FC = (): ReactElement => {
+  const { currentUser } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [computers, setComputers] = useState<Computer[]>([]);
   const [selectedComputer, setSelectedComputer] = useState<string>("");
@@ -147,6 +149,17 @@ const BookingForm: React.FC = (): ReactElement => {
   });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  // Check if user has a valid Amrita email
+  const isAmritaEmail = (email: string | null | undefined): boolean => {
+    if (!email) return false;
+    return email.endsWith('@amrita.edu') || 
+           email.endsWith('@ch.amrita.edu') || 
+           email.endsWith('@students.amrita.edu') ||
+           email.endsWith('@ch.student.amrita.edu');
+  };
+
+  const hasValidAmritaEmail = isAmritaEmail(currentUser?.email);
 
   // Function to disable Sundays
   const shouldDisableDate = (date: Date) => {
@@ -564,6 +577,12 @@ const BookingForm: React.FC = (): ReactElement => {
   };
 
   const handleNext = () => {
+    // Check email validity first
+    if (!hasValidAmritaEmail) {
+      setError("Please sign in with a valid Amrita email address to proceed with bookings.");
+      return;
+    }
+
     // Check if selected computer is available (for step 0)
     if (activeStep === 0) {
       const selectedComp = computers.find(c => c._id === selectedComputer);
@@ -608,6 +627,12 @@ const BookingForm: React.FC = (): ReactElement => {
   };
 
   const handleSubmit = async () => {
+    // Check email validity first
+    if (!hasValidAmritaEmail) {
+      setError("Booking requests are only allowed for users with valid Amrita email addresses.");
+      return;
+    }
+
     if (
       !selectedComputer ||
       !startDate ||
@@ -967,12 +992,13 @@ const BookingForm: React.FC = (): ReactElement => {
               Choose from the available computers in the lab
             </Typography>
 
-            <FormControl fullWidth>
+            <FormControl fullWidth disabled={!hasValidAmritaEmail}>
               <InputLabel>Computer</InputLabel>
               <Select
                 value={selectedComputer}
                 onChange={(e) => setSelectedComputer(e.target.value)}
                 label="Computer"
+                disabled={!hasValidAmritaEmail}
               >
                 {computers
                   .sort((a, b) => {
@@ -1016,6 +1042,16 @@ const BookingForm: React.FC = (): ReactElement => {
                 ))}
               </Select>
             </FormControl>
+
+            {/* Email Domain Validation Message */}
+            {!hasValidAmritaEmail && (
+              <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>📧 Computer selection is disabled</strong> because you're not signed in with an Amrita email address. 
+                  Please sign out and log in with your institutional email to proceed with bookings.
+                </Typography>
+              </Alert>
+            )}
 
             {/* Show available vs unavailable computers info */}
             <Box sx={{ mt: 2, mb: 2 }}>
@@ -1582,6 +1618,39 @@ const BookingForm: React.FC = (): ReactElement => {
         Book a Computer
       </Typography>
 
+      {/* Amrita Email Validation Warning */}
+      {currentUser && !hasValidAmritaEmail && (
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: 3,
+            border: '2px solid',
+            borderColor: 'error.main',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+            <Box>
+              <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                 Invalid Email Domain for Booking
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                You are currently signed in with: <strong>{currentUser.email}</strong>
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                <strong>Booking requests are only allowed for Amrita email addresses:</strong>
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ mb: 2, ml: 2 }}>
+                • Students: <strong>rollno@ch.students.amrita.edu</strong><br/>
+                • Faculty: <strong>username@amrita.edu</strong> or <strong>username@ch.amrita.edu</strong>
+              </Typography>
+              <Typography variant="body2" color="error.dark">
+                <strong>Computer selection is disabled.</strong> Please sign out and log in with your Amrita email to make bookings.
+              </Typography>
+            </Box>
+          </Box>
+        </Alert>
+      )}
+
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
@@ -1680,6 +1749,7 @@ const BookingForm: React.FC = (): ReactElement => {
                   variant="contained"
                   onClick={handleNext}
                   disabled={
+                    !hasValidAmritaEmail ||
                     (activeStep === 0 && (!selectedComputer || 
                       computers.find(c => c._id === selectedComputer)?.status !== "available")) ||
                     (activeStep === 1 &&
