@@ -98,7 +98,7 @@ const AdminComputerManagement: React.FC = () => {
     processor: "",
     ram: "",
     rom: "",
-    status: "available" as const,
+    status: "available" as "available" | "maintenance" | "reserved",
   });
   
   const theme = useTheme();
@@ -412,6 +412,7 @@ const AdminComputerManagement: React.FC = () => {
               >
                 <MenuItem value="available">Available</MenuItem>
                 <MenuItem value="maintenance">Maintenance</MenuItem>
+                <MenuItem value="reserved">Reserved</MenuItem>
               </Select>
             </FormControl>
           </Box>
