@@ -1340,7 +1340,7 @@ const BookingForm: React.FC = (): ReactElement => {
                 value={datasetLink}
                 onChange={(e) => setDatasetLink(e.target.value)}
                 required
-                placeholder="Provide a link to your dataset or its location..."
+                placeholder="Dataset link or location (enter “N/A” if not applicable)"
               />
 
               <Box>
