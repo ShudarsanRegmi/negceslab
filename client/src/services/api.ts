@@ -39,6 +39,7 @@ export const computersAPI = {
   getAllComputers: () => api.get('/computers'),
   getComputersWithBookings: () => api.get('/computers/with-bookings'),
   createComputer: (data: { name: string; location: string; specifications: string; status: string }) => api.post('/computers', data),
+  updateComputer: (computerId: string, data: { name: string; location: string; specifications: string; status: string }) => api.put(`/computers/${computerId}`, data),
   deleteComputer: (computerId: string) => api.delete(`/computers/${computerId}`),
 };
 

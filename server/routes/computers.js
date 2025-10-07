@@ -129,6 +129,95 @@ router.post("/", verifyToken, async (req, res) => {
   }
 });
 
+// Update a computer
+router.put("/:id", verifyToken, async (req, res) => {
+  try {
+    const { name, location, specifications, status } = req.body;
+    const computerId = req.params.id;
+
+    // Basic validation
+    if (!name || !location) {
+      return res
+        .status(400)
+        .json({ message: "Name and location are required" });
+    }
+
+    // Validate status if provided
+    const validStatuses = ['available', 'maintenance', 'reserved'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Invalid status. Must be one of: available, maintenance, reserved"
+      });
+    }
+
+    // Check if computer exists
+    const existingComputer = await Computer.findById(computerId);
+    if (!existingComputer) {
+      return res.status(404).json({ message: "Computer not found" });
+    }
+
+    // Check if another computer with the same name exists (excluding current one)
+    const duplicateComputer = await Computer.findOne({
+      name: name,
+      _id: { $ne: computerId }
+    });
+    
+    if (duplicateComputer) {
+      return res.status(400).json({
+        message: "A computer with this name already exists"
+      });
+    }
+
+    // If changing status to maintenance or reserved, check for active bookings
+    if (status && (status === 'maintenance' || status === 'reserved') && existingComputer.status === 'available') {
+      const activeBookings = await Booking.findOne({
+        computerId: computerId,
+        status: { $in: ['approved', 'pending'] },
+        endDate: { $gte: new Date().toISOString().split("T")[0] },
+      });
+
+      if (activeBookings) {
+        return res.status(400).json({
+          message: `Cannot change status to ${status} while computer has active bookings. Please handle existing bookings first.`,
+        });
+      }
+    }
+
+    // Update the computer
+    const updatedComputer = await Computer.findByIdAndUpdate(
+      computerId,
+      {
+        name,
+        location,
+        specifications: specifications || existingComputer.specifications,
+        status: status || existingComputer.status,
+      },
+      { 
+        new: true, // Return updated document
+        runValidators: true // Run schema validations
+      }
+    );
+
+    res.json({
+      message: "Computer updated successfully",
+      computer: updatedComputer
+    });
+
+  } catch (error) {
+    console.error("Error updating computer:", error);
+    if (error.code === 11000) {
+      res.status(400).json({ 
+        message: "A computer with this name already exists" 
+      });
+    } else {
+      res.status(500).json({
+        message: "Error updating computer",
+        error: error.message,
+      });
+    }
+  }
+});
+
 // Delete a computer
 router.delete("/:id", verifyToken, async (req, res) => {
   try {

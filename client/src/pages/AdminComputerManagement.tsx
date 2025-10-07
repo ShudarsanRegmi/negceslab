@@ -36,6 +36,8 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
+  Edit as EditIcon,
+  Info as InfoIcon,
 } from "@mui/icons-material";
 import { computersAPI, bookingsAPI } from "../services/api";
 
@@ -92,6 +94,18 @@ const AdminComputerManagement: React.FC = () => {
   
   // Computer management states
   const [computerDialogOpen, setComputerDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedComputer, setSelectedComputer] = useState<Computer | null>(null);
+  const [editComputer, setEditComputer] = useState({
+    name: "",
+    os: "",
+    processor: "",
+    ram: "",
+    rom: "",
+    location: "",
+    status: "available" as "available" | "maintenance" | "reserved",
+  });
   const [newComputer, setNewComputer] = useState({
     name: "",
     os: "",
@@ -160,6 +174,79 @@ const AdminComputerManagement: React.FC = () => {
     } catch (error) {
       console.error("Error deleting computer:", error);
       setError("Failed to delete computer");
+    }
+  };
+
+  const handleComputerClick = (computer: Computer) => {
+    setSelectedComputer(computer);
+    
+    // Parse specifications to populate edit form
+    const specs = computer.specifications;
+    const osMatch = specs.match(/OS:\s*([^\n]+)/);
+    const processorMatch = specs.match(/Processor:\s*([^\n]+)/);
+    const ramMatch = specs.match(/RAM:\s*([^\n]+)/);
+    const romMatch = specs.match(/ROM:\s*([^\n]+)/);
+    
+    setEditComputer({
+      name: computer.name,
+      os: osMatch ? osMatch[1].trim() : "",
+      processor: processorMatch ? processorMatch[1].trim() : "",
+      ram: ramMatch ? ramMatch[1].trim() : "",
+      rom: romMatch ? romMatch[1].trim() : "",
+      location: computer.location,
+      status: computer.status,
+    });
+    
+    setIsEditMode(false); // Start in view mode
+    setViewDialogOpen(true);
+  };
+
+  const handleEditClick = () => {
+    setIsEditMode(true);
+  };
+
+  const handleCancelEdit = () => {
+    // Reset to original values
+    if (selectedComputer) {
+      const specs = selectedComputer.specifications;
+      const osMatch = specs.match(/OS:\s*([^\n]+)/);
+      const processorMatch = specs.match(/Processor:\s*([^\n]+)/);
+      const ramMatch = specs.match(/RAM:\s*([^\n]+)/);
+      const romMatch = specs.match(/ROM:\s*([^\n]+)/);
+      
+      setEditComputer({
+        name: selectedComputer.name,
+        os: osMatch ? osMatch[1].trim() : "",
+        processor: processorMatch ? processorMatch[1].trim() : "",
+        ram: ramMatch ? ramMatch[1].trim() : "",
+        rom: romMatch ? romMatch[1].trim() : "",
+        location: selectedComputer.location,
+        status: selectedComputer.status,
+      });
+    }
+    setIsEditMode(false);
+  };
+
+  const handleUpdateComputer = async () => {
+    if (!selectedComputer) return;
+    
+    try {
+      const specifications = `OS: ${editComputer.os}\nProcessor: ${editComputer.processor}\nRAM: ${editComputer.ram}\nROM: ${editComputer.rom}`;
+      
+      await computersAPI.updateComputer(selectedComputer._id, {
+        name: editComputer.name,
+        location: editComputer.location,
+        specifications,
+        status: editComputer.status,
+      });
+      
+      setIsEditMode(false);
+      setViewDialogOpen(false);
+      setSelectedComputer(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error updating computer:", error);
+      setError("Failed to update computer");
     }
   };
 
@@ -233,7 +320,10 @@ const AdminComputerManagement: React.FC = () => {
             ).length;
             return (
               <React.Fragment key={computer._id}>
-                <ListItem>
+                <ListItem 
+                  onClick={() => handleComputerClick(computer)}
+                  sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                >
                   <ListItemText
                     primary={computer.name}
                     secondary={
@@ -247,7 +337,7 @@ const AdminComputerManagement: React.FC = () => {
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                           Bookings: {bookingCount}
                         </Typography>
-                        {computer.status === "booked" &&
+                        {computer.status === "reserved" &&
                           computer.nextAvailable && (
                             <Typography
                               variant="caption"
@@ -255,7 +345,7 @@ const AdminComputerManagement: React.FC = () => {
                               display="block"
                               sx={{ mt: 1 }}
                             >
-                              Booked until {computer.nextAvailable} on{" "}
+                              Reserved until {computer.nextAvailable} on{" "}
                               {computer.nextAvailableDate}
                             </Typography>
                           )}
@@ -267,6 +357,16 @@ const AdminComputerManagement: React.FC = () => {
                             sx={{ mt: 1 }}
                           >
                             Under maintenance
+                          </Typography>
+                        )}
+                        {computer.status === "reserved" && (
+                          <Typography
+                            variant="caption"
+                            color="error.main"
+                            display="block"
+                            sx={{ mt: 1 }}
+                          >
+                            Reserved
                           </Typography>
                         )}
                         {computer.status === "available" && (
@@ -286,7 +386,10 @@ const AdminComputerManagement: React.FC = () => {
                     <IconButton
                       edge="end"
                       color="error"
-                      onClick={() => handleDeleteComputer(computer._id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteComputer(computer._id);
+                      }}
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -315,7 +418,14 @@ const AdminComputerManagement: React.FC = () => {
                   b => b.computerId._id === computer._id && b.status === 'approved'
                 ).length;
                 return (
-                  <TableRow key={computer._id}>
+                  <TableRow 
+                    key={computer._id}
+                    onClick={() => handleComputerClick(computer)}
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: 'action.hover' }
+                    }}
+                  >
                     <TableCell>{computer.name}</TableCell>
                     <TableCell>{computer.location}</TableCell>
                     <TableCell>
@@ -325,7 +435,10 @@ const AdminComputerManagement: React.FC = () => {
                     <TableCell>
                       <IconButton
                         color="error"
-                        onClick={() => handleDeleteComputer(computer._id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteComputer(computer._id);
+                        }}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -422,6 +535,234 @@ const AdminComputerManagement: React.FC = () => {
           <Button onClick={handleAddComputer} variant="contained">
             Add Computer
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View/Edit Computer Dialog */}
+      <Dialog
+        open={viewDialogOpen}
+        onClose={() => {
+          setViewDialogOpen(false);
+          setIsEditMode(false);
+        }}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {isEditMode ? (
+                <>
+                  <EditIcon color="primary" />
+                  <Typography variant="h6">Edit Computer</Typography>
+                </>
+              ) : (
+                <>
+                  <InfoIcon color="primary" />
+                  <Typography variant="h6">Computer Details</Typography>
+                </>
+              )}
+            </Box>
+            {!isEditMode && (
+              <Button
+                variant="outlined"
+                startIcon={<EditIcon />}
+                onClick={handleEditClick}
+                size="small"
+              >
+                Edit
+              </Button>
+            )}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            {selectedComputer && (
+              <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="h6" gutterBottom>System Information</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>ID:</strong> {selectedComputer._id}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Active Bookings:</strong> {bookings.filter(
+                      b => b.computerId._id === selectedComputer._id && b.status === 'approved'
+                    ).length}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            
+            {isEditMode ? (
+              // Edit Mode - Editable Fields
+              <>
+                <TextField
+                  label="Name"
+                  value={editComputer.name}
+                  onChange={(e) =>
+                    setEditComputer({ ...editComputer, name: e.target.value })
+                  }
+                  fullWidth
+                  size={isMobile ? "small" : "medium"}
+                />
+                
+                <TextField
+                  label="Location"
+                  value={editComputer.location}
+                  onChange={(e) =>
+                    setEditComputer({ ...editComputer, location: e.target.value })
+                  }
+                  fullWidth
+                  size={isMobile ? "small" : "medium"}
+                  placeholder="e.g., Main Lab, Room 101"
+                />
+                
+                <TextField
+                  label="Operating System"
+                  value={editComputer.os}
+                  onChange={(e) =>
+                    setEditComputer({ ...editComputer, os: e.target.value })
+                  }
+                  fullWidth
+                  size={isMobile ? "small" : "medium"}
+                  placeholder="e.g., Windows 11, Ubuntu 22.04, macOS"
+                />
+                
+                <TextField
+                  label="Processor"
+                  value={editComputer.processor}
+                  onChange={(e) =>
+                    setEditComputer({ ...editComputer, processor: e.target.value })
+                  }
+                  fullWidth
+                  size={isMobile ? "small" : "medium"}
+                  placeholder="e.g., Intel i7-12700K, AMD Ryzen 7 5800X"
+                />
+                
+                <TextField
+                  label="RAM"
+                  value={editComputer.ram}
+                  onChange={(e) =>
+                    setEditComputer({ ...editComputer, ram: e.target.value })
+                  }
+                  fullWidth
+                  size={isMobile ? "small" : "medium"}
+                  placeholder="e.g., 16GB DDR4, 32GB DDR5"
+                />
+                
+                <TextField
+                  label="Storage"
+                  value={editComputer.rom}
+                  onChange={(e) =>
+                    setEditComputer({ ...editComputer, rom: e.target.value })
+                  }
+                  fullWidth
+                  size={isMobile ? "small" : "medium"}
+                  placeholder="e.g., 512GB SSD, 1TB NVMe"
+                />
+                
+                <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={editComputer.status}
+                    onChange={(e) =>
+                      setEditComputer({
+                        ...editComputer,
+                        status: e.target.value as any,
+                      })
+                    }
+                    label="Status"
+                  >
+                    <MenuItem value="available">Available</MenuItem>
+                    <MenuItem value="maintenance">Maintenance</MenuItem>
+                    <MenuItem value="reserved">Reserved</MenuItem>
+                  </Select>
+                </FormControl>
+              </>
+            ) : (
+              // View Mode - Read-only Display
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                    Basic Information
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">Name</Typography>
+                      <Typography variant="body1" fontWeight="medium">{editComputer.name}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">Location</Typography>
+                      <Typography variant="body1" fontWeight="medium">{editComputer.location}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">Status</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography
+                          variant="body1"
+                          fontWeight="medium"
+                          color={
+                            editComputer.status === 'available'
+                              ? 'success.main'
+                              : editComputer.status === 'maintenance'
+                              ? 'warning.main'
+                              : 'error.main'
+                          }
+                          sx={{ textTransform: 'capitalize' }}
+                        >
+                          {editComputer.status}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                    Hardware Specifications
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">Operating System</Typography>
+                      <Typography variant="body1" fontWeight="medium">{editComputer.os || 'Not specified'}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">Processor</Typography>
+                      <Typography variant="body1" fontWeight="medium">{editComputer.processor || 'Not specified'}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">RAM</Typography>
+                      <Typography variant="body1" fontWeight="medium">{editComputer.ram || 'Not specified'}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">Storage</Typography>
+                      <Typography variant="body1" fontWeight="medium">{editComputer.rom || 'Not specified'}</Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          {isEditMode ? (
+            // Edit Mode Actions
+            <>
+              <Button onClick={handleCancelEdit} color="inherit">
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateComputer} variant="contained" startIcon={<EditIcon />}>
+                Save Changes
+              </Button>
+            </>
+          ) : (
+            // View Mode Actions
+            <Button onClick={() => setViewDialogOpen(false)} variant="outlined">
+              Close
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
