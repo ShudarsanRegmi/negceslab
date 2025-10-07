@@ -209,7 +209,7 @@ export default function Rules() {
                           Standard acknowledgement statement:
                         </Typography>
                         <Typography variant="body2" sx={{ mt: 1, color: "#475569" }}>
-                          "This work was carried out using the resources of the NEGCES Laboratory, [University Name]."
+                          "This work was carried out using the resources of the NEGCES Laboratory, Amrita Vishwa Vidyapeetham Chennai Campus."
                         </Typography>
                       </Box>
                     </Box>
