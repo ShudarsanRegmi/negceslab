@@ -380,8 +380,18 @@ const LabOverview: React.FC = () => {
         
         <Grid container spacing={3}>
           <Grid item xs={12} sm={3}>
-            <Box sx={{ textAlign: 'center', p: 2, borderRadius: 2, bgcolor: 'primary.50' }}>
-              <Typography variant="h4" fontWeight="bold" color="primary">
+            <Box sx={{ 
+              textAlign: 'center', 
+              p: 2, 
+              borderRadius: 2, 
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(79, 109, 245, 0.15)' 
+                : 'rgba(79, 109, 245, 0.08)',
+              border: `1px solid ${theme.palette.mode === 'dark' 
+                ? 'rgba(79, 109, 245, 0.3)' 
+                : 'rgba(79, 109, 245, 0.12)'}`
+            }}>
+              <Typography variant="h4" fontWeight="bold" color="primary.main">
                 {stats.approvedBookings}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -391,7 +401,17 @@ const LabOverview: React.FC = () => {
           </Grid>
           
           <Grid item xs={12} sm={3}>
-            <Box sx={{ textAlign: 'center', p: 2, borderRadius: 2, bgcolor: 'success.50' }}>
+            <Box sx={{ 
+              textAlign: 'center', 
+              p: 2, 
+              borderRadius: 2, 
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(76, 175, 80, 0.15)' 
+                : 'rgba(76, 175, 80, 0.08)',
+              border: `1px solid ${theme.palette.mode === 'dark' 
+                ? 'rgba(76, 175, 80, 0.3)' 
+                : 'rgba(76, 175, 80, 0.12)'}`
+            }}>
               <Typography variant="h4" fontWeight="bold" color="success.main">
                 {stats.activeBookings}
               </Typography>
@@ -402,7 +422,17 @@ const LabOverview: React.FC = () => {
           </Grid>
           
           <Grid item xs={12} sm={3}>
-            <Box sx={{ textAlign: 'center', p: 2, borderRadius: 2, bgcolor: 'warning.50' }}>
+            <Box sx={{ 
+              textAlign: 'center', 
+              p: 2, 
+              borderRadius: 2, 
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 152, 0, 0.15)' 
+                : 'rgba(255, 152, 0, 0.08)',
+              border: `1px solid ${theme.palette.mode === 'dark' 
+                ? 'rgba(255, 152, 0, 0.3)' 
+                : 'rgba(255, 152, 0, 0.12)'}`
+            }}>
               <Typography variant="h4" fontWeight="bold" color="warning.main">
                 {stats.pendingBookings}
               </Typography>
@@ -413,7 +443,13 @@ const LabOverview: React.FC = () => {
           </Grid>
           
           <Grid item xs={12} sm={3}>
-            <Box sx={{ textAlign: 'center', p: 2, borderRadius: 2, bgcolor: 'grey.100' }}>
+            <Box sx={{ 
+              textAlign: 'center', 
+              p: 2, 
+              borderRadius: 2, 
+              bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
+              border: `1px solid ${theme.palette.divider}`
+            }}>
               <Typography variant="h4" fontWeight="bold" color="text.primary">
                 {stats.totalBookings - stats.approvedBookings - stats.pendingBookings}
               </Typography>
