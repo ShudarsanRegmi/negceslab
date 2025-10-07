@@ -992,6 +992,43 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           }),
         }}
       >
+        {/* Email Verification Banner */}
+        {currentUser && !currentUser.emailVerified && (
+          <Box sx={{ mb: 3 }}>
+            <Box
+              sx={{
+                backgroundColor: 'warning.light',
+                color: 'warning.contrastText',
+                p: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'warning.main',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+              }}
+            >
+              <Warning />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body1" fontWeight="bold">
+                  Email Verification Required
+                </Typography>
+                <Typography variant="body2">
+                  Please verify your email address ({currentUser.email}) to access all booking features.
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                color="warning"
+                onClick={() => navigate('/verify-email')}
+                size="small"
+              >
+                Verify Now
+              </Button>
+            </Box>
+          </Box>
+        )}
+        
         {children}
       </Box>
 

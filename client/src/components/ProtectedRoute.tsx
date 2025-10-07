@@ -22,6 +22,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Check if email is verified for authenticated users
+  if (currentUser && !currentUser.emailVerified) {
+    // Allow access to email verification page
+    if (location.pathname === '/verify-email') {
+      return <>{children}</>;
+    }
+    // Redirect unverified users to verification page
+    return <Navigate to="/verify-email" replace />;
+  }
+
   if (requiredRole && userRole !== requiredRole && !(requiredRole === 'user' && userRole === 'admin')) {
     return <Navigate to="/" replace />;
   }

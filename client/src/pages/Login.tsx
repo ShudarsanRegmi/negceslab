@@ -9,6 +9,10 @@ import {
   Link,
   Alert,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -32,6 +36,8 @@ const Login = () => {
   const { login, loginWithGoogle, loginWithMicrosoft } = useAuth();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showSocialWarning, setShowSocialWarning] = useState(false);
+  const [pendingSocialLogin, setPendingSocialLogin] = useState<'google' | 'microsoft' | null>(null);
 
   const formik = useFormik({
     initialValues: {
@@ -43,7 +49,14 @@ const Login = () => {
       try {
         setError('');
         setIsLoading(true);
-        await login(values.email, values.password);
+        const result = await login(values.email, values.password);
+        
+        // Check if email is verified
+        if (!result.user.emailVerified) {
+          navigate('/verify-email');
+          return;
+        }
+        
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
       } catch (err) {
@@ -55,34 +68,42 @@ const Login = () => {
     },
   });
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
+    setPendingSocialLogin('google');
+    setShowSocialWarning(true);
+  };
+
+  const handleMicrosoftLogin = () => {
+    setPendingSocialLogin('microsoft');
+    setShowSocialWarning(true);
+  };
+
+  const handleSocialLoginConfirm = async () => {
     try {
       setError('');
       setIsLoading(true);
-      await loginWithGoogle();
+      setShowSocialWarning(false);
+      
+      if (pendingSocialLogin === 'google') {
+        await loginWithGoogle();
+      } else if (pendingSocialLogin === 'microsoft') {
+        await loginWithMicrosoft();
+      }
+      
       const from = location.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
-      setError('Failed to sign in with Google.');
-      console.error('Google login error:', err);
+      setError(`Failed to sign in with ${pendingSocialLogin === 'google' ? 'Google' : 'Microsoft'}.`);
+      console.error('Social login error:', err);
     } finally {
       setIsLoading(false);
+      setPendingSocialLogin(null);
     }
   };
 
-  const handleMicrosoftLogin = async () => {
-    try {
-      setError('');
-      setIsLoading(true);
-      await loginWithMicrosoft();
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
-    } catch (err) {
-      setError('Failed to sign in with Microsoft.');
-      console.error('Microsoft login error:', err);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSocialLoginCancel = () => {
+    setShowSocialWarning(false);
+    setPendingSocialLogin(null);
   };
 
   return (
@@ -108,6 +129,17 @@ const Login = () => {
           <Typography component="h1" variant="h5" gutterBottom>
             Sign in
           </Typography>
+          
+          <Alert severity="info" sx={{ mt: 1, width: '100%' }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+              📧 Use your Amrita email to raise booking requests:
+            </Typography>
+            <Typography variant="body2" component="div">
+              • Students: <strong>ch.rollno@ch.student.amrita.edu</strong><br/>
+              • Faculty: <strong>username@ch.amrita.edu</strong>
+            </Typography>
+          </Alert>
+
           {error && (
             <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
               {error}
@@ -170,6 +202,42 @@ const Login = () => {
           </Box>
         </Paper>
       </Box>
+
+      {/* Social Login Warning Dialog */}
+      <Dialog
+        open={showSocialWarning}
+        onClose={handleSocialLoginCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+  ⚠️ Important: Email Domain Requirement
+    </DialogTitle>
+    <DialogContent>
+      <Alert severity="warning" sx={{ mb: 2 }}>
+        <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+          Booking requests can only be made using an Amrita email ID:
+        </Typography>
+        <Typography variant="body2" component="div">
+          • Students: <strong>rollno@ch.student.amrita.edu</strong><br/>
+          • Faculty: <strong>username@amrita.edu</strong>
+        </Typography>
+      </Alert>
+      <Typography variant="body2" color="text.secondary">
+        Your {pendingSocialLogin === 'google' ? 'Google' : 'Microsoft'} ID can be used to browse availability and other information, but not for submitting booking requests. Please sign in with your Amrita Campus ID to proceed with bookings.
+      </Typography>
+    </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSocialLoginCancel}>Cancel</Button>
+          <Button 
+            onClick={handleSocialLoginConfirm}
+            variant="contained"
+            disabled={isLoading}
+          >
+            I Understand, Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

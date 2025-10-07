@@ -35,6 +35,7 @@ import Team from "./pages/Team";
 import Contact from "./pages/Contact";
 import SystemDetails from "./pages/SystemDetails";
 import Achievement from "./pages/Achievement";
+import EmailVerification from "./pages/EmailVerification";
 
 const basename = import.meta.env.VITE_ROUTER_BASE_CONFIG || '/';
 console.log("Basename is: ", basename);
@@ -67,6 +68,16 @@ const AppContent = () => {
                     <MainLayout>
                       <Register />
                     </MainLayout>
+                  }
+                />
+                <Route
+                  path="/verify-email"
+                  element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <EmailVerification />
+                      </MainLayout>
+                    </ProtectedRoute>
                   }
                 />
                 <Route

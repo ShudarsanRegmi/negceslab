@@ -8,6 +8,8 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup,
+  sendEmailVerification,
+  reload,
 } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { authAPI } from "../services/api";
@@ -20,6 +22,8 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithMicrosoft: () => Promise<void>;
   logout: () => Promise<void>;
+  sendVerificationEmail: () => Promise<void>;
+  reloadUser: () => Promise<void>;
   loading: boolean;
 }
 
@@ -80,6 +84,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const { user } = await createUserWithEmailAndPassword(auth, email, password);
       console.log('Firebase user created:', user.uid);
 
+      // Send verification email immediately after registration
+      await sendEmailVerification(user);
+      console.log('Verification email sent to:', email);
+
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const token = await user.getIdToken();
@@ -92,6 +100,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
+    }
+  };
+
+  const sendVerificationEmail = async () => {
+    if (currentUser && !currentUser.emailVerified) {
+      await sendEmailVerification(currentUser);
+    } else {
+      throw new Error('No user logged in or email already verified');
+    }
+  };
+
+  const reloadUser = async () => {
+    if (currentUser) {
+      await reload(currentUser);
     }
   };
 
@@ -164,6 +186,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     loginWithGoogle,
     loginWithMicrosoft,
     logout,
+    sendVerificationEmail,
+    reloadUser,
     loading,
   };
 
