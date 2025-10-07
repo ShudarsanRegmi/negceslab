@@ -28,6 +28,7 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Layout from "./components/Layout";
 import ComputerGrid from "./pages/ComputerGrid";
+import LabOverview from "./pages/LabOverview";
 import HomePage from "./pages/HomePage";
 import Rules from "./pages/Rules";
 import Team from "./pages/Team";
@@ -146,6 +147,16 @@ const AppContent = () => {
                     <ProtectedRoute requiredRole="user">
                       <Layout>
                         <BookingForm />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/lab-overview"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <LabOverview />
                       </Layout>
                     </ProtectedRoute>
                   }

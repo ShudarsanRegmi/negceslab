@@ -178,6 +178,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       roles: ["user", "admin"],
     },
     {
+      text: "Lab Overview",
+      icon: <InfoIcon />,
+      path: "/lab-overview",
+      roles: ["user", "admin"],
+    },
+    {
       text: "Computer Availability",
       icon: <Computer />,
       path: "/computers",
@@ -282,7 +288,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               NEGCES Lab
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Computer Booking System
+              Booking System
             </Typography>
           </Box>
         </Box>
