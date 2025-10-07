@@ -287,13 +287,9 @@ const ComputerGrid: React.FC = () => {
   };
 
   const filteredComputers = computers.filter((computer) => {
-    const matchesSearch =
-      computer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      computer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      computer.specifications.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || computer.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesStatus;
   });
 
   const handleViewModeChange = (
@@ -1051,56 +1047,23 @@ const ComputerGrid: React.FC = () => {
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Computer Availability
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-          View real-time computer availability and book your preferred system
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<BookIcon />}
-          sx={{ mb: 3 }}
-          onClick={() => navigate("/book")}
-        >
-          + Book Computer
-        </Button>
-      </Box>
-
-
-
       {/* Controls */}
       <Box
         sx={{
           display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: { xs: 2, sm: 3 },
-          mb: 4,
-          alignItems: { xs: "stretch", sm: "center" },
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
         }}
       >
-        <TextField
-          label="Search computers..."
-          variant="outlined"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{
-            flexGrow: 1,
-            minWidth: { xs: "100%", sm: 200 },
-          }}
-          size="small"
-        />
-
-        <FormControl sx={{ minWidth: { xs: "100%", sm: 150 } }} size="small">
-          <InputLabel>Status</InputLabel>
+        <FormControl sx={{ minWidth: 150 }} size="small">
+          <InputLabel>Filter by Status</InputLabel>
           <Select
             value={statusFilter}
-            label="Status"
+            label="Filter by Status"
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="all">All Computers</MenuItem>
             <MenuItem value="available">Available</MenuItem>
             <MenuItem value="booked">Booked</MenuItem>
             <MenuItem value="reserved">Reserved</MenuItem>
@@ -1108,13 +1071,15 @@ const ComputerGrid: React.FC = () => {
           </Select>
         </FormControl>
 
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            justifyContent: { xs: "center", sm: "flex-start" },
-          }}
+        <Typography 
+          variant="body2" 
+          color="text.secondary"
+          sx={{ display: { xs: "none", md: "block" } }}
         >
+          Click on available computers to view their bookings
+        </Typography>
+
+        <Box sx={{ display: "flex", gap: 1 }}>
           <IconButton
             onClick={() => setViewMode("grid")}
             color={viewMode === "grid" ? "primary" : "default"}
@@ -1140,13 +1105,14 @@ const ComputerGrid: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Results Count */}
-      <Typography
-        variant="h5"
-        sx={{ mb: 3, fontWeight: "bold", color: "#212121" }}
-      >
-        Lab Computer Status
-      </Typography>
+      {/* Mobile instruction text */}
+      <Box sx={{ display: { xs: "block", md: "none" }, mb: 2, textAlign: "center" }}>
+        <Typography variant="body2" color="text.secondary">
+          Click on available computers to view their bookings
+        </Typography>
+      </Box>
+
+
 
       {/* White Box Container */}
       <Paper
@@ -1157,20 +1123,7 @@ const ComputerGrid: React.FC = () => {
           mb: 4,
         }}
       >
-        {/* Status Legend - Update to show booking ranges */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "flex-end",
-            mb: 4,
-            gap: { xs: 2, sm: 3 },
-            flexWrap: "wrap",
-          }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            Click on available computers to view their bookings
-          </Typography>
-        </Box>
+
 
         {/* Computer Status Cards */}
         <Box
