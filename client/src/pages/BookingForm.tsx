@@ -27,6 +27,7 @@ import {
   List,
   ListItem,
   ListItemText,
+
 } from "@mui/material";
 import { DatePicker, TimePicker } from "@mui/x-date-pickers";
 import {
@@ -45,6 +46,7 @@ import { computersAPI, bookingsAPI, temporaryReleaseAPI } from "../services/api"
 import Warning from "@mui/icons-material/Warning";
 import Info from "@mui/icons-material/Info";
 import { alpha } from "@mui/material/styles";
+import TermsAndConditionsDialog, { type TermsAccepted } from "../components/TermsAndConditionsDialog";
 // Import shared policy constants
 import {
   LAB_OPEN_HOUR,
@@ -133,6 +135,16 @@ const BookingForm: React.FC = (): ReactElement => {
   const [mentor, setMentor] = useState("");
   const [availableTemporarySlots, setAvailableTemporarySlots] = useState<TemporaryRelease[]>([]);
   const [showTemporarySlots, setShowTemporarySlots] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState<TermsAccepted>({
+    usageDuration: false,
+    coolingPeriod: false,
+    academicPurpose: false,
+    acknowledgement: false,
+    prohibitedUse: false,
+    dataResponsibility: false,
+    compliance: false,
+  });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -583,6 +595,18 @@ const BookingForm: React.FC = (): ReactElement => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
+  const handleTermsChange = (term: keyof TermsAccepted) => {
+    setTermsAccepted(prev => ({
+      ...prev,
+      [term]: !prev[term]
+    }));
+  };
+
+  const handleSubmitClick = () => {
+    // Show terms and conditions dialog first
+    setShowTermsDialog(true);
+  };
+
   const handleSubmit = async () => {
     if (
       !selectedComputer ||
@@ -716,6 +740,16 @@ const BookingForm: React.FC = (): ReactElement => {
       setBottleneckExplanation("");
       setMentor("");
       setActiveStep(0);
+      // Reset terms and conditions
+      setTermsAccepted({
+        usageDuration: false,
+        coolingPeriod: false,
+        academicPurpose: false,
+        acknowledgement: false,
+        prohibitedUse: false,
+        dataResponsibility: false,
+        compliance: false,
+      });
     } catch (error: any) {
       console.error("Error creating booking:", error);
       setError(error.response?.data?.message || "Failed to create booking");
@@ -918,6 +952,8 @@ const BookingForm: React.FC = (): ReactElement => {
       </Dialog>
     );
   };
+
+
 
   const getStepContent = (step: number) => {
     switch (step) {
@@ -1214,9 +1250,9 @@ const BookingForm: React.FC = (): ReactElement => {
                   These dates are temporarily available from other users who have released their bookings:
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {availableTemporarySlots.map((slot) => (
+                  {availableTemporarySlots.map((slot, index) => (
                     <Box 
-                      key={`${slot.temporaryReleaseId}-${slot.date}`}
+                      key={`${slot.originalBookingId}-${slot.date}-${index}`}
                       sx={{ 
                         p: 1.5, 
                         border: '1px solid', 
@@ -1233,7 +1269,6 @@ const BookingForm: React.FC = (): ReactElement => {
                       </Typography>
                       <Typography variant="caption" color="success.main" sx={{ display: 'block' }}>
                         📍 {slot.location} • Temporarily available
-                        {slot.hasExistingBookings && " (Some bookings exist)"}
                       </Typography>
                     </Box>
                   ))}
@@ -1634,7 +1669,7 @@ const BookingForm: React.FC = (): ReactElement => {
               {activeStep === steps.length - 1 ? (
                 <Button
                   variant="contained"
-                  onClick={handleSubmit}
+                  onClick={handleSubmitClick}
                   disabled={loading}
                   fullWidth={isMobile}
                 >
@@ -1665,6 +1700,17 @@ const BookingForm: React.FC = (): ReactElement => {
       </Card>
 
       <ConflictDialog />
+      <TermsAndConditionsDialog 
+        open={showTermsDialog}
+        onClose={() => setShowTermsDialog(false)}
+        termsAccepted={termsAccepted}
+        onTermsChange={handleTermsChange}
+        onAcceptAndSubmit={() => {
+          setShowTermsDialog(false);
+          handleSubmit();
+        }}
+        loading={loading}
+      />
     </Box>
   );
 };
