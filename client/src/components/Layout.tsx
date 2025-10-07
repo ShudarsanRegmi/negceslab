@@ -178,15 +178,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       roles: ["user", "admin"],
     },
     {
-      text: "Lab Overview",
-      icon: <InfoIcon />,
-      path: "/lab-overview",
-      roles: ["user", "admin"],
-    },
-    {
       text: "Computer Availability",
       icon: <Computer />,
       path: "/computers",
+      roles: ["user", "admin"],
+    },
+    {
+      text: "Lab Overview",
+      icon: <InfoIcon />,
+      path: "/lab-overview",
       roles: ["user", "admin"],
     },
     {
