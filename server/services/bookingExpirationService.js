@@ -14,20 +14,18 @@ const checkExpiredBookings = async () => {
     });
 
     // Find approved bookings that have expired
+    // A booking is expired only when:
+    // 1. endDate < currentDate (past bookings)
+    // 2. endDate === currentDate AND endTime < currentTime (today's ended bookings)
     const expiredBookings = await Booking.find({
       status: 'approved',
       $or: [
-        // Single day bookings that have ended
-        {
-          startDate: { $lt: currentDate }
-        },
-        // Multi-day bookings that have ended
+        // Bookings that ended on previous dates
         {
           endDate: { $lt: currentDate }
         },
-        // Same day bookings that have ended
+        // Bookings that end today but have passed their end time
         {
-          startDate: currentDate,
           endDate: currentDate,
           endTime: { $lt: currentTime }
         }
