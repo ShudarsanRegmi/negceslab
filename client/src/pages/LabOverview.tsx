@@ -153,18 +153,28 @@ const LabOverview: React.FC = () => {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {/* Total Computers */}
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+          <Card sx={{ 
+            height: '100%', 
+            background: 'linear-gradient(135deg, rgba(79, 109, 245, 0.08) 0%, rgba(79, 109, 245, 0.03) 100%)',
+            border: '1px solid rgba(79, 109, 245, 0.12)',
+            color: 'text.primary',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 25px rgba(79, 109, 245, 0.15)',
+            },
+            transition: 'all 0.3s ease'
+          }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h4" fontWeight="bold">
+                  <Typography variant="h4" fontWeight="bold" color="primary.main">
                     {stats.totalComputers}
                   </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  <Typography variant="body2" color="text.secondary">
                     Total Computers
                   </Typography>
                 </Box>
-                <Computer sx={{ fontSize: 40, opacity: 0.8 }} />
+                <Computer sx={{ fontSize: 40, color: 'primary.main', opacity: 0.7 }} />
               </Box>
             </CardContent>
           </Card>
@@ -172,18 +182,28 @@ const LabOverview: React.FC = () => {
 
         {/* Available Computers */}
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+          <Card sx={{ 
+            height: '100%', 
+            background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(76, 175, 80, 0.03) 100%)',
+            border: '1px solid rgba(76, 175, 80, 0.12)',
+            color: 'text.primary',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 25px rgba(76, 175, 80, 0.15)',
+            },
+            transition: 'all 0.3s ease'
+          }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h4" fontWeight="bold">
+                  <Typography variant="h4" fontWeight="bold" color="success.main">
                     {stats.availableComputers}
                   </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  <Typography variant="body2" color="text.secondary">
                     Available Now
                   </Typography>
                 </Box>
-                <CheckCircle sx={{ fontSize: 40, opacity: 0.8 }} />
+                <CheckCircle sx={{ fontSize: 40, color: 'success.main', opacity: 0.7 }} />
               </Box>
             </CardContent>
           </Card>
@@ -191,18 +211,28 @@ const LabOverview: React.FC = () => {
 
         {/* Total Bookings */}
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+          <Card sx={{ 
+            height: '100%', 
+            background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(33, 150, 243, 0.03) 100%)',
+            border: '1px solid rgba(33, 150, 243, 0.12)',
+            color: 'text.primary',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 25px rgba(33, 150, 243, 0.15)',
+            },
+            transition: 'all 0.3s ease'
+          }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h4" fontWeight="bold">
+                  <Typography variant="h4" fontWeight="bold" color="info.main">
                     {stats.totalBookings}
                   </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  <Typography variant="body2" color="text.secondary">
                     Total Bookings
                   </Typography>
                 </Box>
-                <Schedule sx={{ fontSize: 40, opacity: 0.8 }} />
+                <Schedule sx={{ fontSize: 40, color: 'info.main', opacity: 0.7 }} />
               </Box>
             </CardContent>
           </Card>
@@ -210,18 +240,28 @@ const LabOverview: React.FC = () => {
 
         {/* Pending Bookings */}
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+          <Card sx={{ 
+            height: '100%', 
+            background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.08) 0%, rgba(255, 152, 0, 0.03) 100%)',
+            border: '1px solid rgba(255, 152, 0, 0.12)',
+            color: 'text.primary',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 25px rgba(255, 152, 0, 0.15)',
+            },
+            transition: 'all 0.3s ease'
+          }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h4" fontWeight="bold">
+                  <Typography variant="h4" fontWeight="bold" color="warning.main">
                     {stats.pendingBookings}
                   </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  <Typography variant="body2" color="text.secondary">
                     Pending Approval
                   </Typography>
                 </Box>
-                <Info sx={{ fontSize: 40, opacity: 0.8 }} />
+                <Info sx={{ fontSize: 40, color: 'warning.main', opacity: 0.7 }} />
               </Box>
             </CardContent>
           </Card>
