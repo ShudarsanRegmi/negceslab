@@ -156,7 +156,7 @@ const BookingForm: React.FC = (): ReactElement => {
     return email.endsWith('@amrita.edu') || 
            email.endsWith('@ch.amrita.edu') || 
            email.endsWith('@students.amrita.edu') ||
-           email.endsWith('@ch.student.amrita.edu');
+           email.endsWith('@ch.students.amrita.edu');
   };
 
   const hasValidAmritaEmail = isAmritaEmail(currentUser?.email);
