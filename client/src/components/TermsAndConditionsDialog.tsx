@@ -144,7 +144,7 @@ const TermsAndConditionsDialog: React.FC<TermsAndConditionsDialogProps> = memo((
             }
             label={
               <Typography variant="body2">
-                <strong>I agree</strong> to cite "This work was carried out using the resources of the NEGCES Laboratory, [University Name]" in any publications or presentations resulting from this work.
+                <strong>I agree</strong> to cite "This work was carried out using the resources of the NEGCES Laboratory, Amrita Vishwa Vidyapeetham" in any publications or presentations resulting from this work.
               </Typography>
             }
             sx={{ mb: 2, alignItems: 'flex-start' }}
