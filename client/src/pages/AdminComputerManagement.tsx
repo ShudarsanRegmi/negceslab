@@ -326,15 +326,16 @@ const AdminComputerManagement: React.FC = () => {
                 >
                   <ListItemText
                     primary={computer.name}
+                    secondaryTypographyProps={{ component: 'div' }}
                     secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
+                      <Box component="div">
+                        <Typography variant="body2" color="text.secondary" component="div">
                           {computer.location}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" component="div">
                           {computer.specifications}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        <Typography variant="body2" color="text.secondary" component="div" sx={{ mt: 1 }}>
                           Bookings: {bookingCount}
                         </Typography>
                         {computer.status === "reserved" &&
@@ -342,7 +343,7 @@ const AdminComputerManagement: React.FC = () => {
                             <Typography
                               variant="caption"
                               color="error"
-                              display="block"
+                              component="div"
                               sx={{ mt: 1 }}
                             >
                               Reserved until {computer.nextAvailable} on{" "}
@@ -353,7 +354,7 @@ const AdminComputerManagement: React.FC = () => {
                           <Typography
                             variant="caption"
                             color="warning.main"
-                            display="block"
+                            component="div"
                             sx={{ mt: 1 }}
                           >
                             Under maintenance
@@ -363,7 +364,7 @@ const AdminComputerManagement: React.FC = () => {
                           <Typography
                             variant="caption"
                             color="error.main"
-                            display="block"
+                            component="div"
                             sx={{ mt: 1 }}
                           >
                             Reserved
@@ -373,7 +374,7 @@ const AdminComputerManagement: React.FC = () => {
                           <Typography
                             variant="caption"
                             color="success.main"
-                            display="block"
+                            component="div"
                             sx={{ mt: 1 }}
                           >
                             Available now
