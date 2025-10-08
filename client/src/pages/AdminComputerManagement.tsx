@@ -316,7 +316,7 @@ const AdminComputerManagement: React.FC = () => {
         <List>
           {computers.map((computer) => {
             const bookingCount = bookings.filter(
-              b => b.computerId._id === computer._id && b.status === 'approved'
+              b => b.computerId && b.computerId._id === computer._id && b.status === 'approved'
             ).length;
             return (
               <React.Fragment key={computer._id}>
@@ -415,7 +415,7 @@ const AdminComputerManagement: React.FC = () => {
             <TableBody>
               {computers.map((computer) => {
                 const bookingCount = bookings.filter(
-                  b => b.computerId._id === computer._id && b.status === 'approved'
+                  b => b.computerId && b.computerId._id === computer._id && b.status === 'approved'
                 ).length;
                 return (
                   <TableRow 
@@ -586,7 +586,7 @@ const AdminComputerManagement: React.FC = () => {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     <strong>Active Bookings:</strong> {bookings.filter(
-                      b => b.computerId._id === selectedComputer._id && b.status === 'approved'
+                      b => b.computerId && b.computerId._id === selectedComputer._id && b.status === 'approved'
                     ).length}
                   </Typography>
                 </Box>
