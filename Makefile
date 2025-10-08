@@ -39,8 +39,11 @@ build-frontend-fresh:
 	@echo "Building frontend without cache and extracting to ./client/dist/..."
 	@rm -rf ./client/dist
 	@mkdir -p ./client/dist
+	@echo "Cleaning up existing frontend-builder containers and images..."
+	-podman rm -f frontend-builder 2>/dev/null || true
+	-podman rmi $$(podman images -q "*frontend-builder*") 2>/dev/null || true
 	podman-compose -f docker-compose.yml build --no-cache frontend-builder
-	podman-compose -f docker-compose.yml up frontend-builder
+	podman-compose -f docker-compose.yml up --force-recreate frontend-builder
 	@echo "Frontend built and extracted to ./client/dist/"
 	@echo "Files ready to serve from Apache HTTPD at /negces/ path"
 
