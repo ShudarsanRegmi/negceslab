@@ -1,10 +1,26 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
+const readline = require("readline");
 const User = require("./models/user");
 
 if (!process.env.MONGODB_URI) {
   console.error("MONGODB_URI is not defined in .env file");
   process.exit(1);
+}
+
+// Function to get user input
+function askQuestion(question) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
 }
 
 async function makeAdmin() {
@@ -23,28 +39,29 @@ async function makeAdmin() {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("Connected to MongoDB");
 
-    // Get admin email from environment variable
-    const adminEmail = process.env.SMTP_USER;
-    if (!adminEmail) {
-      console.error("SMTP_USER is not defined in .env file");
+    // Ask for admin email
+    const adminEmail = await askQuestion("Enter the email address of the user you want to make admin: ");
+    
+    if (!adminEmail || !adminEmail.trim()) {
+      console.error("Email address is required!");
       process.exit(1);
     }
 
-    console.log(`Searching for user with email: ${adminEmail} in Firebase...`);
+    console.log(`Searching for user with email: ${adminEmail.trim()} in Firebase...`);
 
     // Search for user in Firebase by email
     let firebaseUser;
     try {
-      firebaseUser = await admin.auth().getUserByEmail(adminEmail);
+      firebaseUser = await admin.auth().getUserByEmail(adminEmail.trim());
       console.log(`Found Firebase user: ${firebaseUser.uid}`);
     } catch (firebaseError) {
-      console.error(`User ${adminEmail} not found in Firebase. Please ensure the user is registered in Firebase first.`);
+      console.error(`User ${adminEmail.trim()} not found in Firebase. Please ensure the user is registered in Firebase first.`);
       process.exit(1);
     }
 
     // Check if user already exists in MongoDB and update role
     let result = await User.findOneAndUpdate(
-      { email: adminEmail },
+      { email: adminEmail.trim() },
       { 
         role: "admin",
         firebaseUid: firebaseUser.uid,
@@ -65,7 +82,7 @@ async function makeAdmin() {
       console.log("Creating new admin user in MongoDB...");
       const adminUser = new User({
         firebaseUid: firebaseUser.uid,
-        email: adminEmail,
+        email: adminEmail.trim(),
         name: firebaseUser.displayName || "Admin User",
         role: "admin",
       });
