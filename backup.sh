@@ -1,5 +1,5 @@
 #!/bin/bash
-
+cd ~/negceslab || exit 1
 # Load environment variables from server/.env
 if [ -f server/.env ]; then
     # Export variables from .env file
