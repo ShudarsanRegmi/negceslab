@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { Mail, CheckCircle, Refresh } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { handleFirebaseAuthError } from '../utils/authErrors';
 
 const EmailVerification = () => {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ const EmailVerification = () => {
       setMessage('Verification email sent! Please check your inbox and spam folder.');
       setResendCooldown(60); // 60 second cooldown
     } catch (err: any) {
-      setError(err.message || 'Failed to send verification email. Please try again.');
+      setError(handleFirebaseAuthError(err));
     } finally {
       setIsLoading(false);
     }

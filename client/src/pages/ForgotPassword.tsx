@@ -13,6 +13,7 @@ import {
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { useAuth } from '../contexts/AuthContext';
+import { handleFirebaseAuthError } from '../utils/authErrors';
 
 const validationSchema = yup.object({
   email: yup
@@ -42,15 +43,7 @@ const ForgotPassword = () => {
         setMessage('Check your inbox for further instructions to reset your password.');
       } catch (err: any) {
         console.error('Password reset error:', err);
-        if (err.code === 'auth/user-not-found') {
-          setError('No account found with this email address.');
-        } else if (err.code === 'auth/invalid-email') {
-          setError('Please enter a valid email address.');
-        } else if (err.code === 'auth/too-many-requests') {
-          setError('Too many requests. Please try again later.');
-        } else {
-          setError('Failed to send reset email. Please try again.');
-        }
+        setError(handleFirebaseAuthError(err));
       } finally {
         setIsLoading(false);
       }

@@ -17,6 +17,7 @@ import {
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { useAuth } from '../contexts/AuthContext';
+import { handleFirebaseAuthError } from '../utils/authErrors';
 import SocialLoginButtons from '../components/SocialLoginButtons';
 
 const validationSchema = yup.object({
@@ -60,7 +61,7 @@ const Login = () => {
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
       } catch (err) {
-        setError('Failed to sign in. Please check your credentials.');
+        setError(handleFirebaseAuthError(err));
         console.error('Login error:', err);
       } finally {
         setIsLoading(false);
@@ -93,7 +94,7 @@ const Login = () => {
       const from = location.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
-      setError(`Failed to sign in with ${pendingSocialLogin === 'google' ? 'Google' : 'Microsoft'}.`);
+      setError(handleFirebaseAuthError(err));
       console.error('Social login error:', err);
     } finally {
       setIsLoading(false);

@@ -17,6 +17,7 @@ import {
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { useAuth } from '../contexts/AuthContext';
+import { handleFirebaseAuthError } from '../utils/authErrors';
 import SocialLoginButtons from '../components/SocialLoginButtons';
 
 const validationSchema = yup.object({
@@ -62,7 +63,7 @@ const Register = () => {
         // Redirect to email verification page after successful registration
         navigate('/verify-email');
       } catch (err) {
-        setError('Failed to create an account. Please try again.');
+        setError(handleFirebaseAuthError(err));
         console.error('Registration error:', err);
       } finally {
         setIsLoading(false);
@@ -94,7 +95,7 @@ const Register = () => {
       
       navigate('/');
     } catch (err) {
-      setError(`Failed to sign up with ${pendingSocialLogin === 'google' ? 'Google' : 'Microsoft'}.`);
+      setError(handleFirebaseAuthError(err));
       console.error('Social login error:', err);
     } finally {
       setIsLoading(false);

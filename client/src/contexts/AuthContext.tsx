@@ -101,6 +101,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await fetchUserProfile(user);
     } catch (error) {
       console.error('Registration error:', error);
+      // If there's an error after Firebase user creation, we should delete the Firebase user
+      // to avoid orphaned accounts, but Firebase doesn't allow this easily.
+      // For now, we'll just throw the error and let the frontend handle it.
       throw error;
     }
   };
