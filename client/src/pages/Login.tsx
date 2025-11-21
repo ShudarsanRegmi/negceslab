@@ -195,6 +195,12 @@ const Login = () => {
             />
 
             <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Link component={RouterLink} to="/forgot-password" variant="body2">
+                Forgot your password?
+              </Link>
+            </Box>
+
+            <Box sx={{ textAlign: 'center', mt: 1 }}>
               <Link component={RouterLink} to="/register" variant="body2">
                 {"Don't have an account? Sign Up"}
               </Link>

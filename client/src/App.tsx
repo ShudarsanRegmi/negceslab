@@ -19,6 +19,7 @@ import { useAuth } from "./contexts/AuthContext";
 // Pages (to be created)
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTemporaryReleases from "./pages/AdminTemporaryReleases";
@@ -67,6 +68,14 @@ const AppContent = () => {
                   element={
                     <MainLayout>
                       <Register />
+                    </MainLayout>
+                  }
+                />
+                <Route
+                  path="/forgot-password"
+                  element={
+                    <MainLayout>
+                      <ForgotPassword />
                     </MainLayout>
                   }
                 />

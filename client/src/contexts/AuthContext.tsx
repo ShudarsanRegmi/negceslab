@@ -9,6 +9,7 @@ import {
   OAuthProvider,
   signInWithPopup,
   sendEmailVerification,
+  sendPasswordResetEmail,
   reload,
 } from "firebase/auth";
 import { auth } from "../config/firebase";
@@ -23,6 +24,7 @@ interface AuthContextType {
   loginWithMicrosoft: () => Promise<void>;
   logout: () => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   reloadUser: () => Promise<void>;
   loading: boolean;
 }
@@ -178,6 +180,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     await signOut(auth);
   };
 
+  const sendPasswordReset = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
   const value = {
     currentUser,
     userRole,
@@ -187,6 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     loginWithMicrosoft,
     logout,
     sendVerificationEmail,
+    sendPasswordReset,
     reloadUser,
     loading,
   };
