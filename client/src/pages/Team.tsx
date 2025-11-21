@@ -16,6 +16,7 @@ interface TeamMember {
   email: string;
   bio?: string;
   contact: string;
+  linkedin?: string;
 }
 interface GalleryImage {
   src: string;
@@ -32,12 +33,13 @@ const teamMembers: TeamMember[] = [
     email: 'k_deepak@ch.amrita.edu',
     bio: 'Assistant Professor at the School of Computing, Amrita Vishwa Vidyapeetham, Chennai. His research interests include Machine Learning, Deep Learning, Computer Vision, Video Anomaly Detection, Human Activity Recognition, and Vision-based Heart Rate Estimation.',
     contact: '+91 99406 87412',
+    linkedin: 'https://www.linkedin.com/in/deepak-k-27023a47/',
   },
   {
     name: 'Mrs. Indhu S',
     role: 'Lab Technician',
     image: indhu,
-    email: 'mark.thompson@lab.com',
+    email: 's_indhu@ch.amrita.edu',
     bio: 'Expert in hardware troubleshooting and lab logistics. Passionate about assisting students and maintaining lab operations efficiently.',
     contact: '+91 97919 22510',
   },
@@ -145,6 +147,9 @@ const Team: React.FC = () => {
                 <p className={styles.teamBio}>{member.bio}</p>
                 <p><strong>Email:</strong> <a href={`mailto:${member.email}`}>{member.email}</a></p>
                 <p><strong>Phone:</strong> <a href={`tel:${member.contact}`}>{member.contact}</a></p>
+                {member.linkedin && (
+                  <p><strong>LinkedIn:</strong> <a href={member.linkedin} target="_blank" rel="noopener noreferrer">View Profile</a></p>
+                )}
               </div>
             </motion.div>
           ))}
