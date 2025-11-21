@@ -41,7 +41,7 @@ const teamMembers: TeamMember[] = [
     image: indhu,
     email: 's_indhu@ch.amrita.edu',
     bio: 'Expert in hardware troubleshooting and lab logistics. Passionate about assisting students and maintaining lab operations efficiently.',
-    contact: '+91 97919 22510',
+    contact: '+919791922590',
   },
 ];
 
