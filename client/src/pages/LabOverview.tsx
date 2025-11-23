@@ -160,27 +160,38 @@ const LabOverview: React.FC = () => {
         {/* Total Computers */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ 
-            height: '100%', 
-            background: 'linear-gradient(135deg, rgba(79, 109, 245, 0.08) 0%, rgba(79, 109, 245, 0.03) 100%)',
-            border: '1px solid rgba(79, 109, 245, 0.12)',
-            color: 'text.primary',
+            height: '100%',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 8px 25px rgba(79, 109, 245, 0.15)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
             },
-            transition: 'all 0.3s ease'
+            transition: 'all 0.2s ease'
           }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box 
+                  sx={{ 
+                    p: 1.5, 
+                    borderRadius: 2, 
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    mr: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Computer sx={{ fontSize: 24 }} />
+                </Box>
                 <Box>
-                  <Typography variant="h4" fontWeight="bold" color="primary.main">
+                  <Typography variant="h4" fontWeight="600" color="primary.main" sx={{ lineHeight: 1.2 }}>
                     {stats.totalComputers}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                     Total Computers
                   </Typography>
                 </Box>
-                <Computer sx={{ fontSize: 40, color: 'primary.main', opacity: 0.7 }} />
               </Box>
             </CardContent>
           </Card>
@@ -189,27 +200,38 @@ const LabOverview: React.FC = () => {
         {/* Available Computers */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ 
-            height: '100%', 
-            background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(76, 175, 80, 0.03) 100%)',
-            border: '1px solid rgba(76, 175, 80, 0.12)',
-            color: 'text.primary',
+            height: '100%',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 8px 25px rgba(76, 175, 80, 0.15)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
             },
-            transition: 'all 0.3s ease'
+            transition: 'all 0.2s ease'
           }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box 
+                  sx={{ 
+                    p: 1.5, 
+                    borderRadius: 2, 
+                    bgcolor: 'success.main',
+                    color: 'white',
+                    mr: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <CheckCircle sx={{ fontSize: 24 }} />
+                </Box>
                 <Box>
-                  <Typography variant="h4" fontWeight="bold" color="success.main">
+                  <Typography variant="h4" fontWeight="600" color="success.main" sx={{ lineHeight: 1.2 }}>
                     {stats.availableComputers}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                     Available Now
                   </Typography>
                 </Box>
-                <CheckCircle sx={{ fontSize: 40, color: 'success.main', opacity: 0.7 }} />
               </Box>
             </CardContent>
           </Card>
@@ -218,27 +240,38 @@ const LabOverview: React.FC = () => {
         {/* Total Bookings */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ 
-            height: '100%', 
-            background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(33, 150, 243, 0.03) 100%)',
-            border: '1px solid rgba(33, 150, 243, 0.12)',
-            color: 'text.primary',
+            height: '100%',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 8px 25px rgba(33, 150, 243, 0.15)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
             },
-            transition: 'all 0.3s ease'
+            transition: 'all 0.2s ease'
           }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box 
+                  sx={{ 
+                    p: 1.5, 
+                    borderRadius: 2, 
+                    bgcolor: 'info.main',
+                    color: 'white',
+                    mr: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Schedule sx={{ fontSize: 24 }} />
+                </Box>
                 <Box>
-                  <Typography variant="h4" fontWeight="bold" color="info.main">
+                  <Typography variant="h4" fontWeight="600" color="info.main" sx={{ lineHeight: 1.2 }}>
                     {stats.totalBookings}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                     Total Bookings
                   </Typography>
                 </Box>
-                <Schedule sx={{ fontSize: 40, color: 'info.main', opacity: 0.7 }} />
               </Box>
             </CardContent>
           </Card>
@@ -247,27 +280,38 @@ const LabOverview: React.FC = () => {
         {/* Pending Bookings */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ 
-            height: '100%', 
-            background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.08) 0%, rgba(255, 152, 0, 0.03) 100%)',
-            border: '1px solid rgba(255, 152, 0, 0.12)',
-            color: 'text.primary',
+            height: '100%',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 8px 25px rgba(255, 152, 0, 0.15)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
             },
-            transition: 'all 0.3s ease'
+            transition: 'all 0.2s ease'
           }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box 
+                  sx={{ 
+                    p: 1.5, 
+                    borderRadius: 2, 
+                    bgcolor: 'warning.main',
+                    color: 'white',
+                    mr: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Info sx={{ fontSize: 24 }} />
+                </Box>
                 <Box>
-                  <Typography variant="h4" fontWeight="bold" color="warning.main">
+                  <Typography variant="h4" fontWeight="600" color="warning.main" sx={{ lineHeight: 1.2 }}>
                     {stats.pendingBookings}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                     Pending Approval
                   </Typography>
                 </Box>
-                <Info sx={{ fontSize: 40, color: 'warning.main', opacity: 0.7 }} />
               </Box>
             </CardContent>
           </Card>
@@ -278,44 +322,71 @@ const LabOverview: React.FC = () => {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {/* Computer Status Breakdown */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-              <PieChart color="primary" />
-              <Typography variant="h6" fontWeight="bold">
+          <Paper sx={{ p: 4, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+              <Box 
+                sx={{ 
+                  p: 1, 
+                  borderRadius: 2, 
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <PieChart sx={{ fontSize: 20 }} />
+              </Box>
+              <Typography variant="h6" fontWeight="600">
                 Computer Status Distribution
               </Typography>
             </Box>
             
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2">Available</Typography>
-                <Chip label={stats.availableComputers} color="success" size="small" />
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>Available</Typography>
+                <Chip 
+                  label={stats.availableComputers} 
+                  color="success" 
+                  size="small" 
+                  sx={{ fontWeight: 600, minWidth: 40 }}
+                />
               </Box>
               <LinearProgress 
                 variant="determinate" 
                 value={stats.totalComputers > 0 ? (stats.availableComputers / stats.totalComputers) * 100 : 0}
-                sx={{ height: 8, borderRadius: 4 }}
+                sx={{ height: 8, borderRadius: 4, mb: 0.5 }}
                 color="success"
               />
             </Box>
 
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2">Under Maintenance</Typography>
-                <Chip label={stats.maintenanceComputers} color="warning" size="small" />
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>Under Maintenance</Typography>
+                <Chip 
+                  label={stats.maintenanceComputers} 
+                  color="warning" 
+                  size="small"
+                  sx={{ fontWeight: 600, minWidth: 40 }}
+                />
               </Box>
               <LinearProgress 
                 variant="determinate" 
                 value={stats.totalComputers > 0 ? (stats.maintenanceComputers / stats.totalComputers) * 100 : 0}
-                sx={{ height: 8, borderRadius: 4 }}
+                sx={{ height: 8, borderRadius: 4, mb: 0.5 }}
                 color="warning"
               />
             </Box>
 
             <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2">Reserved</Typography>
-                <Chip label={stats.reservedComputers} color="error" size="small" />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>Reserved</Typography>
+                <Chip 
+                  label={stats.reservedComputers} 
+                  color="error" 
+                  size="small"
+                  sx={{ fontWeight: 600, minWidth: 40 }}
+                />
               </Box>
               <LinearProgress 
                 variant="determinate" 
@@ -329,48 +400,60 @@ const LabOverview: React.FC = () => {
 
         {/* Utilization Metrics */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-              <TrendingUp color="primary" />
-              <Typography variant="h6" fontWeight="bold">
+          <Paper sx={{ p: 4, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+              <Box 
+                sx={{ 
+                  p: 1, 
+                  borderRadius: 2, 
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <TrendingUp sx={{ fontSize: 20 }} />
+              </Box>
+              <Typography variant="h6" fontWeight="600">
                 Lab Utilization Metrics
               </Typography>
             </Box>
 
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 4 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="body1">Current Utilization Rate</Typography>
-                <Typography variant="h6" color="primary" fontWeight="bold">
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>Current Utilization Rate</Typography>
+                <Typography variant="h6" color="primary" fontWeight="600">
                   {stats.utilizationRate}%
                 </Typography>
               </Box>
               <LinearProgress 
                 variant="determinate" 
                 value={stats.utilizationRate}
-                sx={{ height: 10, borderRadius: 5 }}
+                sx={{ height: 10, borderRadius: 5, mb: 1 }}
                 color="primary"
               />
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              <Typography variant="body2" color="text.secondary">
                 {stats.activeBookings} out of {stats.totalComputers} computers currently in use
               </Typography>
             </Box>
 
-            <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: 3 }} />
 
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="body1">Availability Rate</Typography>
-                <Typography variant="h6" color="success.main" fontWeight="bold">
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>Availability Rate</Typography>
+                <Typography variant="h6" color="success.main" fontWeight="600">
                   {stats.availabilityRate}%
                 </Typography>
               </Box>
               <LinearProgress 
                 variant="determinate" 
                 value={stats.availabilityRate}
-                sx={{ height: 10, borderRadius: 5 }}
+                sx={{ height: 10, borderRadius: 5, mb: 1 }}
                 color="success"
               />
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              <Typography variant="body2" color="text.secondary">
                 {stats.availableComputers} computers ready for immediate booking
               </Typography>
             </Box>
@@ -379,8 +462,8 @@ const LabOverview: React.FC = () => {
       </Grid>
 
       {/* Booking Status Summary */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mb: 3 }}>
+      <Paper sx={{ p: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <Typography variant="h6" fontWeight="600" gutterBottom sx={{ mb: 4 }}>
           Booking Status Summary
         </Typography>
         
@@ -388,19 +471,21 @@ const LabOverview: React.FC = () => {
           <Grid item xs={12} sm={3}>
             <Box sx={{ 
               textAlign: 'center', 
-              p: 2, 
-              borderRadius: 2, 
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(79, 109, 245, 0.15)' 
-                : 'rgba(79, 109, 245, 0.08)',
-              border: `1px solid ${theme.palette.mode === 'dark' 
-                ? 'rgba(79, 109, 245, 0.3)' 
-                : 'rgba(79, 109, 245, 0.12)'}`
+              p: 3,
+              borderRadius: 3, 
+              bgcolor: 'grey.50',
+              border: '1px solid',
+              borderColor: 'grey.200',
+              '&:hover': {
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transform: 'translateY(-1px)'
+              },
+              transition: 'all 0.2s ease'
             }}>
-              <Typography variant="h4" fontWeight="bold" color="primary.main">
+              <Typography variant="h4" fontWeight="600" color="primary.main" sx={{ mb: 1 }}>
                 {stats.approvedBookings}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
                 Approved Bookings
               </Typography>
             </Box>
@@ -409,19 +494,21 @@ const LabOverview: React.FC = () => {
           <Grid item xs={12} sm={3}>
             <Box sx={{ 
               textAlign: 'center', 
-              p: 2, 
-              borderRadius: 2, 
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(76, 175, 80, 0.15)' 
-                : 'rgba(76, 175, 80, 0.08)',
-              border: `1px solid ${theme.palette.mode === 'dark' 
-                ? 'rgba(76, 175, 80, 0.3)' 
-                : 'rgba(76, 175, 80, 0.12)'}`
+              p: 3,
+              borderRadius: 3, 
+              bgcolor: 'grey.50',
+              border: '1px solid',
+              borderColor: 'grey.200',
+              '&:hover': {
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transform: 'translateY(-1px)'
+              },
+              transition: 'all 0.2s ease'
             }}>
-              <Typography variant="h4" fontWeight="bold" color="success.main">
+              <Typography variant="h4" fontWeight="600" color="success.main" sx={{ mb: 1 }}>
                 {stats.activeBookings}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
                 Currently Active
               </Typography>
             </Box>
@@ -430,19 +517,21 @@ const LabOverview: React.FC = () => {
           <Grid item xs={12} sm={3}>
             <Box sx={{ 
               textAlign: 'center', 
-              p: 2, 
-              borderRadius: 2, 
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 152, 0, 0.15)' 
-                : 'rgba(255, 152, 0, 0.08)',
-              border: `1px solid ${theme.palette.mode === 'dark' 
-                ? 'rgba(255, 152, 0, 0.3)' 
-                : 'rgba(255, 152, 0, 0.12)'}`
+              p: 3,
+              borderRadius: 3, 
+              bgcolor: 'grey.50',
+              border: '1px solid',
+              borderColor: 'grey.200',
+              '&:hover': {
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transform: 'translateY(-1px)'
+              },
+              transition: 'all 0.2s ease'
             }}>
-              <Typography variant="h4" fontWeight="bold" color="warning.main">
+              <Typography variant="h4" fontWeight="600" color="warning.main" sx={{ mb: 1 }}>
                 {stats.pendingBookings}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
                 Awaiting Approval
               </Typography>
             </Box>
@@ -451,15 +540,21 @@ const LabOverview: React.FC = () => {
           <Grid item xs={12} sm={3}>
             <Box sx={{ 
               textAlign: 'center', 
-              p: 2, 
-              borderRadius: 2, 
-              bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
-              border: `1px solid ${theme.palette.divider}`
+              p: 3,
+              borderRadius: 3, 
+              bgcolor: 'grey.50',
+              border: '1px solid',
+              borderColor: 'grey.200',
+              '&:hover': {
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transform: 'translateY(-1px)'
+              },
+              transition: 'all 0.2s ease'
             }}>
-              <Typography variant="h4" fontWeight="bold" color="text.primary">
+              <Typography variant="h4" fontWeight="600" color="text.primary" sx={{ mb: 1 }}>
                 {stats.totalBookings - stats.approvedBookings - stats.pendingBookings}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
                 Completed/Rejected
               </Typography>
             </Box>
