@@ -1048,6 +1048,31 @@ const ComputerGrid: React.FC = () => {
 
   return (
     <Box>
+      {/* Login Prompt for non-authenticated users */}
+      {!currentUser && (
+        <Alert 
+          severity="info" 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              variant="outlined"
+              onClick={() => navigate('/login')}
+            >
+              Sign In
+            </Button>
+          }
+        >
+          <Typography variant="body1" fontWeight="bold">
+            To make a booking, please sign in to your account
+          </Typography>
+          <Typography variant="body2">
+            You can browse available computers, but booking requires authentication.
+          </Typography>
+        </Alert>
+      )}
+
       {/* Controls */}
       <Box
         sx={{

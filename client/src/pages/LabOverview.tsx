@@ -13,6 +13,7 @@ import {
   LinearProgress,
   Paper,
   Divider,
+  Button,
 } from "@mui/material";
 import {
   Computer,
@@ -26,6 +27,7 @@ import {
 } from "@mui/icons-material";
 import { computersAPI, bookingsAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface Computer {
   _id: string;
@@ -54,6 +56,7 @@ const LabOverview: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();

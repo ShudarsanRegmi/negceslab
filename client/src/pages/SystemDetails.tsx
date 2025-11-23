@@ -42,6 +42,7 @@ import {
 } from "@mui/icons-material";
 import { systemDetailsAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface Computer {
   _id: string;
@@ -109,6 +110,7 @@ const SystemDetails: React.FC = () => {
   });
 
   const { userRole, currentUser } = useAuth();
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 

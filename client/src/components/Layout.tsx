@@ -578,12 +578,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               gap: { xs: 1, sm: 2 },
             }}
           >
-            <IconButton color="inherit" onClick={handleNotificationClick}>
-              <Badge badgeContent={unreadCount} color="error">
-                <Notifications />
-              </Badge>
-            </IconButton>
-
             {/* Theme Toggle Button */}
             <IconButton
               color="inherit"
@@ -603,6 +597,47 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <BrightnessAuto />
               )}
             </IconButton>
+
+            {/* Authentication Buttons - shown when no user is logged in */}
+            {!currentUser ? (
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={() => navigate("/login")}
+                  sx={{
+                    textTransform: "none",
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                    },
+                  }}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={() => navigate("/register")}
+                  sx={{
+                    textTransform: "none",
+                    borderColor: "rgba(255, 255, 255, 0.5)",
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                      borderColor: "rgba(255, 255, 255, 0.8)",
+                    },
+                  }}
+                >
+                  Sign Up
+                </Button>
+              </Box>
+            ) : (
+              /* User is logged in - show notifications and user menu */
+              <>
+                <IconButton color="inherit" onClick={handleNotificationClick}>
+                  <Badge badgeContent={unreadCount} color="error">
+                    <Notifications />
+                  </Badge>
+                </IconButton>
 
             <Menu
               anchorEl={notificationAnchor}
@@ -813,18 +848,39 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       )}
                     </Avatar>
                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                      <Typography variant="body1" fontWeight="bold" noWrap>
-                        {getUserDisplayName()}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" noWrap>
-                        {currentUser?.email || "user@example.com"}
-                      </Typography>
-                      <Chip
-                        label={userRole === "admin" ? "Administrator" : "User"}
-                        size="small"
-                        color={userRole === "admin" ? "primary" : "default"}
-                        sx={{ mt: 0.5 }}
-                      />
+                      {currentUser ? (
+                        <>
+                          <Typography variant="body1" fontWeight="bold" noWrap>
+                            {getUserDisplayName()}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" noWrap>
+                            {currentUser.email}
+                          </Typography>
+                          <Chip
+                            label={userRole === "admin" ? "Administrator" : "User"}
+                            size="small"
+                            color={userRole === "admin" ? "primary" : "default"}
+                            sx={{ mt: 0.5 }}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <Typography variant="body1" fontWeight="bold" noWrap>
+                            Not signed in
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" noWrap>
+                            Sign in to access all features
+                          </Typography>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => navigate("/login")}
+                            sx={{ mt: 1 }}
+                          >
+                            Sign In
+                          </Button>
+                        </>
+                      )}
                     </Box>
                   </Box>
                 </Box>
@@ -928,6 +984,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </MenuItem>
               </Menu>
             </Box>
+              </>
+            )}
           </Box>
         </Toolbar>
       </AppBar>
