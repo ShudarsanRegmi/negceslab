@@ -25,6 +25,7 @@ import {
   PieChart,
 } from "@mui/icons-material";
 import { computersAPI, bookingsAPI } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Computer {
   _id: string;
@@ -52,6 +53,7 @@ const LabOverview: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     fetchData();
@@ -60,9 +62,10 @@ const LabOverview: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const usePublic = !currentUser; // Use public API if no user is authenticated
       const [computersRes, bookingsRes] = await Promise.all([
-        computersAPI.getAllComputers(),
-        bookingsAPI.getAllBookings(),
+        computersAPI.getAllComputers(usePublic),
+        currentUser ? bookingsAPI.getAllBookings() : Promise.resolve({ data: [] }),
       ]);
       setComputers(computersRes.data);
       setBookings(bookingsRes.data);

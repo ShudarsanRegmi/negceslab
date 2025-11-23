@@ -108,7 +108,7 @@ const SystemDetails: React.FC = () => {
     icon: ''
   });
 
-  const { userRole } = useAuth();
+  const { userRole, currentUser } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -135,7 +135,8 @@ const SystemDetails: React.FC = () => {
   const fetchSystemDetails = async () => {
     try {
       setLoading(true);
-      const response = await systemDetailsAPI.getAllSystemDetails();
+      const usePublic = !currentUser; // Use public API if no user is authenticated
+      const response = await systemDetailsAPI.getAllSystemDetails(usePublic);
       setComputers(response.data);
     } catch (error) {
       console.error("Error fetching system details:", error);
@@ -147,7 +148,8 @@ const SystemDetails: React.FC = () => {
 
   const fetchSoftwarePool = async () => {
     try {
-      const response = await systemDetailsAPI.getSoftwarePool();
+      const usePublic = !currentUser; // Use public API if no user is authenticated
+      const response = await systemDetailsAPI.getSoftwarePool(usePublic);
       setSoftwarePool(response.data.softwarePool);
       setOsIcons(response.data.osIcons);
       setFilteredSoftware(response.data.softwarePool);

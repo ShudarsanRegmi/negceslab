@@ -4,7 +4,28 @@ const Computer = require('../models/computer');
 const { verifyToken } = require('../middleware/auth');
 const { softwarePool, osIcons } = require('../data/softwarePool');
 
-// Get software pool and OS icons (available to all authenticated users)
+// Get software pool and OS icons (public access)
+router.get('/public/software-pool', async (req, res) => {
+  try {
+    res.json({ softwarePool, osIcons });
+  } catch (error) {
+    console.error('Error fetching software pool:', error);
+    res.status(500).json({ message: 'Error fetching software pool', error: error.message });
+  }
+});
+
+// Get all computers with system details (public access)
+router.get('/public', async (req, res) => {
+  try {
+    const computers = await Computer.find().sort({ name: 1 });
+    res.json(computers);
+  } catch (error) {
+    console.error('Error fetching system details:', error);
+    res.status(500).json({ message: 'Error fetching system details', error: error.message });
+  }
+});
+
+// Get software pool and OS icons (authenticated)
 router.get('/software-pool', verifyToken, async (req, res) => {
   try {
     res.json({ softwarePool, osIcons });

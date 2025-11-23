@@ -33,7 +33,7 @@ const navLinks = [
   { label: "Home", href: "/" },
   { label: "Achievements", href: "/achievements"},
   { label: "Rules", href: "/rules" },
-  { label: "Booking", href: "/dashboard" },
+  { label: "Booking", href: "/computers" },
   { label: "Team", href: "/team" },
   { label: "Contact", href: "/contact" },
 ];

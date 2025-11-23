@@ -176,30 +176,35 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       icon: <Dashboard />,
       path: "/dashboard",
       roles: ["user", "admin"],
+      requireAuth: true,
     },
     {
       text: "Computer Availability",
       icon: <Computer />,
       path: "/computers",
-      roles: ["user", "admin"],
+      roles: ["user", "admin", "guest"],
+      requireAuth: false,
     },
     {
       text: "Lab Overview",
       icon: <InfoIcon />,
       path: "/lab-overview",
-      roles: ["user", "admin"],
+      roles: ["user", "admin", "guest"],
+      requireAuth: false,
     },
     {
       text: "Book Slot",
       icon: <BookOnline />,
       path: "/book",
       roles: ["user"],
+      requireAuth: true,
     },
     {
       text: "System Details",
       icon: <StorageIcon />,
       path: "/system-details",
-      roles: ["user", "admin"],
+      roles: ["user", "admin", "guest"],
+      requireAuth: false,
     },
   ];
 
@@ -298,7 +303,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <List sx={{ flexGrow: 1, pt: 1 }}>
         {/* Regular menu items */}
         {menuItems
-          .filter((item) => item.roles.includes(userRole || ""))
+          .filter((item) => {
+            // Show items that don't require auth (public access)
+            if (!item.requireAuth) return true;
+            // Show auth-required items only if user is logged in and has proper role
+            return currentUser && item.roles.includes(userRole || "");
+          })
           .map((item) => (
             <ListItem key={item.text} disablePadding>
               <Tooltip
@@ -309,6 +319,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <ListItemButton
                   selected={location.pathname === item.path}
                   onClick={() => {
+                    // Check if the item requires authentication and user is not logged in
+                    if (item.requireAuth && !currentUser) {
+                      navigate("/login");
+                      return;
+                    }
                     navigate(item.path);
                     if (isMobile) setMobileOpen(false);
                   }}

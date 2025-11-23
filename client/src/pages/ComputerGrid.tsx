@@ -154,7 +154,7 @@ interface TemporaryRelease {
 
 const ComputerGrid: React.FC = () => {
   const navigate = useNavigate();
-  const { userRole } = useAuth(); // Get userRole from auth context
+  const { userRole, currentUser } = useAuth(); // Get userRole from auth context
   const [computers, setComputers] = useState<Computer[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [temporaryReleases, setTemporaryReleases] = useState<TemporaryRelease[]>([]);
@@ -177,9 +177,10 @@ const ComputerGrid: React.FC = () => {
   const fetchComputers = async () => {
     try {
       setLoading(true);
+      const usePublic = !currentUser; // Use public API if no user is authenticated
       const [computersRes, bookingsRes] = await Promise.all([
-        computersAPI.getComputersWithBookings(),
-        bookingsAPI.getUserBookings(),
+        computersAPI.getComputersWithBookings(usePublic),
+        currentUser ? bookingsAPI.getUserBookings() : Promise.resolve({ data: [] }),
       ]);
       setComputers(computersRes.data);
       setBookings(bookingsRes.data);

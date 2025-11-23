@@ -36,8 +36,10 @@ export const authAPI = {
 };
 
 export const computersAPI = {
-  getAllComputers: () => api.get('/computers'),
-  getComputersWithBookings: () => api.get('/computers/with-bookings'),
+  getAllComputers: (usePublic = false) => 
+    api.get(usePublic ? '/computers/public' : '/computers'),
+  getComputersWithBookings: (usePublic = false) => 
+    api.get(usePublic ? '/computers/public/with-bookings' : '/computers/with-bookings'),
   createComputer: (data: { name: string; location: string; specifications: string; status: string }) => api.post('/computers', data),
   updateComputer: (computerId: string, data: { name: string; location: string; specifications: string; status: string }) => api.put(`/computers/${computerId}`, data),
   deleteComputer: (computerId: string) => api.delete(`/computers/${computerId}`),
@@ -115,9 +117,11 @@ export const feedbackAPI = {
 
 // System Details API endpoints
 export const systemDetailsAPI = {
-  getAllSystemDetails: () => api.get('/system-details'),
+  getAllSystemDetails: (usePublic = false) => 
+    api.get(usePublic ? '/system-details/public' : '/system-details'),
   getSystemDetails: (computerId: string) => api.get(`/system-details/${computerId}`),
-  getSoftwarePool: () => api.get('/system-details/software-pool'),
+  getSoftwarePool: (usePublic = false) => 
+    api.get(usePublic ? '/system-details/public/software-pool' : '/system-details/software-pool'),
   updateSystemDetails: (computerId: string, data: {
     operatingSystem?: string;
     osVersion?: string;

@@ -5,7 +5,95 @@ const Booking = require("../models/booking");
 const User = require("../models/user");
 const { verifyToken } = require("../middleware/auth");
 
-// Get all computers
+// Get all computers (public access)
+router.get("/public", async (req, res) => {
+  try {
+    const computers = await Computer.find()
+      .populate({
+        path: 'bookings',
+        populate: {
+          path: 'user',
+          select: 'name email'
+        }
+      })
+      .sort({ name: 1 });
+    res.json(computers);
+  } catch (error) {
+    console.error("Error fetching computers:", error);
+    res.status(500).json({ message: "Error fetching computers" });
+  }
+});
+
+// Get computers with their current and upcoming bookings (public access)
+router.get("/public/with-bookings", async (req, res) => {
+  try {
+    // Get all computers with their bookings populated
+    const computers = await Computer.find()
+      .populate({
+        path: 'bookings',
+        populate: {
+          path: 'user',
+          select: 'name email'
+        }
+      })
+      .sort({ name: 1 });
+
+    // Get current date and time
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const currentTime = now.toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    console.log("Current date and time:", { today, currentTime });
+
+    // Process each computer to include only relevant bookings
+    const computersWithActiveBookings = computers.map(computer => {
+      const computerObj = computer.toObject();
+      
+      // Filter bookings to include only current, upcoming, and pending ones
+      computerObj.bookings = (computerObj.bookings || []).filter(booking => {
+        // Include if:
+        // 1. Booking is pending or approved
+        // 2. Booking hasn't ended yet
+        if (booking.status === 'rejected' || booking.status === 'cancelled') {
+          return false;
+        }
+
+        // For today's bookings
+        if (booking.startDate === today) {
+          return booking.endTime > currentTime;
+        }
+
+        // For future bookings
+        if (booking.startDate > today) {
+          return true;
+        }
+
+        // For multi-day bookings
+        if (booking.startDate <= today && booking.endDate >= today) {
+          return true;
+        }
+
+        return false;
+      });
+
+      return computerObj;
+    });
+
+    res.json(computersWithActiveBookings);
+  } catch (error) {
+    console.error("Error fetching computers with bookings:", error);
+    res.status(500).json({
+      message: "Error fetching computers with bookings",
+      error: error.message,
+    });
+  }
+});
+
+// Get all computers (authenticated)
 router.get("/", verifyToken, async (req, res) => {
   try {
     const computers = await Computer.find()

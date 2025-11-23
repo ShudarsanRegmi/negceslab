@@ -174,21 +174,17 @@ const AppContent = () => {
                 <Route
                   path="/lab-overview"
                   element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <LabOverview />
-                      </Layout>
-                    </ProtectedRoute>
+                    <Layout>
+                      <LabOverview />
+                    </Layout>
                   }
                 />
                 <Route
                   path="/computers"
                   element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <ComputerGrid />
-                      </Layout>
-                    </ProtectedRoute>
+                    <Layout>
+                      <ComputerGrid />
+                    </Layout>
                   }
                 />
                 <Route
@@ -214,11 +210,9 @@ const AppContent = () => {
                 <Route
                   path="/system-details"
                   element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <SystemDetails />
-                      </Layout>
-                    </ProtectedRoute>
+                    <Layout>
+                      <SystemDetails />
+                    </Layout>
                   }
                 />
                 <Route
