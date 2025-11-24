@@ -4,6 +4,17 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 const achievements = [
   {
+    title: 'Paper Accepted at SecITC 2025 | International Conference on Security for Information Technology and Communications',
+    author: 'Shudarsan Regmi, Dr. Saravanan Selvam',
+    description:
+      'A research contribution from NEGCES Lab was presented at SecITC 2025, an established international forum focused on advancements in information and communication security. The conference took place in Bucharest, Romania.\n\n' +
+      'The paper titled "Securing LLM-Integrated Chatbots: A Transformer-Based Vulnerability Scanner for Prompt Injection and Jailbreak Detection" introduces a structured evaluation framework for assessing security weaknesses in LLM driven chatbot systems. The study examines three critical threat categories, namely prompt manipulation, jailbreak style interactions, and exposure of sensitive information. The work provides a clear methodology to investigate how these threats emerge in practical deployments.\n\n' +
+      'The project was carried out under the academic supervision of Dr. Saravanan Selvam.\n\n' +
+      'NEGCES Lab acknowledges the support of Amrita Vishwa Vidyapeetham, Chennai Campus. The research environment and computational facilities available at the campus enabled consistent experimentation and reliable analysis.',
+    date: 'November 2025',
+    tags: ['Research', 'LLM Security', 'Vulnerability Analysis', 'Prompt Injection', 'Conference', 'NEGCES Lab']
+  },
+  {
     title: 'Paper Accepted at SOTVIA 2025! | International Conference',
     author: 'Vishal R, Deepak K, Venkatesan K, Syarifah Bahiyah Rahayu, Najah Alsubaie',
     description:
@@ -20,6 +31,7 @@ const achievements = [
     date: 'August 2025',
     tags: ['Research', 'Unsupervised Learning', 'Autoencoders', 'Conference', 'SCOPUS', 'NEGCES Lab'],
   }
+  
 ];
 
 const Achievement: React.FC = () => {
