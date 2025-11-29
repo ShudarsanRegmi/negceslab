@@ -54,6 +54,11 @@ import {
   Refresh as RefreshIcon,
   CalendarMonth as CalendarIcon,
   ExitToApp as TempReleaseIcon,
+  PlayArrow as ActiveIcon,
+  Schedule as UpcomingIcon,
+  CheckCircleOutline as CompletedIcon,
+  Cancel as RejectedIcon,
+  Assignment as TotalBookingsIcon,
 } from "@mui/icons-material";
 import { format, addDays, isWithinInterval, parseISO } from "date-fns";
 import { computersAPI, bookingsAPI, feedbackAPI, temporaryReleaseAPI } from "../services/api";
@@ -459,6 +464,32 @@ const AdminDashboard: React.FC = () => {
   ).length;
   const totalBookings = bookings.length;
   const pendingBookings = bookings.filter((b) => b.status === "pending").length;
+  // Additional statistics for overview
+  const approvedBookings = bookings.filter((b) => b.status === "approved").length;
+  const rejectedBookings = bookings.filter((b) => b.status === "rejected").length;
+  const cancelledBookings = bookings.filter((b) => b.status === "cancelled").length;
+  const completedBookings = bookings.filter((b) => b.status === "completed").length;
+  
+  // Calculate active and upcoming bookings from all approved bookings
+  const getAllActiveBookings = () => {
+    return bookings.filter((booking) => {
+      if (booking.status !== "approved") return false;
+      const start = new Date(booking.startDate + 'T' + booking.startTime);
+      const end = new Date(booking.endDate + 'T' + booking.endTime);
+      return start <= now && end >= now;
+    });
+  };
+  
+  const getAllUpcomingBookings = () => {
+    return bookings.filter((booking) => {
+      if (booking.status !== "approved") return false;
+      const start = new Date(booking.startDate + 'T' + booking.startTime);
+      return start > now;
+    });
+  };
+  
+  const totalActiveBookings = getAllActiveBookings().length;
+  const totalUpcomingBookings = getAllUpcomingBookings().length;
 
   // Add filter function
   const filteredBookings = bookings.filter((booking) => {
@@ -586,7 +617,7 @@ const AdminDashboard: React.FC = () => {
           {/* Summary Cards */}
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, mb: 4 }}>
             {/* Pending Approvals */}
-            <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 33.33%" } }}>
+            <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 calc(33.33% - 16px)" } }}>
               <Card
                 sx={{
                   height: "100%",
@@ -650,6 +681,366 @@ const AdminDashboard: React.FC = () => {
                     >
                       <NotificationIcon
                         sx={{ color: "#f57c00", fontSize: 22 }}
+                      />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Active Bookings */}
+            <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 calc(33.33% - 16px)" } }}>
+              <Card
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                  overflow: "visible",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  borderRadius: 2,
+                  minHeight: 140,
+                }}
+              >
+                <CardContent
+                  sx={{
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    p: 3,
+                    "&:last-child": { pb: 3 },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Box sx={{ flex: 1, mr: 2 }}>
+                      <Typography
+                        variant="h6"
+                        color="text.secondary"
+                        gutterBottom
+                        sx={{ fontSize: "0.875rem", fontWeight: 500 }}
+                      >
+                        Active Bookings
+                      </Typography>
+                      <Typography
+                        variant="h3"
+                        sx={{
+                          fontWeight: "bold",
+                          mb: 1,
+                          fontSize: { xs: "1.75rem", sm: "2rem", md: "2.5rem" },
+                        }}
+                      >
+                        {totalActiveBookings}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        bgcolor: "rgba(76, 175, 80, 0.15)",
+                        borderRadius: 1.5,
+                        p: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: 44,
+                        height: 44,
+                      }}
+                    >
+                      <ActiveIcon
+                        sx={{ color: "#4caf50", fontSize: 22 }}
+                      />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Upcoming Bookings */}
+            <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 calc(33.33% - 16px)" } }}>
+              <Card
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                  overflow: "visible",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  borderRadius: 2,
+                  minHeight: 140,
+                }}
+              >
+                <CardContent
+                  sx={{
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    p: 3,
+                    "&:last-child": { pb: 3 },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Box sx={{ flex: 1, mr: 2 }}>
+                      <Typography
+                        variant="h6"
+                        color="text.secondary"
+                        gutterBottom
+                        sx={{ fontSize: "0.875rem", fontWeight: 500 }}
+                      >
+                        Upcoming Bookings
+                      </Typography>
+                      <Typography
+                        variant="h3"
+                        sx={{
+                          fontWeight: "bold",
+                          mb: 1,
+                          fontSize: { xs: "1.75rem", sm: "2rem", md: "2.5rem" },
+                        }}
+                      >
+                        {totalUpcomingBookings}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        bgcolor: "rgba(33, 150, 243, 0.15)",
+                        borderRadius: 1.5,
+                        p: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: 44,
+                        height: 44,
+                      }}
+                    >
+                      <UpcomingIcon
+                        sx={{ color: "#2196f3", fontSize: 22 }}
+                      />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Total Completed */}
+            <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 calc(33.33% - 16px)" } }}>
+              <Card
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                  overflow: "visible",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  borderRadius: 2,
+                  minHeight: 140,
+                }}
+              >
+                <CardContent
+                  sx={{
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    p: 3,
+                    "&:last-child": { pb: 3 },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Box sx={{ flex: 1, mr: 2 }}>
+                      <Typography
+                        variant="h6"
+                        color="text.secondary"
+                        gutterBottom
+                        sx={{ fontSize: "0.875rem", fontWeight: 500 }}
+                      >
+                        Completed Requests
+                      </Typography>
+                      <Typography
+                        variant="h3"
+                        sx={{
+                          fontWeight: "bold",
+                          mb: 1,
+                          fontSize: { xs: "1.75rem", sm: "2rem", md: "2.5rem" },
+                        }}
+                      >
+                        {completedBookings}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        bgcolor: "rgba(139, 195, 74, 0.15)",
+                        borderRadius: 1.5,
+                        p: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: 44,
+                        height: 44,
+                      }}
+                    >
+                      <CompletedIcon
+                        sx={{ color: "#8bc34a", fontSize: 22 }}
+                      />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Total Rejected */}
+            <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 calc(33.33% - 16px)" } }}>
+              <Card
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                  overflow: "visible",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  borderRadius: 2,
+                  minHeight: 140,
+                }}
+              >
+                <CardContent
+                  sx={{
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    p: 3,
+                    "&:last-child": { pb: 3 },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Box sx={{ flex: 1, mr: 2 }}>
+                      <Typography
+                        variant="h6"
+                        color="text.secondary"
+                        gutterBottom
+                        sx={{ fontSize: "0.875rem", fontWeight: 500 }}
+                      >
+                        Rejected Requests
+                      </Typography>
+                      <Typography
+                        variant="h3"
+                        sx={{
+                          fontWeight: "bold",
+                          mb: 1,
+                          fontSize: { xs: "1.75rem", sm: "2rem", md: "2.5rem" },
+                        }}
+                      >
+                        {rejectedBookings}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        bgcolor: "rgba(244, 67, 54, 0.15)",
+                        borderRadius: 1.5,
+                        p: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: 44,
+                        height: 44,
+                      }}
+                    >
+                      <RejectedIcon
+                        sx={{ color: "#f44336", fontSize: 22 }}
+                      />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Total Bookings */}
+            <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 calc(33.33% - 16px)" } }}>
+              <Card
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                  overflow: "visible",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  borderRadius: 2,
+                  minHeight: 140,
+                }}
+              >
+                <CardContent
+                  sx={{
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    p: 3,
+                    "&:last-child": { pb: 3 },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Box sx={{ flex: 1, mr: 2 }}>
+                      <Typography
+                        variant="h6"
+                        color="text.secondary"
+                        gutterBottom
+                        sx={{ fontSize: "0.875rem", fontWeight: 500 }}
+                      >
+                        Total Bookings
+                      </Typography>
+                      <Typography
+                        variant="h3"
+                        sx={{
+                          fontWeight: "bold",
+                          mb: 1,
+                          fontSize: { xs: "1.75rem", sm: "2rem", md: "2.5rem" },
+                        }}
+                      >
+                        {totalBookings}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        bgcolor: "rgba(156, 39, 176, 0.15)",
+                        borderRadius: 1.5,
+                        p: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: 44,
+                        height: 44,
+                      }}
+                    >
+                      <TotalBookingsIcon
+                        sx={{ color: "#9c27b0", fontSize: 22 }}
                       />
                     </Box>
                   </Box>
