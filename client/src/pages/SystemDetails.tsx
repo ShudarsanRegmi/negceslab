@@ -341,105 +341,136 @@ const SystemDetails: React.FC = () => {
           <Grid item xs={12} sm={6} md={4} key={computer._id}>
             <Card 
               sx={{ 
-                height: 380,
-                width: '100%',
+                height: '100%',
                 display: 'flex', 
                 flexDirection: 'column',
                 transition: 'all 0.3s ease',
+                borderRadius: 2,
                 '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: 3
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
                 }
               }}
             >
-              <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pb: 3 }}>
+              <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
+                {/* Header Section */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Typography variant="h6" component="h2">
-                    {computer.name}
-                  </Typography>
+                  <Box>
+                    <Typography variant="h6" component="h2" fontWeight="600">
+                      {computer.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {computer.location}
+                    </Typography>
+                  </Box>
                   {userRole === 'admin' && (
                     <IconButton
                       size="small"
                       onClick={() => handleEditSystem(computer)}
                       color="primary"
+                      sx={{ 
+                        bgcolor: 'primary.50',
+                        '&:hover': { bgcolor: 'primary.100' }
+                      }}
                     >
-                      <EditIcon />
+                      <EditIcon fontSize="small" />
                     </IconButton>
                   )}
                 </Box>
 
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {computer.location}
-                </Typography>
-
                 {computer.systemDetails ? (
-                  <Box sx={{ mt: 2, flexGrow: 1 }}>
+                  <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                     {/* Operating System */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      mb: 2,
+                      p: 1.5,
+                      bgcolor: 'grey.50',
+                      borderRadius: 1
+                    }}>
                       {getOSDisplay(computer.systemDetails.operatingSystem)}
-                      <Typography variant="body2" sx={{ ml: 1 }}>
+                      <Typography variant="body2" sx={{ ml: 1, fontWeight: 500 }}>
                         {computer.systemDetails.operatingSystem}
-                        {computer.systemDetails.osVersion && ` ${computer.systemDetails.osVersion}`}
+                        {computer.systemDetails.osVersion && (
+                          <Typography component="span" variant="caption" color="text.secondary">
+                            {` ${computer.systemDetails.osVersion}`}
+                          </Typography>
+                        )}
                       </Typography>
                     </Box>
 
-                    {/* Hardware Details */}
-                    {computer.systemDetails.processor && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <SpeedIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          {computer.systemDetails.processor}
-                        </Typography>
-                      </Box>
-                    )}
+                    {/* Hardware Details - Compact Grid */}
+                    <Box sx={{ mb: 2 }}>
+                      {computer.systemDetails.processor && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <SpeedIcon sx={{ fontSize: 16, mr: 1, color: 'primary.main' }} />
+                          <Typography variant="body2" noWrap title={computer.systemDetails.processor}>
+                            {computer.systemDetails.processor}
+                          </Typography>
+                        </Box>
+                      )}
 
-                    {computer.systemDetails.ram && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <MemoryIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          {computer.systemDetails.ram}
-                        </Typography>
-                      </Box>
-                    )}
+                      {computer.systemDetails.ram && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <MemoryIcon sx={{ fontSize: 16, mr: 1, color: 'success.main' }} />
+                          <Typography variant="body2">
+                            {computer.systemDetails.ram}
+                          </Typography>
+                        </Box>
+                      )}
 
-                    {computer.systemDetails.storage && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <StorageIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          {computer.systemDetails.storage}
-                        </Typography>
-                      </Box>
-                    )}
+                      {computer.systemDetails.storage && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <StorageIcon sx={{ fontSize: 16, mr: 1, color: 'warning.main' }} />
+                          <Typography variant="body2">
+                            {computer.systemDetails.storage}
+                          </Typography>
+                        </Box>
+                      )}
 
-                    {computer.systemDetails.gpu && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <MonitorIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          {computer.systemDetails.gpu}
-                        </Typography>
-                      </Box>
-                    )}
+                      {computer.systemDetails.gpu && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <MonitorIcon sx={{ fontSize: 16, mr: 1, color: 'info.main' }} />
+                          <Typography variant="body2" noWrap title={computer.systemDetails.gpu}>
+                            {computer.systemDetails.gpu}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
 
-                    {/* Installed Software */}
+                    {/* Installed Software - Simplified */}
                     {computer.systemDetails.installedSoftware && computer.systemDetails.installedSoftware.length > 0 && (
-                      <Box sx={{ mt: 2, flexGrow: 1 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                          <Typography variant="subtitle2">
-                            Installed Software ({computer.systemDetails.installedSoftware.length})
+                      <Box sx={{ mt: 'auto' }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          mb: 1.5 
+                        }}>
+                          <Typography variant="subtitle2" color="primary" fontWeight="600">
+                            Software ({computer.systemDetails.installedSoftware.length})
                           </Typography>
                           <Button
                             size="small"
+                            variant="text"
                             onClick={() => {
                               setSelectedComputerForSoftware(computer);
                               setSoftwareViewDialogOpen(true);
                             }}
-                            sx={{ minWidth: 'auto', p: 0.5 }}
+                            sx={{ 
+                              minWidth: 'auto', 
+                              p: 0.5,
+                              fontSize: '0.75rem'
+                            }}
                           >
                             View All
                           </Button>
                         </Box>
+                        
+                        {/* Show only first 4 software as small chips */}
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {computer.systemDetails.installedSoftware.slice(0, 3).map((software, index) => (
+                          {computer.systemDetails.installedSoftware.slice(0, 4).map((software, index) => (
                             <Chip
                               key={index}
                               label={
@@ -447,7 +478,7 @@ const SystemDetails: React.FC = () => {
                                   <img 
                                     src={software.icon} 
                                     alt={software.name}
-                                    style={{ width: 16, height: 16, objectFit: 'contain' }}
+                                    style={{ width: 14, height: 14, objectFit: 'contain' }}
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none';
                                     }}
@@ -456,16 +487,30 @@ const SystemDetails: React.FC = () => {
                                 </Box>
                               }
                               size="small"
-                              color={getCategoryColor(software.category) as any}
                               variant="outlined"
+                              sx={{ 
+                                fontSize: '0.7rem',
+                                height: 24,
+                                '& .MuiChip-label': {
+                                  px: 1
+                                }
+                              }}
                             />
                           ))}
-                          {computer.systemDetails.installedSoftware.length > 3 && (
+                          {computer.systemDetails.installedSoftware.length > 4 && (
                             <Chip
-                              label={`+${computer.systemDetails.installedSoftware.length - 3} more`}
+                              label={`+${computer.systemDetails.installedSoftware.length - 4}`}
                               size="small"
-                              variant="outlined"
-                              sx={{ cursor: 'pointer' }}
+                              variant="filled"
+                              color="primary"
+                              sx={{ 
+                                fontSize: '0.7rem',
+                                height: 24,
+                                cursor: 'pointer',
+                                '& .MuiChip-label': {
+                                  px: 1
+                                }
+                              }}
                               onClick={() => {
                                 setSelectedComputerForSoftware(computer);
                                 setSoftwareViewDialogOpen(true);
@@ -476,22 +521,42 @@ const SystemDetails: React.FC = () => {
                       </Box>
                     )}
 
-                    {/* Last Updated */}
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-                      Last updated: {new Date(computer.systemDetails.lastUpdated).toLocaleDateString()}
+                    {/* Last Updated - Compact */}
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary" 
+                      sx={{ 
+                        mt: 2, 
+                        pt: 1.5, 
+                        borderTop: '1px solid', 
+                        borderColor: 'divider',
+                        textAlign: 'center'
+                      }}
+                    >
+                      Updated {new Date(computer.systemDetails.lastUpdated).toLocaleDateString()}
                     </Typography>
                   </Box>
                 ) : (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
+                  <Box sx={{ 
+                    flexGrow: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    py: 4
+                  }}>
+                    <ComputerIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
                       No system details available
                     </Typography>
                     {userRole === 'admin' && (
                       <Button
                         size="small"
+                        variant="outlined"
                         startIcon={<AddIcon />}
                         onClick={() => handleEditSystem(computer)}
-                        sx={{ mt: 1 }}
+                        sx={{ mt: 2 }}
                       >
                         Add Details
                       </Button>
