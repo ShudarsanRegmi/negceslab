@@ -130,7 +130,12 @@ const AdminComputerManagement: React.FC = () => {
         bookingsAPI.getAllBookings(),
       ]);
       
-      setComputers(computersRes.data);
+      // Sort computers with natural/numeric sorting
+      const sortedComputers = computersRes.data.sort((a: Computer, b: Computer) => {
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      
+      setComputers(sortedComputers);
       setBookings(bookingsRes.data);
     } catch (error: any) {
       console.error("Error fetching data:", error);

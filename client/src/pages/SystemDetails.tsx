@@ -139,7 +139,13 @@ const SystemDetails: React.FC = () => {
       setLoading(true);
       const usePublic = !currentUser; // Use public API if no user is authenticated
       const response = await systemDetailsAPI.getAllSystemDetails(usePublic);
-      setComputers(response.data);
+      
+      // Sort computers with natural/numeric sorting
+      const sortedComputers = response.data.sort((a: Computer, b: Computer) => {
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      
+      setComputers(sortedComputers);
     } catch (error) {
       console.error("Error fetching system details:", error);
       setError("Failed to load system details");

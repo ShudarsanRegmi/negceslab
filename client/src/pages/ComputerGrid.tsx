@@ -182,7 +182,13 @@ const ComputerGrid: React.FC = () => {
         computersAPI.getComputersWithBookings(usePublic),
         currentUser ? bookingsAPI.getUserBookings() : Promise.resolve({ data: [] }),
       ]);
-      setComputers(computersRes.data);
+      
+      // Sort computers with natural/numeric sorting
+      const sortedComputers = computersRes.data.sort((a: Computer, b: Computer) => {
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      
+      setComputers(sortedComputers);
       setBookings(bookingsRes.data);
 
       console.log('=== COMPUTERS WITH BOOKINGS DEBUG ===');
