@@ -240,9 +240,9 @@ const AppContent = () => {
                 <Route
                   path="/achievements"
                   element={
-                    <Layout>
+                    <MainLayout>
                       <Achievement />
-                    </Layout>
+                    </MainLayout>
                   }
                 />
               </Routes>
