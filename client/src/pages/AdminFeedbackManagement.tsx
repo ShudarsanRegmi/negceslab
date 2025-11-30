@@ -350,7 +350,7 @@ const AdminFeedbackManagement: React.FC = () => {
         fullScreen={isMobile}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Feedback Details</Typography>
+          Feedback Details
           <IconButton onClick={handleCloseFeedbackDialog}>
             <CloseIcon />
           </IconButton>
