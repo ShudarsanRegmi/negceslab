@@ -63,6 +63,7 @@ import {
 import { format, addDays, isWithinInterval, parseISO } from "date-fns";
 import { computersAPI, bookingsAPI, feedbackAPI, temporaryReleaseAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
+import AdminAchievementManagement from "./AdminAchievementManagement";
 
 interface Computer {
   _id: string;
@@ -597,6 +598,7 @@ const AdminDashboard: React.FC = () => {
       />
         <Tab label="All Bookings" />
         <Tab label="Feedback" />
+        <Tab label="Achievements" />
         {/* <Tab label="Notifications" /> */}
       </Tabs>
 
@@ -1727,6 +1729,9 @@ const AdminDashboard: React.FC = () => {
           )}
         </Box>
       )}
+
+      {/* Achievements Tab */}
+      {activeTab === 5 && <AdminAchievementManagement />}
 
       {/* Notifications Tab */}
       {activeTab === 6 && <AdminNotificationPanel />}
