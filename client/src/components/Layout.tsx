@@ -57,6 +57,8 @@ import {
   Storage as StorageIcon,
   CalendarToday as CalendarIcon,
   ManageAccounts as ManageAccountsIcon,
+  EmojiEvents as EmojiEventsIcon,
+  Feedback as FeedbackIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -225,6 +227,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       text: "Temporary Releases",
       icon: <CalendarIcon />,
       path: "/admin/temporary-releases",
+      roles: ["admin"],
+    },
+    {
+      text: "Achievements CMS",
+      icon: <EmojiEventsIcon />,
+      path: "/admin/achievements",
+      roles: ["admin"],
+    },
+    {
+      text: "Feedback",
+      icon: <FeedbackIcon />,
+      path: "/admin/feedback",
       roles: ["admin"],
     },
     // {
