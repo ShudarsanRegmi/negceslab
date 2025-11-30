@@ -464,11 +464,15 @@ const AdminDashboard: React.FC = () => {
   ).length;
   const totalBookings = bookings.length;
   const pendingBookings = bookings.filter((b) => b.status === "pending").length;
+  
   // Additional statistics for overview
   const approvedBookings = bookings.filter((b) => b.status === "approved").length;
   const rejectedBookings = bookings.filter((b) => b.status === "rejected").length;
   const cancelledBookings = bookings.filter((b) => b.status === "cancelled").length;
   const completedBookings = bookings.filter((b) => b.status === "completed").length;
+  
+  // Helper functions for filtering - declare now first
+  const now = new Date();
   
   // Calculate active and upcoming bookings from all approved bookings
   const getAllActiveBookings = () => {
@@ -532,8 +536,6 @@ const AdminDashboard: React.FC = () => {
     return `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`;
   };
 
-  // Helper functions for filtering
-  const now = new Date();
   const isActiveBooking = (booking: Booking) => {
     const start = new Date(booking.startDate + 'T' + booking.startTime);
     const end = new Date(booking.endDate + 'T' + booking.endTime);
