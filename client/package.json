@@ -8,7 +8,16 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "test": "playwright test static-pages.spec.ts --config=playwright-simple.config.ts",
+    "test:static": "playwright test static-pages.spec.ts --config=playwright-simple.config.ts",
+    "test:static:headed": "playwright test static-pages.spec.ts --config=playwright-simple.config.ts --headed",
+    "test:static:ui": "playwright test static-pages.spec.ts --config=playwright-simple.config.ts --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report",
+    "test:codegen": "playwright codegen"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -35,6 +44,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^24.10.1",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
@@ -44,7 +55,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
     "postcss": "^8.5.6",
-  "rimraf": "^4.4.1",
+    "rimraf": "^4.4.1",
     "tailwindcss": "^4.1.11",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
