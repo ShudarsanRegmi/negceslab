@@ -1,0 +1,13 @@
+[Unit]
+Description=NegCES Application Stack (MongoDB + Backend)
+Wants=negces-mongodb.service negces-backend.service
+After=negces-mongodb.service negces-backend.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecReload=/bin/systemctl reload negces-mongodb.service negces-backend.service
+
+[Install]
+WantedBy=default.target

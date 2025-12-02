@@ -1,0 +1,44 @@
+[Unit]
+Description=NegCES Backend Container
+Documentation=man:podman-run(1)
+Wants=network-online.target
+After=network-online.target negces-mongodb.service
+Requires=negces-mongodb.service
+RequiresMountsFor=%t/containers
+
+[Service]
+Type=exec
+Restart=always
+RestartSec=10
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+# Environment file for backend configuration
+EnvironmentFile=%h/Projects/negceslab/server/.env
+
+# Stop and remove any existing container before starting
+ExecStartPre=/usr/bin/podman stop -t 10 backend || true
+ExecStartPre=/usr/bin/podman rm -f backend || true
+
+# Wait for MongoDB to be healthy (optional but recommended)
+ExecStartPre=/bin/bash -c 'while ! /usr/bin/podman healthcheck run mongodb; do sleep 2; done'
+
+# Start the Backend container
+ExecStart=/usr/bin/podman run \
+    --name backend \
+    --rm \
+    --detach \
+    --replace \
+    --publish 5001:5000 \
+    --env NODE_ENV=production \
+    --env-file %h/Projects/negceslab/server/.env \
+    localhost/negceslab_backend:latest
+
+# Stop the container
+ExecStop=/usr/bin/podman stop -t 30 backend
+
+# Cleanup on stop
+ExecStopPost=/usr/bin/podman rm -f backend || true
+
+[Install]
+WantedBy=default.target

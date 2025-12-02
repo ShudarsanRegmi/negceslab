@@ -1,0 +1,47 @@
+[Unit]
+Description=NegCES MongoDB Container
+Documentation=man:podman-run(1)
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=%t/containers
+
+[Service]
+Type=exec
+Restart=always
+RestartSec=10
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+# Environment file for MongoDB configuration
+EnvironmentFile=%h/Projects/negceslab/server/.env
+
+# Stop and remove any existing container before starting
+ExecStartPre=/usr/bin/podman stop -t 10 mongodb || true
+ExecStartPre=/usr/bin/podman rm -f mongodb || true
+
+# Start the MongoDB container
+ExecStart=/usr/bin/podman run \
+    --name mongodb \
+    --rm \
+    --detach \
+    --replace \
+    --publish 27018:27017 \
+    --volume mongo_data:/data/db \
+    --env MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME} \
+    --env MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD} \
+    --env MONGO_INITDB_DATABASE=${MONGO_DB_NAME} \
+    --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'" \
+    --health-interval 30s \
+    --health-timeout 10s \
+    --health-retries 3 \
+    --health-start-period 60s \
+    docker.io/library/mongo:7
+
+# Stop the container
+ExecStop=/usr/bin/podman stop -t 30 mongodb
+
+# Cleanup on stop
+ExecStopPost=/usr/bin/podman rm -f mongodb || true
+
+[Install]
+WantedBy=default.target
