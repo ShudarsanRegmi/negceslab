@@ -93,6 +93,18 @@ const AdminAchievementManagement: React.FC = () => {
   // Tag input state
   const [tagInput, setTagInput] = useState('');
 
+  // Date selection state
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 10 }, (_, i) => currentYear + i - 5); // 5 years back and 4 years forward
+
   useEffect(() => {
     fetchAchievements();
   }, []);
@@ -124,18 +136,32 @@ const AdminAchievementManagement: React.FC = () => {
         status: achievement.status,
         featuredImage: achievement.featuredImage || '',
       });
+      
+      // Parse existing date for dropdowns
+      const dateParts = achievement.date.split(' ');
+      if (dateParts.length === 2) {
+        setSelectedMonth(dateParts[0]);
+        setSelectedYear(dateParts[1]);
+      }
     } else {
       setEditingAchievement(null);
+      const currentDate = new Date();
+      const currentMonth = currentDate.toLocaleDateString('en-US', { month: 'long' });
+      const currentYear = currentDate.getFullYear().toString();
+      
       setFormData({
         title: '',
         author: '',
         content: '',
         excerpt: '',
         tags: [],
-        date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+        date: `${currentMonth} ${currentYear}`,
         status: 'draft',
         featuredImage: '',
       });
+      
+      setSelectedMonth(currentMonth);
+      setSelectedYear(currentYear);
     }
     setDialogOpen(true);
   };
@@ -144,6 +170,8 @@ const AdminAchievementManagement: React.FC = () => {
     setDialogOpen(false);
     setEditingAchievement(null);
     setTagInput('');
+    setSelectedMonth('');
+    setSelectedYear('');
   };
 
   const handleInputChange = (field: keyof AchievementFormData, value: any) => {
@@ -171,14 +199,34 @@ const AdminAchievementManagement: React.FC = () => {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       handleAddTag();
     }
   };
 
+  const validateDate = (dateString: string) => {
+    const monthYearPattern = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s\d{4}$/;
+    return monthYearPattern.test(dateString);
+  };
+
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month);
+    if (month && selectedYear) {
+      handleInputChange('date', `${month} ${selectedYear}`);
+    }
+  };
+
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    if (selectedMonth && year) {
+      handleInputChange('date', `${selectedMonth} ${year}`);
+    }
+  };
+
   const handleSave = async () => {
     try {
+      // Date validation is now handled by dropdowns, so we can remove the manual validation
       if (editingAchievement) {
         await achievementsAPI.updateAchievement(editingAchievement._id, formData);
         setSuccess('Achievement updated successfully');
@@ -392,19 +440,50 @@ const AdminAchievementManagement: React.FC = () => {
             
             <TextField
               label="Author"
+              placeholder='Author1, Author2, ...'
               value={formData.author}
               onChange={(e) => handleInputChange('author', e.target.value)}
               fullWidth
               required
             />
             
-            <TextField
-              label="Date"
-              value={formData.date}
-              onChange={(e) => handleInputChange('date', e.target.value)}
-              fullWidth
-              required
-            />
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Date
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <FormControl sx={{ minWidth: 150 }} size="small">
+                  <InputLabel>Month</InputLabel>
+                  <Select
+                    value={selectedMonth}
+                    onChange={(e) => handleMonthChange(e.target.value)}
+                    label="Month"
+                    required
+                  >
+                    {months.map((month) => (
+                      <MenuItem key={month} value={month}>
+                        {month}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl sx={{ minWidth: 100 }} size="small">
+                  <InputLabel>Year</InputLabel>
+                  <Select
+                    value={selectedYear}
+                    onChange={(e) => handleYearChange(e.target.value)}
+                    label="Year"
+                    required
+                  >
+                    {years.map((year) => (
+                      <MenuItem key={year} value={year.toString()}>
+                        {year}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
             
             <TextField
               label="Excerpt (Optional)"
@@ -426,7 +505,7 @@ const AdminAchievementManagement: React.FC = () => {
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Add a tag"
+                  placeholder="Add a tag (press Enter or comma to add)"
                   sx={{ flexGrow: 1 }}
                 />
                 <Button variant="outlined" onClick={handleAddTag}>
@@ -462,11 +541,28 @@ const AdminAchievementManagement: React.FC = () => {
               <Typography variant="subtitle2" gutterBottom>
                 Content
               </Typography>
-              <Box sx={{ '& .w-md-editor': { minHeight: '300px' } }}>
+              <Box sx={{ 
+                '& .w-md-editor': { 
+                  minHeight: '300px',
+                  backgroundColor: '#fff'
+                },
+                '& .w-md-editor-text-container': {
+                  backgroundColor: '#fff'
+                },
+                '& .w-md-editor-text': {
+                  backgroundColor: '#fff !important',
+                  color: '#000 !important'
+                },
+                '& .w-md-editor-text-area': {
+                  backgroundColor: '#fff !important',
+                  color: '#000 !important'
+                }
+              }}>
                 <MDEditor
                   value={formData.content}
                   onChange={(val) => handleInputChange('content', val || '')}
                   preview="edit"
+                  data-color-mode="light"
                 />
               </Box>
             </Box>
@@ -480,7 +576,7 @@ const AdminAchievementManagement: React.FC = () => {
             onClick={handleSave} 
             variant="contained" 
             startIcon={<SaveIcon />}
-            disabled={!formData.title || !formData.author || !formData.content}
+            disabled={!formData.title || !formData.author || !formData.content || !selectedMonth || !selectedYear}
           >
             {editingAchievement ? 'Update' : 'Create'}
           </Button>
