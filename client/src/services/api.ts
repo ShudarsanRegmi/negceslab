@@ -177,4 +177,37 @@ export const temporaryReleaseAPI = {
   }) => api.post('/temporary-releases/book', data),
 };
 
+// Achievements API endpoints
+export const achievementsAPI = {
+  // Public endpoints
+  getPublishedAchievements: () => api.get('/achievements/public'),
+  getAchievement: (id: string) => api.get(`/achievements/${id}`),
+  
+  // Admin endpoints
+  getAllAchievements: () => api.get('/achievements'),
+  createAchievement: (data: {
+    title: string;
+    author: string;
+    content: string;
+    excerpt?: string;
+    tags: string[];
+    date: string;
+    status?: 'draft' | 'published' | 'hidden';
+    featuredImage?: string;
+  }) => api.post('/achievements', data),
+  updateAchievement: (id: string, data: {
+    title?: string;
+    author?: string;
+    content?: string;
+    excerpt?: string;
+    tags?: string[];
+    date?: string;
+    status?: 'draft' | 'published' | 'hidden';
+    featuredImage?: string;
+  }) => api.put(`/achievements/${id}`, data),
+  deleteAchievement: (id: string) => api.delete(`/achievements/${id}`),
+  updateAchievementStatus: (id: string, status: 'draft' | 'published' | 'hidden') => 
+    api.patch(`/achievements/${id}/status`, { status }),
+};
+
 export default api; 

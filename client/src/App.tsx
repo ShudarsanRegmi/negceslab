@@ -24,6 +24,8 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTemporaryReleases from "./pages/AdminTemporaryReleases";
 import AdminComputerManagement from "./pages/AdminComputerManagement";
+import AdminAchievementManagement from "./pages/AdminAchievementManagement";
+import AdminFeedbackManagement from "./pages/AdminFeedbackManagement";
 import BookingForm from "./pages/BookingForm";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
@@ -157,6 +159,26 @@ const AppContent = () => {
                     <ProtectedRoute requiredRole="admin">
                       <Layout>
                         <AdminComputerManagement />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/achievements"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <Layout>
+                        <AdminAchievementManagement />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/feedback"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <Layout>
+                        <AdminFeedbackManagement />
                       </Layout>
                     </ProtectedRoute>
                   }

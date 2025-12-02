@@ -53,6 +53,7 @@ const notificationRoutes = require("./routes/notifications");
 const feedbackRoutes = require('./routes/feedback');
 const systemDetailsRoutes = require('./routes/systemDetails');
 const temporaryReleaseRoutes = require('./routes/temporaryReleases');
+const achievementRoutes = require('./routes/achievements');
 
 // Use routes
 app.use("/api/auth", authRoutes);
@@ -62,6 +63,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/system-details', systemDetailsRoutes);
 app.use('/api/temporary-releases', temporaryReleaseRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 
 app.get('/', (req, res)=>{

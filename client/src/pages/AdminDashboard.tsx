@@ -61,7 +61,7 @@ import {
   Assignment as TotalBookingsIcon,
 } from "@mui/icons-material";
 import { format, addDays, isWithinInterval, parseISO } from "date-fns";
-import { computersAPI, bookingsAPI, feedbackAPI, temporaryReleaseAPI } from "../services/api";
+import { computersAPI, bookingsAPI, temporaryReleaseAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
 
 interface Computer {
@@ -108,19 +108,6 @@ interface Booking {
   datasetLink?: string;
   bottleneckExplanation?: string;
   mentor?: string; // Added mentor field
-}
-
-// Add feedback interface
-interface Feedback {
-  _id: string;
-  fullName: string;
-  email: string;
-  subject: string;
-  message: string;
-  status: 'pending' | 'resolved' | 'in_progress';
-  adminResponse?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -174,7 +161,7 @@ const AdminDashboard: React.FC = () => {
       new Date(booking.endDate) >= new Date(new Date().toDateString())
   );
 
-  // Add new state variables at the top of the component
+  // Add to component state
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<{
@@ -185,10 +172,6 @@ const AdminDashboard: React.FC = () => {
     endDate: null,
   });
 
-  // Add to component state
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
-  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [bookingTab, setBookingTab] = useState<'all' | 'pending'>('all');
 
   // Add loading states
@@ -214,16 +197,14 @@ const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [computersRes, bookingsRes, currentBookingsRes, feedbackRes] = await Promise.all([
+      const [computersRes, bookingsRes, currentBookingsRes] = await Promise.all([
         computersAPI.getComputersWithBookings(),
         bookingsAPI.getAllBookings(),
         bookingsAPI.getCurrentBookings(),
-        feedbackAPI.getAllFeedback(),
       ]);
       setComputers(computersRes.data);
       setBookings(bookingsRes.data);
       setCurrentBookings(currentBookingsRes.data);
-      setFeedbacks(feedbackRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
       setError("Failed to load data");
@@ -596,7 +577,6 @@ const AdminDashboard: React.FC = () => {
         }
       />
         <Tab label="All Bookings" />
-        <Tab label="Feedback" />
         {/* <Tab label="Notifications" /> */}
       </Tabs>
 
@@ -1650,86 +1630,8 @@ const AdminDashboard: React.FC = () => {
         </Box>
       )}
 
-      {/* Add Feedback Tab */}
-      {activeTab === 4 && (
-        <Box>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-            <Typography variant="h6">Feedback Management</Typography>
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={fetchData}
-              disabled={loading}
-              size="small"
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </Button>
-          </Box>
-
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Subject</TableCell>
-                  <TableCell>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {feedbacks.map((feedback) => (
-                  <TableRow
-                    key={feedback._id}
-                    sx={{
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: 'action.hover',
-                      }
-                    }}
-                    onClick={() => {
-                      setSelectedFeedback(feedback);
-                      setFeedbackDialogOpen(true);
-                    }}
-                  >
-                    <TableCell>{new Date(feedback.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Typography>{feedback.fullName}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {feedback.email}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{feedback.subject}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={feedback.status}
-                        color={
-                          feedback.status === 'resolved'
-                            ? 'success'
-                            : feedback.status === 'in_progress'
-                            ? 'warning'
-                            : 'default'
-                        }
-                        size="small"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {feedbacks.length === 0 && (
-            <Box sx={{ textAlign: 'center', py: 2 }}>
-              <Typography variant="body1" color="text.secondary">
-                No feedback submissions found
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      )}
-
       {/* Notifications Tab */}
-      {activeTab === 6 && <AdminNotificationPanel />}
+      {activeTab === 4 && <AdminNotificationPanel />}
 
       {/* Add Computer Dialog */}
       <Dialog
