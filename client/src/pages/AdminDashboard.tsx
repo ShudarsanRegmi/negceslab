@@ -190,6 +190,10 @@ const AdminDashboard: React.FC = () => {
   const [tempReleaseAdminNote, setTempReleaseAdminNote] = useState("");
   const [calendarValue, setCalendarValue] = useState<Date | null>(null);
 
+  // Feedback management state
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
+
   useEffect(() => {
     fetchData();
   }, []);
