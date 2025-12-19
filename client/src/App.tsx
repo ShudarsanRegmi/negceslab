@@ -39,6 +39,7 @@ import Contact from "./pages/Contact";
 import SystemDetails from "./pages/SystemDetails";
 import Achievement from "./pages/Achievement";
 import EmailVerification from "./pages/EmailVerification";
+import Version from "./pages/Version";
 
 const basename = import.meta.env.VITE_ROUTER_BASE_CONFIG || '/';
 console.log("Basename is: ", basename);
@@ -244,6 +245,10 @@ const AppContent = () => {
                       <Achievement />
                     </MainLayout>
                   }
+                />
+                <Route
+                  path="/version"
+                  element={<Version />}
                 />
               </Routes>
             </Router>

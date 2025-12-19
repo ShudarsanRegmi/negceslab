@@ -67,7 +67,7 @@ app.use('/api/achievements', achievementRoutes);
 
 
 app.get('/', (req, res)=>{
-	res.status(200).json({'msg': "welcome to lab server api"});
+	res.status(200).json({'msg': "Welcome to Negces Lab Server API", 'Version': "3.0.0", "lastUpdatedOn": "2025-12-19"});
 });
 // Error handling middleware
 app.use((err, req, res, next) => {
