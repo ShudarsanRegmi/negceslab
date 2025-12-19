@@ -32,3 +32,49 @@ podman exec -it mongodb mongosh --username mongoadmin --password pass --authenti
 ```bash
 0 2 * * * /bin/bash ~/negces/negceslab/backup.sh >> ~/mongo-backups/backup.log 2>&1
 ```
+---
+
+## Commands to generate systemd files using Podman:
+
+### 1. First, start your containers normally:
+```bash
+make up-mongo
+make up-backend
+```
+
+### 2. Generate systemd files from running containers:
+```bash
+# Generate MongoDB service file
+podman generate systemd --new --files --name mongodb
+
+# Generate Backend service file  
+podman generate systemd --new --files --name backend
+```
+
+### 3. Stop the containers (systemd will manage them now):
+```bash
+make down-backend
+make down-mongo
+```
+
+### 4. Move the generated files to systemd directory:
+```bash
+mkdir -p ~/.config/systemd/user
+mv container-*.service ~/.config/systemd/user/
+```
+
+### 5. Enable and start the services:
+```bash
+systemctl --user daemon-reload
+systemctl --user enable container-mongodb.service
+systemctl --user enable container-backend.service
+systemctl --user start container-mongodb.service
+systemctl --user start container-backend.service
+```
+
+### 6. Check status:
+```bash
+systemctl --user status container-mongodb.service
+systemctl --user status container-backend.service
+podman ps
+```
