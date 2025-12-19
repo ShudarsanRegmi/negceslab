@@ -67,8 +67,41 @@ app.use('/api/achievements', achievementRoutes);
 
 
 app.get('/', (req, res)=>{
-	res.status(200).json({'msg': "Welcome to Negces Lab Server API", 'Version': "3.0.0", "lastUpdatedOn": "2025-12-19"});
+	res.status(200).json({'msg': "Welcome to Negces Lab Server API", 'Version': "3.0.1", "lastUpdatedOn": "2025-12-19"});
 });
+
+// Health endpoint
+app.get('/health', async (req, res) => {
+	try {
+		// Check database connection
+		const dbStatus = mongoose.connection.readyState;
+		
+		// Basic health info - production safe
+		const healthInfo = {
+			status: 'healthy',
+			timestamp: new Date().toISOString(),
+			version: "3.0.0",
+			database: {
+				connected: dbStatus === 1
+			}
+		};
+
+		// If database is not connected, return 503 status
+		if (dbStatus !== 1) {
+			healthInfo.status = 'unhealthy';
+			return res.status(503).json(healthInfo);
+		}
+
+		res.status(200).json(healthInfo);
+	} catch (error) {
+		res.status(503).json({
+			status: 'unhealthy',
+			timestamp: new Date().toISOString(),
+			version: "3.0.1"
+		});
+	}
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
