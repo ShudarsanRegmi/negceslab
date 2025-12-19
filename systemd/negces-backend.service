@@ -14,7 +14,7 @@ TimeoutStartSec=120
 TimeoutStopSec=30
 
 # Environment file for backend configuration
-EnvironmentFile=%h/Projects/negceslab/server/.env
+EnvironmentFile=%h/negceslab/server/.env
 
 # Stop and remove any existing container before starting
 ExecStartPre=/usr/bin/podman stop -t 10 backend || true
@@ -31,7 +31,7 @@ ExecStart=/usr/bin/podman run \
     --replace \
     --publish 5001:5000 \
     --env NODE_ENV=production \
-    --env-file %h/Projects/negceslab/server/.env \
+    --env-file %h/negceslab/server/.env \
     localhost/negceslab_backend:latest
 
 # Stop the container

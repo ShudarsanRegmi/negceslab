@@ -13,7 +13,7 @@ TimeoutStartSec=120
 TimeoutStopSec=30
 
 # Environment file for MongoDB configuration
-EnvironmentFile=%h/Projects/negceslab/server/.env
+EnvironmentFile=%h/negceslab/server/.env
 
 # Stop and remove any existing container before starting
 ExecStartPre=/usr/bin/podman stop -t 10 mongodb || true
