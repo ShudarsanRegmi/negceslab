@@ -54,6 +54,7 @@ const feedbackRoutes = require('./routes/feedback');
 const systemDetailsRoutes = require('./routes/systemDetails');
 const temporaryReleaseRoutes = require('./routes/temporaryReleases');
 const achievementRoutes = require('./routes/achievements');
+const superadminRoutes = require('./routes/superadmin');
 
 // Use routes
 app.use("/api/auth", authRoutes);
@@ -64,6 +65,7 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/system-details', systemDetailsRoutes);
 app.use('/api/temporary-releases', temporaryReleaseRoutes);
 app.use('/api/achievements', achievementRoutes);
+app.use('/api/superadmin', superadminRoutes);
 
 
 app.get('/', (req, res)=>{

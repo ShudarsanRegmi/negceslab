@@ -40,6 +40,7 @@ import SystemDetails from "./pages/SystemDetails";
 import Achievement from "./pages/Achievement";
 import EmailVerification from "./pages/EmailVerification";
 import Version from "./pages/Version";
+import SuperAdmin from "./pages/SuperAdmin";
 
 const basename = import.meta.env.VITE_ROUTER_BASE_CONFIG || '/';
 console.log("Basename is: ", basename);
@@ -249,6 +250,14 @@ const AppContent = () => {
                 <Route
                   path="/version"
                   element={<Version />}
+                />
+                <Route
+                  path="/superadmin"
+                  element={
+                    <MainLayout>
+                      <SuperAdmin />
+                    </MainLayout>
+                  }
                 />
               </Routes>
             </Router>

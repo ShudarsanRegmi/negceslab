@@ -1,13 +1,29 @@
 const nodemailer = require('nodemailer');
 
+const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'your-email@gmail.com';
+const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'your-app-password';
+
 // Email configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASS || 'your-app-password'
-  }
-});
+const transporter = process.env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: Number(process.env.SMTP_PORT || 587) === 465,
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      }
+    })
+  : nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      },
+      requireTLS: true
+    });
 
 // Email templates
 const emailTemplates = {
@@ -437,7 +453,7 @@ const sendEmail = async (to, template, data) => {
     const emailContent = emailTemplates[template](...data);
     
     const mailOptions = {
-      from: process.env.EMAIL_USER || 'your-email@gmail.com',
+      from: emailUser,
       to: to,
       subject: emailContent.subject,
       html: emailContent.html
@@ -469,10 +485,49 @@ const sendBookingExpiredEmail = async (userEmail, userName, computerName, startD
   return await sendEmail(userEmail, 'bookingExpired', [userName, computerName, startDate, endDate, startTime, endTime]);
 };
 
+const sendSuperadminOtpEmail = async (userEmail, otp, validMinutes) => {
+  try {
+    const mailOptions = {
+      from: emailUser,
+      to: userEmail,
+      subject: 'NEGCES Lab Superadmin OTP',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Superadmin OTP</title>
+        </head>
+        <body>
+          <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <h2 style="margin-top: 0; color: #1f2937;">NEGCES Lab superadmin login</h2>
+            <p style="color: #374151; font-size: 15px;">Use this OTP to complete your superadmin login.</p>
+            <div style="font-size: 32px; letter-spacing: 8px; font-weight: 700; padding: 18px 20px; margin: 20px 0; background: #f3f4f6; border-radius: 8px; text-align: center; color: #111827;">
+              ${otp}
+            </div>
+            <p style="color: #4b5563; font-size: 14px;">This OTP is valid for ${validMinutes} minutes. The verified session lasts 15 minutes.</p>
+            <p style="color: #6b7280; font-size: 12px;">If you did not request this, ignore this email.</p>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Superadmin OTP email sent successfully:', result.messageId);
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error('Error sending superadmin OTP email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendBookingApprovedEmail,
   sendBookingRejectedEmail,
   sendBookingCancelledEmail,
   sendBookingExpiredEmail,
+  sendSuperadminOtpEmail,
   sendEmail
 }; 

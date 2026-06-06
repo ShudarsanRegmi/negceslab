@@ -35,6 +35,33 @@ export const authAPI = {
     api.get('/auth/profile'),
 };
 
+const superadminHeaders = (token: string) => ({
+  headers: {
+    'X-Superadmin-Session': token,
+  },
+});
+
+export const superadminAPI = {
+  requestOtp: (email: string) =>
+    api.post('/superadmin/request-otp', { email }),
+  verifyOtp: (email: string, otp: string) =>
+    api.post('/superadmin/verify-otp', { email, otp }),
+  logout: (token: string) =>
+    api.post('/superadmin/logout', {}, superadminHeaders(token)),
+  me: (token: string) =>
+    api.get('/superadmin/me', superadminHeaders(token)),
+  getStats: (token: string) =>
+    api.get('/superadmin/stats', superadminHeaders(token)),
+  getAdmins: (token: string) =>
+    api.get('/superadmin/admins', superadminHeaders(token)),
+  searchUsers: (token: string, email: string) =>
+    api.get(`/superadmin/users/search?email=${encodeURIComponent(email)}`, superadminHeaders(token)),
+  makeAdmin: (token: string, email: string) =>
+    api.post('/superadmin/admins', { email }, superadminHeaders(token)),
+  revokeAdmin: (token: string, userId: string) =>
+    api.delete(`/superadmin/admins/${userId}`, superadminHeaders(token)),
+};
+
 export const computersAPI = {
   getAllComputers: (usePublic = false) => 
     api.get(usePublic ? '/computers/public' : '/computers'),
