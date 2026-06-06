@@ -69,7 +69,7 @@ app.use('/api/superadmin', superadminRoutes);
 
 
 app.get('/', (req, res)=>{
-	res.status(200).json({'msg': "Welcome to Negces Lab Server API", 'Version': "3.0.1", "lastUpdatedOn": "2025-12-19"});
+	res.status(200).json({'msg': "Welcome to Negces Lab Server API", 'Version': "3.0.2", "lastUpdatedOn": "2026-06-06"});
 });
 
 // Health endpoint
