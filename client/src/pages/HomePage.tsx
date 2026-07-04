@@ -1023,6 +1023,154 @@ export default function HomePage() {
           </Box>
         </Container>
       </Box>
+
+      {/* Footer Section */}
+      <Box
+        component="footer"
+        sx={{
+          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+          color: "#94a3b8",
+          py: { xs: 6, md: 8 },
+          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "2fr 1fr 1fr" },
+              gap: { xs: 5, md: 8 },
+              pb: 6,
+              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+            }}
+          >
+            {/* Brand Column */}
+            <Box>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2.5 }}>
+                <ComputerIcon sx={{ color: "#2563eb", mr: 1.5, fontSize: 32 }} />
+                <Typography
+                  variant="h6"
+                  fontWeight={800}
+                  sx={{
+                    color: "#fff",
+                    letterSpacing: "0.5px",
+                    background: "linear-gradient(135deg, #fff 0%, #cbd5e1 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  Negces Lab
+                </Typography>
+                <Box
+                  sx={{
+                    ml: 2,
+                    px: 1.5,
+                    py: 0.25,
+                    background: "rgba(37, 99, 235, 0.15)",
+                    border: "1px solid rgba(37, 99, 235, 0.3)",
+                    borderRadius: "9999px",
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    fontWeight={700}
+                    sx={{ color: "#60a5fa", fontSize: "0.75rem" }}
+                  >
+                    v3.0
+                  </Typography>
+                </Box>
+              </Box>
+              <Typography
+                variant="body2"
+                sx={{
+                  lineHeight: 1.8,
+                  mb: 3,
+                  maxWidth: "320px",
+                  color: "#94a3b8",
+                }}
+              >
+                Providing high-performance computation resources, cutting-edge GPU environments, and automated tracking facilities for students, faculty, and research staff.
+              </Typography>
+            </Box>
+
+            {/* Quick Links Column */}
+            <Box>
+              <Typography
+                variant="subtitle2"
+                fontWeight={700}
+                sx={{ color: "#fff", mb: 2.5, textTransform: "uppercase", letterSpacing: "1px" }}
+              >
+                Quick Links
+              </Typography>
+              <Stack spacing={1.5}>
+                {navLinks.map((link) => (
+                  <Typography
+                    key={link.label}
+                    variant="body2"
+                    component="a"
+                    href={link.href}
+                    sx={{
+                      color: "#94a3b8",
+                      textDecoration: "none",
+                      transition: "color 0.2s",
+                      "&:hover": { color: "#3b82f6" },
+                    }}
+                  >
+                    {link.label}
+                  </Typography>
+                ))}
+              </Stack>
+            </Box>
+
+            {/* Contact Column */}
+            <Box>
+              <Typography
+                variant="subtitle2"
+                fontWeight={700}
+                sx={{ color: "#fff", mb: 2.5, textTransform: "uppercase", letterSpacing: "1px" }}
+              >
+                Contact & Support
+              </Typography>
+              <Stack spacing={2}>
+                <Box sx={{ display: "flex", alignItems: "flex-start" }}>
+                  <LocationOnIcon sx={{ color: "#3b82f6", mr: 1.5, mt: 0.25, fontSize: 20 }} />
+                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                    Computer Science Department<br />
+                    Negces Lab, Main Block
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <AccessTimeIcon sx={{ color: "#3b82f6", mr: 1.5, fontSize: 20 }} />
+                  <Typography variant="body2">
+                    Mon - Sat: 8:30 AM - 5:00 PM
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
+          </Box>
+
+          {/* Bottom copyright bar */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              justifyContent: "space-between",
+              alignItems: "center",
+              pt: 4,
+              gap: 2,
+            }}
+          >
+            <Typography variant="caption" sx={{ color: "#64748b" }}>
+              &copy; {new Date().getFullYear()} NegcesLab Slot Booking Management System. All rights reserved.
+            </Typography>
+            <Typography variant="caption" sx={{ color: "#64748b" }}>
+              Version 3.0.0
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
     </Box>
   );
 }
