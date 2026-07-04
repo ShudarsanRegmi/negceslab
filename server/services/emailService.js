@@ -28,7 +28,7 @@ const transporter = process.env.SMTP_HOST
 // Email templates
 const emailTemplates = {
   bookingApproved: (userName, computerName, startDate, endDate, startTime, endTime) => ({
-    subject: 'Lab Computer Booking Confirmation - Your Request Has Been Approved',
+    subject: 'Lab Computer Booking Confirmation - Approved',
     html: `
       <!DOCTYPE html>
       <html>
@@ -38,76 +38,78 @@ const emailTemplates = {
         <title>Lab Computer Booking Approved</title>
       </head>
       <body>
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
           
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 30px 40px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 600;">🎉 Booking Approved!</h1>
-            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Your lab computer reservation is confirmed</p>
+          <!-- Header Bar -->
+          <div style="background-color: #059669; padding: 35px 40px; text-align: left; border-bottom: 3px solid #047857;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #a7f3d0;">Reservation Confirmed</span>
+            <h1 style="margin: 5px 0 0 0; font-size: 26px; font-weight: 700; color: #ffffff;">Booking Approved</h1>
           </div>
 
-          <!-- Main Content -->
-          <div style="padding: 40px;">
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+          <!-- Main Content Body -->
+          <div style="padding: 40px; background-color: #ffffff;">
+            <p style="color: #1e293b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
               Dear <strong>${userName}</strong>,
             </p>
             
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-              Great news! Your lab computer booking request has been <strong style="color: #4CAF50;">approved</strong> and confirmed. 
-              We're pleased to reserve the requested computer for your use during the specified time slot.
+            <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              Your lab computer booking request has been reviewed and approved. The requested time slot is now reserved for your academic and research activities.
             </p>
             
             <!-- Booking Details Card -->
-            <div style="background-color: #f8f9fa; border-left: 4px solid #4CAF50; padding: 25px; border-radius: 8px; margin: 30px 0;">
-              <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 20px;">📋 Booking Details</h3>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #059669; padding: 25px; border-radius: 8px; margin: 0 0 30px 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+                <span style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569;">Reservation Specs</span>
+                <span style="font-size: 12px; font-weight: 700; padding: 4px 10px; background-color: #d1fae5; color: #065f46; border-radius: 9999px;">Approved</span>
+              </div>
               
               <table style="width: 100%; border-collapse: collapse;">
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500; width: 30%;">Computer:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${computerName}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500; width: 35%;">System Name</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${computerName}</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Date Range:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${startDate} to ${endDate}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Duration Dates</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startDate} to ${endDate}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Time Slot:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${startTime} - ${endTime}</td>
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Reserved Time</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startTime} - ${endTime}</td>
                 </tr>
               </table>
             </div>
 
-            <!-- Important Information -->
-            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
-              <h4 style="margin: 0 0 15px 0; color: #856404;">⚠️ Important Reminders</h4>
-              <ul style="margin: 0; padding-left: 20px; color: #856404;">
-                <li style="margin-bottom: 8px;">Please arrive at least 5 minutes before your scheduled time slot</li>
-                <li style="margin-bottom: 8px;">Bring a valid ID for verification purposes</li>
-                <li style="margin-bottom: 8px;">Follow all laboratory safety protocols and guidelines</li>
-                <li>Log out and clean up your workspace when finished</li>
+            <!-- Warning/Alert Box -->
+            <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #d97706; border-radius: 8px; padding: 20px; margin: 0 0 30px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #92400e; font-size: 15px; font-weight: 700;">Important Guidelines</h4>
+              <ul style="margin: 0; padding-left: 20px; color: #b45309; font-size: 14px; line-height: 1.6;">
+                <li style="margin-bottom: 6px;">Arrive at least 5 minutes prior to your scheduled reservation time.</li>
+                <li style="margin-bottom: 6px;">Ensure you bring a valid student/staff identification card.</li>
+                <li style="margin-bottom: 6px;">Adhere to standard laboratory security and hardware protocols.</li>
+                <li>Make sure to log out of all active sessions and clean your desk when finished.</li>
               </ul>
             </div>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              If you need to cancel or modify your booking, please contact the lab administrator at least 2 hours in advance. 
-              For any questions or technical support, feel free to reach out to our team.
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+              To cancel or modify your reservation, please update your dashboard status or contact the administrator at least 2 hours in advance.
             </p>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              We look forward to supporting your academic and research activities. Have a productive session!
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+              Have a productive computing session.
             </p>
           </div>
 
-          <!-- Footer -->
-          <div style="background-color: #f8f9fa; padding: 25px 40px; border-top: 1px solid #e9ecef;">
-            <p style="margin: 0 0 10px 0; color: #6c757d; font-size: 14px;">
-              Best regards,<br>
-              <strong style="color: #333;">Laboratory Management Team</strong><br>
-              Computer Science Department
+          <!-- Footer Area -->
+          <div style="background-color: #f8fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0; text-align: left;">
+            <p style="margin: 0 0 8px 0; color: #334155; font-size: 14px; font-weight: 700;">
+              Laboratory Management Team
             </p>
-            <p style="margin: 10px 0 0 0; color: #adb5bd; font-size: 12px;">
-              This is an automated message. Please do not reply directly to this email.
-              For support, contact the lab administrator.
+            <p style="margin: 0 0 15px 0; color: #64748b; font-size: 13px; line-height: 1.4;">
+              Computer Science Department<br>
+              Negces Lab Tracking System
+            </p>
+            <p style="margin: 0; color: #94a3b8; font-size: 11px;">
+              This is an automated operational system message. Please do not reply directly to this email.
             </p>
           </div>
         </div>
@@ -117,7 +119,7 @@ const emailTemplates = {
   }),
 
   bookingRejected: (userName, computerName, startDate, endDate, startTime, endTime, reason) => ({
-    subject: 'Lab Computer Booking Update - Request Status Notification',
+    subject: 'Lab Computer Booking Update - Request Declined',
     html: `
       <!DOCTYPE html>
       <html>
@@ -127,90 +129,82 @@ const emailTemplates = {
         <title>Lab Computer Booking Update</title>
       </head>
       <body>
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
           
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: white; padding: 30px 40px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 600;">📋 Booking Status Update</h1>
-            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Important information about your reservation request</p>
+          <!-- Header Bar -->
+          <div style="background-color: #dc2626; padding: 35px 40px; text-align: left; border-bottom: 3px solid #b91c1c;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #fca5a5;">Status Update</span>
+            <h1 style="margin: 5px 0 0 0; font-size: 26px; font-weight: 700; color: #ffffff;">Booking Request Declined</h1>
           </div>
 
-          <!-- Main Content -->
-          <div style="padding: 40px;">
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+          <!-- Main Content Body -->
+          <div style="padding: 40px; background-color: #ffffff;">
+            <p style="color: #1e293b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
               Dear <strong>${userName}</strong>,
             </p>
             
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-              Thank you for your interest in using our laboratory facilities. After careful review of your booking request, 
-              we regret to inform you that we are <strong style="color: #f44336;">unable to approve</strong> your reservation 
-              at this time.
+            <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              We have reviewed your booking request for the laboratory computing resources. Regrettably, we are unable to approve your reservation request at this time.
             </p>
             
             <!-- Booking Details Card -->
-            <div style="background-color: #f8f9fa; border-left: 4px solid #f44336; padding: 25px; border-radius: 8px; margin: 30px 0;">
-              <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 20px;">📋 Requested Booking Details</h3>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #dc2626; padding: 25px; border-radius: 8px; margin: 0 0 30px 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+                <span style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569;">Requested Specs</span>
+                <span style="font-size: 12px; font-weight: 700; padding: 4px 10px; background-color: #fee2e2; color: #991b1b; border-radius: 9999px;">Declined</span>
+              </div>
               
               <table style="width: 100%; border-collapse: collapse;">
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500; width: 30%;">Computer:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${computerName}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500; width: 35%;">System Name</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${computerName}</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Date Range:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${startDate} to ${endDate}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Duration Dates</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startDate} to ${endDate}</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Time Slot:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${startTime} - ${endTime}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Reserved Time</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startTime} - ${endTime}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Status Reason:</td>
-                  <td style="padding: 12px 0; color: #d32f2f; font-weight: 600;">${reason}</td>
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Declined Reason</td>
+                  <td style="padding: 10px 0; color: #b91c1c; font-size: 15px; font-weight: 700; line-height: 1.4;">${reason}</td>
                 </tr>
               </table>
             </div>
 
-            <!-- Alternative Options -->
-            <div style="background-color: #e8f5e8; border: 1px solid #c8e6c9; border-radius: 8px; padding: 20px; margin: 25px 0;">
-              <h4 style="margin: 0 0 15px 0; color: #2e7d32;">💡 Alternative Options</h4>
-              <ul style="margin: 0; padding-left: 20px; color: #2e7d32;">
-                <li style="margin-bottom: 8px;">Check available time slots for the same or different computers</li>
-                <li style="margin-bottom: 8px;">Consider booking during off-peak hours for better availability</li>
-                <li style="margin-bottom: 8px;">Submit your request earlier to secure preferred time slots</li>
-                <li>Contact the lab administrator for assistance with scheduling</li>
+            <!-- Info Box -->
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 20px; margin: 0 0 30px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #166534; font-size: 15px; font-weight: 700;">Alternative Solutions</h4>
+              <ul style="margin: 0; padding-left: 20px; color: #15803d; font-size: 14px; line-height: 1.6;">
+                <li style="margin-bottom: 6px;">Query other available systems or time slots in the dashboard.</li>
+                <li style="margin-bottom: 6px;">Try scheduling sessions during off-peak times (early mornings or late afternoons).</li>
+                <li style="margin-bottom: 6px;">Submit booking requests well in advance to secure allocation.</li>
+                <li>Contact the supervisor or administrator desk directly for scheduling overrides.</li>
               </ul>
             </div>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              We understand this may be disappointing, and we apologize for any inconvenience. We encourage you to 
-              submit a new booking request with different parameters or alternative time slots. Our lab resources are 
-              in high demand, and we strive to accommodate as many users as possible.
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
+              You can submit a new booking request immediately using the reservation system dashboard.
             </p>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              For assistance with finding suitable alternatives or if you have questions about the rejection reason, 
-              please don't hesitate to contact our lab administrator. We're here to help you find the best solution 
-              for your computing needs.
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+              For further queries or overrides, contact the system administrator desk.
             </p>
-
-            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
-              <p style="margin: 0; color: #856404; font-weight: 500;">
-                🔄 <strong>Next Steps:</strong> You can submit a new booking request immediately through the lab booking system.
-              </p>
-            </div>
           </div>
 
-          <!-- Footer -->
-          <div style="background-color: #f8f9fa; padding: 25px 40px; border-top: 1px solid #e9ecef;">
-            <p style="margin: 0 0 10px 0; color: #6c757d; font-size: 14px;">
-              Best regards,<br>
-              <strong style="color: #333;">Laboratory Management Team</strong><br>
-              Computer Science Department
+          <!-- Footer Area -->
+          <div style="background-color: #f8fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0; text-align: left;">
+            <p style="margin: 0 0 8px 0; color: #334155; font-size: 14px; font-weight: 700;">
+              Laboratory Management Team
             </p>
-            <p style="margin: 10px 0 0 0; color: #adb5bd; font-size: 12px;">
-              This is an automated message. Please do not reply directly to this email.
-              For support, contact the lab administrator.
+            <p style="margin: 0 0 15px 0; color: #64748b; font-size: 13px; line-height: 1.4;">
+              Computer Science Department<br>
+              Negces Lab Tracking System
+            </p>
+            <p style="margin: 0; color: #94a3b8; font-size: 11px;">
+              This is an automated operational system message. Please do not reply directly to this email.
             </p>
           </div>
         </div>
@@ -220,7 +214,7 @@ const emailTemplates = {
   }),
 
   bookingCancelled: (userName, computerName, startDate, endDate, startTime, endTime) => ({
-    subject: 'Lab Computer Booking Cancellation Confirmation - Reservation Updated',
+    subject: 'Lab Computer Booking Cancellation Confirmation',
     html: `
       <!DOCTYPE html>
       <html>
@@ -230,95 +224,77 @@ const emailTemplates = {
         <title>Lab Computer Booking Cancellation</title>
       </head>
       <body>
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
           
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; padding: 30px 40px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 600;">🔄 Booking Cancelled</h1>
-            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Your reservation has been successfully cancelled</p>
+          <!-- Header Bar -->
+          <div style="background-color: #ea580c; padding: 35px 40px; text-align: left; border-bottom: 3px solid #c2410c;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #ffedd5;">Status Update</span>
+            <h1 style="margin: 5px 0 0 0; font-size: 26px; font-weight: 700; color: #ffffff;">Booking Cancelled</h1>
           </div>
 
-          <!-- Main Content -->
-          <div style="padding: 40px;">
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+          <!-- Main Content Body -->
+          <div style="padding: 40px; background-color: #ffffff;">
+            <p style="color: #1e293b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
               Dear <strong>${userName}</strong>,
             </p>
             
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-              We're writing to confirm that your lab computer booking has been <strong style="color: #ff9800;">successfully cancelled</strong>. 
-              The previously reserved time slot has been released and is now available for other users to book.
+            <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              This email confirms that your lab computer booking has been cancelled. The allocated time slot has been released back into the pool and is now available for other users to reserve.
             </p>
             
             <!-- Booking Details Card -->
-            <div style="background-color: #f8f9fa; border-left: 4px solid #ff9800; padding: 25px; border-radius: 8px; margin: 30px 0;">
-              <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 20px;">📋 Cancelled Booking Details</h3>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #ea580c; padding: 25px; border-radius: 8px; margin: 0 0 30px 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+                <span style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569;">Released Reservation</span>
+                <span style="font-size: 12px; font-weight: 700; padding: 4px 10px; background-color: #ffedd5; color: #9a3412; border-radius: 9999px;">Cancelled</span>
+              </div>
               
               <table style="width: 100%; border-collapse: collapse;">
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500; width: 30%;">Computer:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${computerName}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500; width: 35%;">System Name</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${computerName}</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Date Range:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${startDate} to ${endDate}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Time Slot:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${startTime} - ${endTime}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Date Range</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startDate} to ${endDate}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Status:</td>
-                  <td style="padding: 12px 0; color: #ff9800; font-weight: 600;">✅ Cancelled Successfully</td>
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Reserved Time</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startTime} - ${endTime}</td>
                 </tr>
               </table>
             </div>
 
-            <!-- Information Notice -->
-            <div style="background-color: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 20px; margin: 25px 0;">
-              <h4 style="margin: 0 0 15px 0; color: #1565c0;">ℹ️ What This Means</h4>
-              <ul style="margin: 0; padding-left: 20px; color: #1565c0;">
-                <li style="margin-bottom: 8px;">The computer is now available for other users during this time slot</li>
-                <li style="margin-bottom: 8px;">No charges or penalties apply for this cancellation</li>
-                <li style="margin-bottom: 8px;">Your booking history has been updated to reflect the cancellation</li>
-                <li>You can make a new booking request at any time through the system</li>
+            <!-- Info Box -->
+            <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; padding: 20px; margin: 0 0 30px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #1e40af; font-size: 15px; font-weight: 700;">Release Impact</h4>
+              <ul style="margin: 0; padding-left: 20px; color: #1d4ed8; font-size: 14px; line-height: 1.6;">
+                <li style="margin-bottom: 6px;">The resource status is now marked as available.</li>
+                <li style="margin-bottom: 6px;">No penalties or logs have been recorded for this cancellation.</li>
+                <li>You can make new bookings immediately at any time.</li>
               </ul>
             </div>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              We understand that plans can change, and we appreciate you cancelling your booking in advance to allow 
-              other students and researchers to utilize the lab resources. This helps us maintain an efficient and 
-              fair booking system for everyone.
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
+              Thank you for cancelling in advance so that other researchers can utilize the lab systems.
             </p>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              If you need to make a new reservation, you can submit a new booking request through our lab booking 
-              system at any time. We're here to support your academic and research activities whenever you need 
-              access to our computing facilities.
-            </p>
-
-            <!-- Quick Action -->
-            <div style="background-color: #e8f5e8; border: 1px solid #c8e6c9; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center;">
-              <p style="margin: 0; color: #2e7d32; font-weight: 500;">
-                🚀 <strong>Ready to book again?</strong> Access the lab booking system to submit a new request.
-              </p>
-            </div>
-
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              If you have any questions about this cancellation or need assistance with future bookings, 
-              please don't hesitate to contact our lab administrator team.
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+              Need a new session? You can schedule another one from the dashboard at any time.
             </p>
           </div>
 
-          <!-- Footer -->
-          <div style="background-color: #f8f9fa; padding: 25px 40px; border-top: 1px solid #e9ecef;">
-            <p style="margin: 0 0 10px 0; color: #6c757d; font-size: 14px;">
-              Best regards,<br>
-              <strong style="color: #333;">Laboratory Management Team</strong><br>
-              Computer Science Department
+          <!-- Footer Area -->
+          <div style="background-color: #f8fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0; text-align: left;">
+            <p style="margin: 0 0 8px 0; color: #334155; font-size: 14px; font-weight: 700;">
+              Laboratory Management Team
             </p>
-            <p style="margin: 10px 0 0 0; color: #adb5bd; font-size: 12px;">
-              This is an automated message. Please do not reply directly to this email.
-              For support, contact the lab administrator.
+            <p style="margin: 0 0 15px 0; color: #64748b; font-size: 13px; line-height: 1.4;">
+              Computer Science Department<br>
+              Negces Lab Tracking System
+            </p>
+            <p style="margin: 0; color: #94a3b8; font-size: 11px;">
+              This is an automated operational system message. Please do not reply directly to this email.
             </p>
           </div>
         </div>
@@ -328,7 +304,7 @@ const emailTemplates = {
   }),
 
   bookingExpired: (userName, computerName, startDate, endDate, startTime, endTime) => ({
-    subject: 'Lab Computer Booking Expiry Notification - Session Completed',
+    subject: 'Lab Computer Booking Expiry Notification',
     html: `
       <!DOCTYPE html>
       <html>
@@ -338,106 +314,159 @@ const emailTemplates = {
         <title>Lab Computer Booking Expiry</title>
       </head>
       <body>
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
           
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%); color: white; padding: 30px 40px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 600;">⏰ Booking Session Completed</h1>
-            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Your reserved time slot has concluded</p>
+          <!-- Header Bar -->
+          <div style="background-color: #4b5563; padding: 35px 40px; text-align: left; border-bottom: 3px solid #374151;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #e2e8f0;">Session Status</span>
+            <h1 style="margin: 5px 0 0 0; font-size: 26px; font-weight: 700; color: #ffffff;">Session Completed</h1>
           </div>
 
-          <!-- Main Content -->
-          <div style="padding: 40px;">
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+          <!-- Main Content Body -->
+          <div style="padding: 40px; background-color: #ffffff;">
+            <p style="color: #1e293b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
               Dear <strong>${userName}</strong>,
             </p>
             
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-              We hope you had a productive session! This email confirms that your lab computer booking has 
-              <strong style="color: #9e9e9e;">reached its scheduled end time</strong> and has now expired. 
-              The computer is now available for the next scheduled user or for new reservations.
+            <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              This email confirms that your lab computer booking session has reached its scheduled end time and is now expired. The computer is now available for the next scheduled user.
             </p>
             
             <!-- Booking Details Card -->
-            <div style="background-color: #f8f9fa; border-left: 4px solid #9e9e9e; padding: 25px; border-radius: 8px; margin: 30px 0;">
-              <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 20px;">📋 Completed Session Details</h3>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #4b5563; padding: 25px; border-radius: 8px; margin: 0 0 30px 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+                <span style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569;">Completed Slot</span>
+                <span style="font-size: 12px; font-weight: 700; padding: 4px 10px; background-color: #f1f5f9; color: #334155; border-radius: 9999px;">Completed</span>
+              </div>
               
               <table style="width: 100%; border-collapse: collapse;">
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500; width: 30%;">Computer:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${computerName}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500; width: 35%;">System Name</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${computerName}</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Date Range:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${startDate} to ${endDate}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Time Slot:</td>
-                  <td style="padding: 12px 0; color: #333; font-weight: 600;">${startTime} - ${endTime}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Date Range</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startDate} to ${endDate}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px 0; color: #6c757d; font-weight: 500;">Status:</td>
-                  <td style="padding: 12px 0; color: #9e9e9e; font-weight: 600;">✅ Session Completed</td>
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Reserved Time</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startTime} - ${endTime}</td>
                 </tr>
               </table>
             </div>
 
-            <!-- Session Summary -->
-            <div style="background-color: #e8f5e8; border: 1px solid #c8e6c9; border-radius: 8px; padding: 20px; margin: 25px 0;">
-              <h4 style="margin: 0 0 15px 0; color: #2e7d32;">🎯 Session Summary</h4>
-              <ul style="margin: 0; padding-left: 20px; color: #2e7d32;">
-                <li style="margin-bottom: 8px;">Your booking session has been completed successfully</li>
-                <li style="margin-bottom: 8px;">We hope you accomplished your academic or research objectives</li>
-                <li style="margin-bottom: 8px;">The computer has been logged out and is ready for the next user</li>
-                <li>Thank you for following lab protocols and guidelines</li>
-              </ul>
-            </div>
-
-            <!-- Feedback Request -->
-            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
-              <h4 style="margin: 0 0 15px 0; color: #856404;">💭 Your Feedback Matters</h4>
-              <p style="margin: 0; color: #856404;">
-                We continuously strive to improve our lab facilities and services. If you experienced any issues 
-                during your session or have suggestions for improvement, we'd love to hear from you. 
-                Please consider sharing your feedback with the lab administrator.
+            <!-- Feedback Notice Box -->
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-left: 4px solid #d97706; border-radius: 8px; padding: 20px; margin: 0 0 30px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #92400e; font-size: 15px; font-weight: 700;">Feedback and Issues</h4>
+              <p style="margin: 0; color: #b45309; font-size: 14px; line-height: 1.6;">
+                We strive to maintain high system reliability. If you faced hardware issues, missing packages, or general problems, please report them to the lab administrator team.
               </p>
             </div>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              We hope your session was productive and that our computing resources helped advance your academic 
-              or research goals. Whether you were working on assignments, conducting research, or developing projects, 
-              we're glad we could provide the tools you needed.
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
+              Thank you for using the laboratory computing environment responsibly.
             </p>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              If you need to use the lab computers again in the future, you can submit new booking requests through 
-              our reservation system at any time. We maintain regular availability throughout the week to accommodate 
-              various academic schedules and project requirements.
-            </p>
-
-            <!-- Quick Action -->
-            <div style="background-color: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center;">
-              <p style="margin: 0; color: #1565c0; font-weight: 500;">
-                🔄 <strong>Need more lab time?</strong> Submit a new booking request through the lab reservation system.
-              </p>
-            </div>
-
-            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 25px 0;">
-              Thank you for using our laboratory facilities responsibly. If you have any questions or need assistance 
-              with future bookings, our lab administrator team is always available to help.
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+              Need more computing time? Submit a new booking request in the dashboard at any time.
             </p>
           </div>
 
-          <!-- Footer -->
-          <div style="background-color: #f8f9fa; padding: 25px 40px; border-top: 1px solid #e9ecef;">
-            <p style="margin: 0 0 10px 0; color: #6c757d; font-size: 14px;">
-              Best regards,<br>
-              <strong style="color: #333;">Laboratory Management Team</strong><br>
-              Computer Science Department
+          <!-- Footer Area -->
+          <div style="background-color: #f8fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0; text-align: left;">
+            <p style="margin: 0 0 8px 0; color: #334155; font-size: 14px; font-weight: 700;">
+              Laboratory Management Team
             </p>
-            <p style="margin: 10px 0 0 0; color: #adb5bd; font-size: 12px;">
-              This is an automated message. Please do not reply directly to this email.
-              For support, contact the lab administrator.
+            <p style="margin: 0 0 15px 0; color: #64748b; font-size: 13px; line-height: 1.4;">
+              Computer Science Department<br>
+              Negces Lab Tracking System
+            </p>
+            <p style="margin: 0; color: #94a3b8; font-size: 11px;">
+              This is an automated operational system message. Please do not reply directly to this email.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  }),
+
+  adminNewBookingRequest: (adminName, userName, userEmail, computerName, startDate, endDate, startTime, endTime, reason, bookingId) => ({
+    subject: `New Lab Booking Request [ID: ${bookingId}] - Action Required`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Booking Request</title>
+      </head>
+      <body>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          
+          <!-- Header Bar -->
+          <div style="background-color: #1e3a8a; padding: 35px 40px; text-align: left; border-bottom: 3px solid #172554;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #bfdbfe;">Administrative Alert</span>
+            <h1 style="margin: 5px 0 0 0; font-size: 26px; font-weight: 700; color: #ffffff;">New Booking Request</h1>
+          </div>
+
+          <!-- Main Content Body -->
+          <div style="padding: 40px; background-color: #ffffff;">
+            <p style="color: #1e293b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Dear <strong>${adminName}</strong>,
+            </p>
+            
+            <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              A new computer booking request has been submitted and is pending review. Please verify the booking parameters below and update its status.
+            </p>
+            
+            <!-- Booking Details Card -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; padding: 25px; border-radius: 8px; margin: 0 0 30px 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+                <span style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569;">Request Details</span>
+                <span style="font-size: 12px; font-weight: 700; padding: 4px 10px; background-color: #dbeafe; color: #1e40af; border-radius: 9999px;">Pending Review</span>
+              </div>
+              
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500; width: 35%;">Booking ID</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${bookingId}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Requester</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${userName} (${userEmail})</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Computer</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${computerName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Date Range</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startDate} to ${endDate}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Time Slot</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700;">${startTime} - ${endTime}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; color: #64748b; font-size: 14px; font-weight: 500;">Reason</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 700; line-height: 1.4;">${reason}</td>
+                </tr>
+              </table>
+            </div>
+
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+              Please access the Negces Lab Tracking System admin portal to approve or reject this booking request.
+            </p>
+          </div>
+
+          <!-- Footer Area -->
+          <div style="background-color: #f8fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0; text-align: left;">
+            <p style="margin: 0 0 8px 0; color: #334155; font-size: 14px; font-weight: 700;">
+              Laboratory Management System
+            </p>
+            <p style="margin: 0; color: #64748b; font-size: 13px;">
+              Computer Science Department
             </p>
           </div>
         </div>
@@ -485,6 +514,10 @@ const sendBookingExpiredEmail = async (userEmail, userName, computerName, startD
   return await sendEmail(userEmail, 'bookingExpired', [userName, computerName, startDate, endDate, startTime, endTime]);
 };
 
+const sendAdminNewBookingRequestEmail = async (adminEmail, adminName, userName, userEmail, computerName, startDate, endDate, startTime, endTime, reason, bookingId) => {
+  return await sendEmail(adminEmail, 'adminNewBookingRequest', [adminName, userName, userEmail, computerName, startDate, endDate, startTime, endTime, reason, bookingId]);
+};
+
 const sendSuperadminOtpEmail = async (userEmail, otp, validMinutes) => {
   try {
     const mailOptions = {
@@ -528,6 +561,7 @@ module.exports = {
   sendBookingRejectedEmail,
   sendBookingCancelledEmail,
   sendBookingExpiredEmail,
+  sendAdminNewBookingRequestEmail,
   sendSuperadminOtpEmail,
   sendEmail
 }; 

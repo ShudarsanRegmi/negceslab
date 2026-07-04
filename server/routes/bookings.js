@@ -11,7 +11,8 @@ const policy = require('../../shared/policy');
 const { 
   sendBookingApprovedEmail, 
   sendBookingRejectedEmail, 
-  sendBookingCancelledEmail 
+  sendBookingCancelledEmail,
+  sendAdminNewBookingRequestEmail
 } = require('../services/emailService');
 
 // Get all bookings (admin) or user's bookings
@@ -356,6 +357,7 @@ router.post('/', verifyToken, async (req, res) => {
       if (endMinutes - startMinutes < policy.MIN_BOOKING_HOURS * 60) {
         return res.status(400).json({ message: `Minimum booking duration is ${policy.MIN_BOOKING_HOURS} hour(s) for same-day bookings.` });
       }
+    }
     // Check lab hours
     if (startMinutes < minLabMinutes) {
       return res.status(400).json({ message: `Start time must be at or after ${policy.LAB_OPEN_HOUR}:${policy.LAB_OPEN_MINUTE.toString().padStart(2, '0')}.` });
@@ -439,6 +441,25 @@ router.post('/', verifyToken, async (req, res) => {
     }));
     if (adminNotifications.length > 0) {
       await Notification.insertMany(adminNotifications);
+      
+      // Send email notifications to all admins asynchronously (do not block client response)
+      Promise.all(admins.map(admin => 
+        sendAdminNewBookingRequestEmail(
+          admin.email,
+          admin.name || 'Admin',
+          req.user.name,
+          req.user.email,
+          computer.name,
+          startDate,
+          endDate,
+          startTime,
+          endTime,
+          reason,
+          userBookingId
+        )
+      )).catch(err => {
+        console.error('Failed to send new booking notification emails to admins:', err);
+      });
     }
 
     // Populate computer and user details before sending response
