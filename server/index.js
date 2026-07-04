@@ -55,6 +55,7 @@ const systemDetailsRoutes = require('./routes/systemDetails');
 const temporaryReleaseRoutes = require('./routes/temporaryReleases');
 const achievementRoutes = require('./routes/achievements');
 const superadminRoutes = require('./routes/superadmin');
+const { setupSwagger } = require("./swagger");
 
 // Use routes
 app.use("/api/auth", authRoutes);
@@ -66,6 +67,11 @@ app.use('/api/system-details', systemDetailsRoutes);
 app.use('/api/temporary-releases', temporaryReleaseRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/superadmin', superadminRoutes);
+
+// Setup Swagger UI (only in development/localhost, not in production)
+if (process.env.NODE_ENV !== "production") {
+  setupSwagger(app);
+}
 
 
 app.get('/', (req, res)=>{
