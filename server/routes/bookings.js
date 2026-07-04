@@ -119,6 +119,48 @@ router.post('/', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    // Format validation (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+      return res.status(400).json({ message: 'Invalid date format (must be YYYY-MM-DD)' });
+    }
+
+    // Calendar check
+    const startParsed = new Date(startDate + 'T00:00:00');
+    const endParsed = new Date(endDate + 'T00:00:00');
+    if (isNaN(startParsed.getTime()) || isNaN(endParsed.getTime())) {
+      return res.status(400).json({ message: 'Invalid start or end date' });
+    }
+
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+
+    if (startParsed.getFullYear() !== startYear || 
+        (startParsed.getMonth() + 1) !== startMonth || 
+        startParsed.getDate() !== startDay) {
+      return res.status(400).json({ message: 'Invalid calendar start date' });
+    }
+
+    if (endParsed.getFullYear() !== endYear || 
+        (endParsed.getMonth() + 1) !== endMonth || 
+        endParsed.getDate() !== endDay) {
+      return res.status(400).json({ message: 'Invalid calendar end date' });
+    }
+
+    // Time validation (HH:MM)
+    const timeRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+      return res.status(400).json({ message: 'Invalid time format (must be HH:MM, 24-hour format)' });
+    }
+
+    if (startDate > endDate) {
+      return res.status(400).json({ message: 'Start date must be before or equal to end date' });
+    }
+
+    if (startDate === endDate && startTime >= endTime) {
+      return res.status(400).json({ message: 'Start time must be before end time' });
+    }
+
     // Check if computer exists
     const computer = await Computer.findById(computerId);
     if (!computer) {
@@ -718,6 +760,59 @@ router.put('/:id/time', verifyToken, async (req, res) => {
     const booking = await Booking.findById(req.params.id);
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Validate parameters if provided
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const timeRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
+
+    if (startDate !== undefined) {
+      if (!dateRegex.test(startDate)) {
+        return res.status(400).json({ message: 'Invalid date format (must be YYYY-MM-DD)' });
+      }
+      const parsed = new Date(startDate + 'T00:00:00');
+      if (isNaN(parsed.getTime())) {
+        return res.status(400).json({ message: 'Invalid start date' });
+      }
+      const [year, month, day] = startDate.split('-').map(Number);
+      if (parsed.getFullYear() !== year || (parsed.getMonth() + 1) !== month || parsed.getDate() !== day) {
+        return res.status(400).json({ message: 'Invalid calendar start date' });
+      }
+    }
+
+    if (endDate !== undefined) {
+      if (!dateRegex.test(endDate)) {
+        return res.status(400).json({ message: 'Invalid date format (must be YYYY-MM-DD)' });
+      }
+      const parsed = new Date(endDate + 'T00:00:00');
+      if (isNaN(parsed.getTime())) {
+        return res.status(400).json({ message: 'Invalid end date' });
+      }
+      const [year, month, day] = endDate.split('-').map(Number);
+      if (parsed.getFullYear() !== year || (parsed.getMonth() + 1) !== month || parsed.getDate() !== day) {
+        return res.status(400).json({ message: 'Invalid calendar end date' });
+      }
+    }
+
+    if (startTime !== undefined && !timeRegex.test(startTime)) {
+      return res.status(400).json({ message: 'Invalid time format (must be HH:MM, 24-hour format)' });
+    }
+
+    if (endTime !== undefined && !timeRegex.test(endTime)) {
+      return res.status(400).json({ message: 'Invalid time format (must be HH:MM, 24-hour format)' });
+    }
+
+    const finalStartDate = startDate !== undefined ? startDate : booking.startDate;
+    const finalEndDate = endDate !== undefined ? endDate : booking.endDate;
+    const finalStartTime = startTime !== undefined ? startTime : booking.startTime;
+    const finalEndTime = endTime !== undefined ? endTime : booking.endTime;
+
+    if (finalStartDate > finalEndDate) {
+      return res.status(400).json({ message: 'Start date must be before or equal to end date' });
+    }
+
+    if (finalStartDate === finalEndDate && finalStartTime >= finalEndTime) {
+      return res.status(400).json({ message: 'Start time must be before end time' });
     }
 
     // Update only the provided fields

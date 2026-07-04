@@ -84,6 +84,12 @@ test_booking "INVALID_DATE_RANGE" \
 "400" \
 "End date before start date should be rejected"
 
+# Test 3b: Arbitrary date format (e.g. 2026-07-200)
+test_booking "ARBITRARY_DATE_FORMAT" \
+'{"computerId":"68835a7f2a9758dd26f1ac97","startDate":"2026-07-200","endDate":"2026-07-300","startTime":"09:00","endTime":"17:30","reason":"arbitrary date format test","requiresGPU":false,"gpuMemoryRequired":0,"problemStatement":"testing format","datasetType":"Video","datasetSize":{"value":23,"unit":"GB"},"datasetLink":"test","bottleneckExplanation":"test"}' \
+"400" \
+"Arbitrary date formats like 2026-07-200 should be rejected"
+
 # 2. TIME VALIDATION TESTS
 echo -e "\n${BLUE}=== TIME VALIDATION TESTS ===${NC}"
 
