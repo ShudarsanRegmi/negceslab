@@ -161,6 +161,45 @@ router.post('/', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'Start time must be before end time' });
     }
 
+    // Stored XSS Prevention: Check datasetLink
+    if (datasetLink && datasetLink.toLowerCase().startsWith('javascript:')) {
+      return res.status(400).json({ message: 'Dataset link cannot be a javascript: URL' });
+    }
+
+    // Input length limits (DoS & DB Bloating Prevention)
+    if (reason && reason.length > 500) {
+      return res.status(400).json({ message: 'Reason is too long (maximum 500 characters)' });
+    }
+
+    if (problemStatement && problemStatement.length > 2000) {
+      return res.status(400).json({ message: 'Problem statement is too long (maximum 2000 characters)' });
+    }
+
+    if (bottleneckExplanation && bottleneckExplanation.length > 2000) {
+      return res.status(400).json({ message: 'Bottleneck explanation is too long (maximum 2000 characters)' });
+    }
+
+    // GPU Memory check logic validation
+    if (requiresGPU) {
+      if (typeof gpuMemoryRequired !== 'number' || gpuMemoryRequired <= 0 || gpuMemoryRequired > 48) {
+        return res.status(400).json({ message: 'GPU memory request must be between 1 and 48 GB' });
+      }
+    } else {
+      if (gpuMemoryRequired !== undefined && gpuMemoryRequired !== 0) {
+        return res.status(400).json({ message: 'GPU memory cannot be requested if GPU is not required' });
+      }
+    }
+
+    // Dataset size validation
+    if (datasetSize) {
+      if (typeof datasetSize.value !== 'number' || isNaN(datasetSize.value)) {
+        return res.status(400).json({ message: 'Dataset size value must be a valid number' });
+      }
+      if (datasetSize.value < 0) {
+        return res.status(400).json({ message: 'Dataset size cannot be negative' });
+      }
+    }
+
     // Check if computer exists
     const computer = await Computer.findById(computerId);
     if (!computer) {
@@ -317,11 +356,6 @@ router.post('/', verifyToken, async (req, res) => {
       if (endMinutes - startMinutes < policy.MIN_BOOKING_HOURS * 60) {
         return res.status(400).json({ message: `Minimum booking duration is ${policy.MIN_BOOKING_HOURS} hour(s) for same-day bookings.` });
       }
-    }
-    // Prevent negative dataset size
-    if (datasetSize && datasetSize.value < 0) {
-      return res.status(400).json({ message: 'Dataset size cannot be negative.' });
-    }
     // Check lab hours
     if (startMinutes < minLabMinutes) {
       return res.status(400).json({ message: `Start time must be at or after ${policy.LAB_OPEN_HOUR}:${policy.LAB_OPEN_MINUTE.toString().padStart(2, '0')}.` });
