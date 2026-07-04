@@ -75,7 +75,7 @@ if (process.env.NODE_ENV !== "production") {
 
 
 app.get('/', (req, res)=>{
-	res.status(200).json({'msg': "Welcome to Negces Lab Server API", 'Version': "3.0.2", "lastUpdatedOn": "2026-06-06"});
+	res.status(200).json({'msg': "Welcome to Negces Lab Server API", 'Version': "3.0.3", "lastUpdatedOn": "Saturday 04 July 2026 06:41:14 PM IST"});
 });
 
 // Health endpoint
