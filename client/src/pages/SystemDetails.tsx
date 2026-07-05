@@ -26,6 +26,8 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
+  Tooltip,
+  Avatar,
 } from "@mui/material";
 import {
   Computer as ComputerIcon,
@@ -216,11 +218,35 @@ const SystemDetails: React.FC = () => {
       setComputers(prev => prev.map(comp => 
         comp._id === selectedComputer._id ? response.data : comp
       ));
+      setSelectedComputer(response.data);
       setSoftwareDialogOpen(false);
       setSuccessMessage("Software added successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (error) {
       console.error("Error adding software:", error);
+      setError("Failed to add software");
+    }
+  };
+
+  const handleAddFromPool = async (software: any) => {
+    if (!selectedComputer) return;
+
+    try {
+      const response = await systemDetailsAPI.addSoftware(selectedComputer._id, {
+        name: software.name,
+        version: software.version,
+        category: software.category,
+        icon: software.icon
+      });
+      setComputers(prev => prev.map(comp => 
+        comp._id === selectedComputer._id ? response.data : comp
+      ));
+      setSelectedComputer(response.data);
+      setSoftwareDialogOpen(false);
+      setSuccessMessage(`Successfully added ${software.name}!`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error) {
+      console.error("Error adding software from pool:", error);
       setError("Failed to add software");
     }
   };
@@ -233,6 +259,7 @@ const SystemDetails: React.FC = () => {
       setComputers(prev => prev.map(comp => 
         comp._id === selectedComputer._id ? response.data : comp
       ));
+      setSelectedComputer(response.data);
       setSuccessMessage("Software removed successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (error) {
@@ -440,17 +467,17 @@ const SystemDetails: React.FC = () => {
                     </Box>
 
                     {/* Installed Software - Simplified */}
-                    {computer.systemDetails.installedSoftware && computer.systemDetails.installedSoftware.length > 0 && (
-                      <Box sx={{ mt: 'auto' }}>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center', 
-                          mb: 1.5 
-                        }}>
-                          <Typography variant="subtitle2" color="primary" fontWeight="600">
-                            Software ({computer.systemDetails.installedSoftware.length})
-                          </Typography>
+                    <Box sx={{ mt: 'auto', pt: 2, display: 'flex', flexDirection: 'column' }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        mb: 1.5 
+                      }}>
+                        <Typography variant="subtitle2" color="primary" fontWeight="600">
+                          Installed Software {computer.systemDetails.installedSoftware && computer.systemDetails.installedSoftware.length > 0 ? `(${computer.systemDetails.installedSoftware.length})` : ''}
+                        </Typography>
+                        {computer.systemDetails.installedSoftware && computer.systemDetails.installedSoftware.length > 0 && (
                           <Button
                             size="small"
                             variant="text"
@@ -466,60 +493,64 @@ const SystemDetails: React.FC = () => {
                           >
                             View All
                           </Button>
-                        </Box>
-                        
-                        {/* Show only first 4 software as small chips */}
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {computer.systemDetails.installedSoftware.slice(0, 4).map((software, index) => (
-                            <Chip
-                              key={index}
-                              label={
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <img 
-                                    src={software.icon} 
-                                    alt={software.name}
-                                    style={{ width: 14, height: 14, objectFit: 'contain' }}
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                    }}
-                                  />
-                                  <span>{software.name}</span>
-                                </Box>
-                              }
-                              size="small"
-                              variant="outlined"
-                              sx={{ 
-                                fontSize: '0.7rem',
-                                height: 24,
-                                '& .MuiChip-label': {
-                                  px: 1
-                                }
-                              }}
-                            />
+                        )}
+                      </Box>
+                      
+                      {computer.systemDetails.installedSoftware && computer.systemDetails.installedSoftware.length > 0 ? (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+                          {computer.systemDetails.installedSoftware.slice(0, 5).map((software, index) => (
+                            <Tooltip key={index} title={`${software.name} ${software.version || ''}`} arrow>
+                              <Avatar
+                                src={software.icon}
+                                alt={software.name}
+                                variant="rounded"
+                                sx={{ 
+                                  width: 28, 
+                                  height: 28, 
+                                  bgcolor: 'grey.100',
+                                  border: '1px solid',
+                                  borderColor: 'grey.200',
+                                  p: 0.5,
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                  '& img': {
+                                    objectFit: 'contain'
+                                  }
+                                }}
+                              />
+                            </Tooltip>
                           ))}
-                          {computer.systemDetails.installedSoftware.length > 4 && (
-                            <Chip
-                              label={`+${computer.systemDetails.installedSoftware.length - 4}`}
-                              size="small"
-                              variant="filled"
-                              color="primary"
-                              sx={{ 
-                                fontSize: '0.7rem',
-                                height: 24,
-                                cursor: 'pointer',
-                                '& .MuiChip-label': {
-                                  px: 1
-                                }
-                              }}
-                              onClick={() => {
-                                setSelectedComputerForSoftware(computer);
-                                setSoftwareViewDialogOpen(true);
-                              }}
-                            />
+                          {computer.systemDetails.installedSoftware.length > 5 && (
+                            <Tooltip title="View all installed software" arrow>
+                              <Avatar
+                                sx={{ 
+                                  width: 28, 
+                                  height: 28, 
+                                  fontSize: '0.75rem', 
+                                  fontWeight: 700,
+                                  bgcolor: 'primary.main',
+                                  color: 'primary.contrastText',
+                                  cursor: 'pointer',
+                                  border: '1px solid',
+                                  borderColor: 'primary.dark'
+                                }}
+                                onClick={() => {
+                                  setSelectedComputerForSoftware(computer);
+                                  setSoftwareViewDialogOpen(true);
+                                }}
+                              >
+                                +{computer.systemDetails.installedSoftware.length - 5}
+                              </Avatar>
+                            </Tooltip>
                           )}
                         </Box>
-                      </Box>
-                    )}
+                      ) : (
+                        <Box sx={{ height: 28, display: 'flex', alignItems: 'center' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', fontSize: '0.85rem' }}>
+                            No software entries recorded.
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
 
                     {/* Last Updated - Compact */}
                     <Typography 
@@ -530,7 +561,8 @@ const SystemDetails: React.FC = () => {
                         pt: 1.5, 
                         borderTop: '1px solid', 
                         borderColor: 'divider',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        display: 'block'
                       }}
                     >
                       Updated {new Date(computer.systemDetails.lastUpdated).toLocaleDateString()}
@@ -748,6 +780,10 @@ const SystemDetails: React.FC = () => {
               helperText="Search by software name or keywords"
             />
             
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontWeight: 600 }}>
+              Quick Add: Click on any software from the pool below to install it instantly.
+            </Typography>
+
             {/* Software Pool Results */}
             <Box sx={{ maxHeight: 300, overflow: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, p: 1 }}>
               {filteredSoftware.length > 0 ? (
@@ -758,17 +794,9 @@ const SystemDetails: React.FC = () => {
                         variant="outlined" 
                         sx={{ 
                           cursor: 'pointer',
-                          '&:hover': { backgroundColor: 'action.hover' }
+                          '&:hover': { backgroundColor: 'action.hover', borderColor: 'primary.main' }
                         }}
-                        onClick={() => {
-                          setSoftwareForm({
-                            name: software.name,
-                            version: software.version,
-                            category: software.category,
-                            icon: software.icon
-                          });
-                          setSoftwareSearchTerm('');
-                        }}
+                        onClick={() => handleAddFromPool(software)}
                       >
                         <CardContent sx={{ py: 1, px: 2 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
