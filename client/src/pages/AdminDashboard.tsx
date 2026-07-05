@@ -514,6 +514,67 @@ const AdminDashboard: React.FC = () => {
   const getBookingUserEmail = (booking: any) =>
     booking.userInfo?.email || booking.user?.email || booking.userId;
 
+  // Helper to find overlapping pending bookings
+  const getOverlappingPendingBookings = (currentBooking: Booking) => {
+    if (!currentBooking) return [];
+    return bookings.filter(b => {
+      if (b.status !== 'pending') return false;
+      if (b._id === currentBooking._id) return false;
+      if (b.computerId._id !== currentBooking.computerId._id) return false;
+      
+      // Date overlap check
+      if (b.startDate > currentBooking.endDate || b.endDate < currentBooking.startDate) return false;
+      
+      // Time overlap check
+      if (b.startDate === currentBooking.startDate && b.endDate === currentBooking.endDate) {
+        return (b.startTime < currentBooking.endTime && b.endTime > currentBooking.startTime);
+      }
+      return true;
+    });
+  };
+
+  // Helper to find groups of conflicting pending bookings
+  const getConflictingGroups = () => {
+    const pending = bookings.filter(b => b.status === 'pending');
+    
+    const overlaps = (b1: Booking, b2: Booking) => {
+      if (!b1.computerId || !b2.computerId) return false;
+      if (b1.computerId._id !== b2.computerId._id) return false;
+      if (b1.startDate > b2.endDate || b1.endDate < b2.startDate) return false;
+      if (b1.startDate === b2.startDate && b1.endDate === b2.endDate) {
+        return (b1.startTime < b2.endTime && b1.endTime > b2.startTime);
+      }
+      return true;
+    };
+
+    const groups: Booking[][] = [];
+    
+    pending.forEach(b => {
+      const overlappingGroupIndices: number[] = [];
+      groups.forEach((group, index) => {
+        if (group.some(member => overlaps(member, b))) {
+          overlappingGroupIndices.push(index);
+        }
+      });
+
+      if (overlappingGroupIndices.length === 0) {
+        groups.push([b]);
+      } else if (overlappingGroupIndices.length === 1) {
+        groups[overlappingGroupIndices[0]].push(b);
+      } else {
+        const mergedGroup: Booking[] = [b];
+        overlappingGroupIndices.sort((a, b) => b - a);
+        overlappingGroupIndices.forEach(index => {
+          mergedGroup.push(...groups[index]);
+          groups.splice(index, 1);
+        });
+        groups.push(mergedGroup);
+      }
+    });
+
+    return groups.filter(g => g.length > 1);
+  };
+
   // Helper to format booking date range
   const formatBookingDateRange = (start: string, end: string) => {
     if (!start) return '';
@@ -1336,15 +1397,205 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* New Booking Requests Tab */}
-      {activeTab === 2 && (
-        <Box>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            New Booking Requests
-          </Typography>
-          {pendingBookingsList.length === 0 ? (
-            <Typography color="text.secondary">No new booking requests.</Typography>
-          ) : (
-            isMobile ? (
+      {/* New Booking Requests Tab */}
+      {activeTab === 2 && (() => {
+        const conflictGroups = getConflictingGroups();
+        return (
+          <Box>
+            {conflictGroups.length > 0 && (
+              <Box sx={{ mb: 6 }}>
+                <Typography 
+                  variant="h6" 
+                  color="warning.dark" 
+                  fontWeight={800} 
+                  sx={{ 
+                    mb: 2.5, 
+                    display: "flex", 
+                    alignItems: "center",
+                    gap: 1
+                  }}
+                >
+                  <span>⚠️</span> Conflicting Pending Slots ({conflictGroups.length} Groups)
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  These bookings overlap with each other for the same slot. Approving one will automatically reject all other conflicting requests in the same group.
+                </Typography>
+
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 3.5 }}>
+                  {conflictGroups.map((group, gIdx) => {
+                    const sample = group[0];
+                    const compName = sample.computerId?.name || "Unknown Computer";
+                    
+                    const minDate = new Date(Math.min(...group.map(b => new Date(b.startDate).getTime())));
+                    const maxDate = new Date(Math.max(...group.map(b => new Date(b.endDate).getTime())));
+                    
+                    // Sort bookings in group chronologically based on creation time (first request first)
+                    const sortedGroup = [...group].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                    
+                    return (
+                      <Paper 
+                        key={gIdx}
+                        elevation={0}
+                        sx={{ 
+                          p: 3, 
+                          borderRadius: 3,
+                          borderLeft: "6px solid #f59e0b",
+                          border: "1px solid #f1f5f9",
+                          borderLeftWidth: "6px",
+                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
+                          background: "linear-gradient(180deg, #fffbeb 0%, #ffffff 100%)"
+                        }}
+                      >
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 2 }}>
+                          <Box>
+                            <Typography variant="subtitle1" fontWeight={800} color="#92400e">
+                              Slot Group #{gIdx + 1} &mdash; {compName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Approx. range: {minDate.toLocaleDateString()} to {maxDate.toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                          <Chip 
+                            label={`${group.length} Conflicting Requests`} 
+                            color="warning" 
+                            variant="outlined" 
+                            size="small"
+                            sx={{ fontWeight: 700, borderColor: "#f59e0b", color: "#d97706" }}
+                          />
+                        </Box>
+
+                        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: `repeat(${Math.min(group.length, 3)}, 1fr)` }, gap: 2.5 }}>
+                          {sortedGroup.map((booking, bIdx) => {
+                            const bookingIdShort = booking._id.toString().slice(-6).toUpperCase();
+                            return (
+                              <Card 
+                                key={booking._id}
+                                variant="outlined"
+                                sx={{ 
+                                  borderRadius: 2, 
+                                  borderColor: bIdx === 0 ? "#10b981" : "#e2e8f0",
+                                  backgroundColor: "#fff",
+                                  boxShadow: bIdx === 0 ? "0 4px 12px rgba(16, 185, 129, 0.06)" : "0 2px 8px rgba(0,0,0,0.02)",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "space-between",
+                                  transition: "transform 0.2s, box-shadow 0.2s",
+                                  "&:hover": {
+                                    transform: "translateY(-2px)",
+                                    boxShadow: bIdx === 0 ? "0 8px 20px rgba(16, 185, 129, 0.12)" : "0 6px 16px rgba(0,0,0,0.05)",
+                                    borderColor: bIdx === 0 ? "#059669" : "#cbd5e1"
+                                  }
+                                }}
+                              >
+                                <CardContent sx={{ p: 2.5, pb: 1.5 }}>
+                                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
+                                    <Box>
+                                      <Typography variant="body2" fontWeight={800} color="text.primary">
+                                        {getBookingUserName(booking)}
+                                      </Typography>
+                                      <Chip 
+                                        label={bIdx === 0 ? "1st Applied (First)" : `${bIdx + 1}${bIdx === 1 ? "nd" : bIdx === 2 ? "rd" : "th"} Applied`}
+                                        size="small"
+                                        color={bIdx === 0 ? "success" : "default"}
+                                        sx={{ 
+                                          mt: 0.75, 
+                                          height: 18, 
+                                          fontSize: '0.65rem', 
+                                          fontWeight: 700,
+                                          backgroundColor: bIdx === 0 ? '#10b981' : 'rgba(0,0,0,0.06)',
+                                          color: bIdx === 0 ? '#fff' : 'text.secondary'
+                                        }}
+                                      />
+                                    </Box>
+                                    <Typography variant="caption" sx={{ fontFamily: "monospace", color: "#64748b" }}>
+                                      ID: {bookingIdShort}
+                                    </Typography>
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    {getBookingUserEmail(booking)}
+                                  </Typography>
+                                  <Divider sx={{ my: 1.5 }} />
+                                  <Typography variant="body2" fontWeight={700} color="#1e293b" sx={{ mb: 0.5 }}>
+                                    {formatBookingDateRange(booking.startDate, booking.endDate)}
+                                  </Typography>
+                                  <Typography variant="caption" display="block" color="text.secondary" sx={{ mb: 1.5 }}>
+                                    Time: {booking.startTime} - {booking.endTime}
+                                  </Typography>
+                                  {booking.mentor && (
+                                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mb: 1, fontStyle: 'italic' }}>
+                                      Mentor: {booking.mentor}
+                                    </Typography>
+                                  )}
+                                  <Typography variant="body2" color="text.secondary" sx={{ 
+                                    lineHeight: 1.5,
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis"
+                                  }}>
+                                    <strong>Reason:</strong> {booking.reason}
+                                  </Typography>
+                                </CardContent>
+                                <Box sx={{ p: 2, pt: 0, display: "flex", gap: 1 }}>
+                                  <Button 
+                                    size="small" 
+                                    variant="contained" 
+                                    color="success"
+                                    fullWidth
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedBooking(booking);
+                                      setNewStatus("approved");
+                                      setStatusDialogOpen(true);
+                                    }}
+                                    sx={{ textTransform: "none", fontWeight: 700 }}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button 
+                                    size="small" 
+                                    variant="outlined" 
+                                    color="error"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedBooking(booking);
+                                      setNewStatus("rejected");
+                                      setStatusDialogOpen(true);
+                                    }}
+                                    sx={{ textTransform: "none", fontWeight: 700 }}
+                                  >
+                                    Reject
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={() => handleViewDetails(booking)}
+                                    sx={{ textTransform: "none" }}
+                                  >
+                                    Info
+                                  </Button>
+                                </Box>
+                              </Card>
+                            );
+                          })}
+                        </Box>
+                      </Paper>
+                    );
+                  })}
+                </Box>
+                <Divider sx={{ my: 5 }} />
+              </Box>
+            )}
+
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              New Booking Requests
+            </Typography>
+            {pendingBookingsList.length === 0 ? (
+              <Typography color="text.secondary">No new booking requests.</Typography>
+            ) : (
+              isMobile ? (
               <List>
                 {pendingBookingsList.map((booking) => (
                   <React.Fragment key={booking._id}>
@@ -1372,8 +1623,8 @@ const AdminDashboard: React.FC = () => {
                             setNewStatus("approved");
                             setStatusDialogOpen(true);
                           }}
-                          title="Approve"
-                          disabled={actionLoading.approve}
+                          title={getOverlappingPendingBookings(booking).length > 0 ? "Resolve conflict in Slot Groups above" : "Approve"}
+                          disabled={actionLoading.approve || getOverlappingPendingBookings(booking).length > 0}
                         >
                           {actionLoading.approve ? <CircularProgress size={20} color="inherit" /> : <CheckIcon />}
                         </IconButton>
@@ -1384,8 +1635,8 @@ const AdminDashboard: React.FC = () => {
                             setNewStatus("rejected");
                             setStatusDialogOpen(true);
                           }}
-                          title="Reject"
-                          disabled={actionLoading.reject}
+                          title={getOverlappingPendingBookings(booking).length > 0 ? "Resolve conflict in Slot Groups above" : "Reject"}
+                          disabled={actionLoading.reject || getOverlappingPendingBookings(booking).length > 0}
                         >
                           {actionLoading.reject ? <CircularProgress size={20} color="inherit" /> : <CancelIcon />}
                         </IconButton>
@@ -1431,8 +1682,8 @@ const AdminDashboard: React.FC = () => {
                               setNewStatus("approved");
                               setStatusDialogOpen(true);
                             }}
-                            title="Approve"
-                            disabled={actionLoading.approve}
+                            title={getOverlappingPendingBookings(booking).length > 0 ? "Resolve conflict in Slot Groups above" : "Approve"}
+                            disabled={actionLoading.approve || getOverlappingPendingBookings(booking).length > 0}
                           >
                             {actionLoading.approve ? <CircularProgress size={20} color="inherit" /> : <CheckIcon />}
                           </IconButton>
@@ -1444,8 +1695,8 @@ const AdminDashboard: React.FC = () => {
                               setNewStatus("rejected");
                               setStatusDialogOpen(true);
                             }}
-                            title="Reject"
-                            disabled={actionLoading.reject}
+                            title={getOverlappingPendingBookings(booking).length > 0 ? "Resolve conflict in Slot Groups above" : "Reject"}
+                            disabled={actionLoading.reject || getOverlappingPendingBookings(booking).length > 0}
                           >
                             {actionLoading.reject ? <CircularProgress size={20} color="inherit" /> : <CancelIcon />}
                           </IconButton>
@@ -1458,7 +1709,8 @@ const AdminDashboard: React.FC = () => {
             )
           )}
         </Box>
-      )}
+        );
+      })()}
 
       {/* All Bookings Tab (remove pending bookings) */}
       {activeTab === 3 && (
@@ -2026,39 +2278,110 @@ const AdminDashboard: React.FC = () => {
                 </Box>
               </Paper>
 
+              {/* Overlapping Pending Bookings Warning */}
+              {selectedBookingDetails.status === "pending" && (() => {
+                const overlaps = getOverlappingPendingBookings(selectedBookingDetails);
+                if (overlaps.length === 0) return null;
+                return (
+                  <Alert 
+                    severity="warning" 
+                    sx={{ 
+                      mt: 2, 
+                      mb: 2, 
+                      borderRadius: 2,
+                      border: "1px solid rgba(217, 119, 6, 0.3)",
+                      "& .MuiAlert-message": { width: "100%" }
+                    }}
+                  >
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, color: "#b45309" }}>
+                      Overlap Alert: {overlaps.length} other pending request(s) compete for this slot
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
+                      {overlaps.map(other => {
+                        const otherBookingId = other._id.toString().slice(-6).toUpperCase();
+                        return (
+                          <Box 
+                            key={other._id}
+                            sx={{ 
+                              display: "flex", 
+                              justifyContent: "space-between", 
+                              alignItems: "center",
+                              p: 1.5,
+                              borderRadius: 1.5,
+                              background: "rgba(251, 191, 36, 0.15)",
+                              border: "1px solid rgba(251, 191, 36, 0.25)"
+                            }}
+                          >
+                            <Box>
+                              <Typography variant="body2" fontWeight={700} sx={{ color: "#78350f" }}>
+                                {getBookingUserName(other)} (ID: {otherBookingId})
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: "#92400e" }}>
+                                {formatBookingDateRange(other.startDate, other.endDate)} | {other.startTime} - {other.endTime}
+                              </Typography>
+                            </Box>
+                            <Button 
+                              size="small" 
+                              variant="outlined" 
+                              color="warning"
+                              sx={{ 
+                                textTransform: "none", 
+                                fontWeight: 700,
+                                background: "#fff",
+                                "&:hover": { background: "#fef3c7" }
+                              }}
+                              onClick={() => setSelectedBookingDetails(other)}
+                            >
+                              Choose This
+                            </Button>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  </Alert>
+                );
+              })()}
+
               {/* Action Buttons for Pending Requests */}
               {selectedBookingDetails.status === "pending" && (
-                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    startIcon={<CheckIcon />}
-                    onClick={() => {
-                      setSelectedBooking(selectedBookingDetails);
-                      setNewStatus("approved");
-                      setStatusDialogOpen(true);
-                      setDetailsDialogOpen(false);
-                    }}
-                    fullWidth
-                    disabled={actionLoading.approve}
-                  >
-                    {actionLoading.approve ? <CircularProgress size={20} color="inherit" /> : "Approve Request"}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<CancelIcon />}
-                    onClick={() => {
-                      setSelectedBooking(selectedBookingDetails);
-                      setNewStatus("rejected");
-                      setStatusDialogOpen(true);
-                      setDetailsDialogOpen(false);
-                    }}
-                    fullWidth
-                    disabled={actionLoading.reject}
-                  >
-                    {actionLoading.reject ? <CircularProgress size={20} color="inherit" /> : "Reject Request"}
-                  </Button>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      startIcon={<CheckIcon />}
+                      onClick={() => {
+                        setSelectedBooking(selectedBookingDetails);
+                        setNewStatus("approved");
+                        setStatusDialogOpen(true);
+                        setDetailsDialogOpen(false);
+                      }}
+                      fullWidth
+                      disabled={actionLoading.approve || getOverlappingPendingBookings(selectedBookingDetails).length > 0}
+                    >
+                      {actionLoading.approve ? <CircularProgress size={20} color="inherit" /> : "Approve Request"}
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<CancelIcon />}
+                      onClick={() => {
+                        setSelectedBooking(selectedBookingDetails);
+                        setNewStatus("rejected");
+                        setStatusDialogOpen(true);
+                        setDetailsDialogOpen(false);
+                      }}
+                      fullWidth
+                      disabled={actionLoading.reject || getOverlappingPendingBookings(selectedBookingDetails).length > 0}
+                    >
+                      {actionLoading.reject ? <CircularProgress size={20} color="inherit" /> : "Reject Request"}
+                    </Button>
+                  </Box>
+                  {getOverlappingPendingBookings(selectedBookingDetails).length > 0 && (
+                    <Typography variant="caption" color="warning.main" align="center" sx={{ fontWeight: 600, mt: 0.5 }}>
+                      Direct actions are disabled because this slot is contested. Please resolve it in the Conflicting Pending Slots section.
+                    </Typography>
+                  )}
                 </Box>
               )}
             </Box>

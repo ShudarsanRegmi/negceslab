@@ -207,10 +207,10 @@ router.post('/', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Computer not found' });
     }
 
-    // Check for booking conflicts
+    // Check for booking conflicts (only with approved bookings)
     const conflictingBookings = await Booking.find({
       computerId,
-      status: { $in: ['approved', 'pending'] }, // Exclude completed, cancelled, and rejected
+      status: 'approved',
       $or: [
         // Check if new booking overlaps with existing bookings
         {
@@ -299,7 +299,7 @@ router.post('/', verifyToken, async (req, res) => {
     // Find bookings that have temporary releases covering the requested dates
     const bookingsWithReleases = await Booking.find({
       computerId,
-      status: { $in: ['approved', 'pending'] },
+      status: 'approved',
       'temporaryRelease.hasActiveReleases': true,
       'temporaryRelease.releasedDates.date': { $in: requestDates }
     });
@@ -520,6 +520,67 @@ router.put('/:id/status', verifyToken, async (req, res) => {
       booking.mentor = req.body.mentor;
     }
     await booking.save();
+
+    // Auto-reject overlapping pending bookings when approved
+    if (status === 'approved') {
+      try {
+        const overlappingPending = await Booking.find({
+          computerId: booking.computerId._id,
+          status: 'pending',
+          _id: { $ne: booking._id },
+          startDate: { $lte: booking.endDate },
+          endDate: { $gte: booking.startDate }
+        });
+
+        const actualOverlaps = overlappingPending.filter(other => {
+          if (other.endDate < booking.startDate || other.startDate > booking.endDate) return false;
+          if (other.startDate === booking.startDate && other.endDate === booking.endDate) {
+            return (other.startTime < booking.endTime && other.endTime > booking.startTime);
+          }
+          return true;
+        });
+
+        for (const other of actualOverlaps) {
+          other.status = 'rejected';
+          other.rejectionReason = 'Overlapped slot allocated to another booking request.';
+          await other.save();
+
+          const otherUserBookingId = other._id.toString().slice(-6).toUpperCase();
+          const otherNotif = new Notification({
+            userId: other.userId,
+            title: 'Booking Rejected',
+            message: `Your booking (ID: ${otherUserBookingId}) for computer ${booking.computerId.name} has been rejected. Reason: Overlapped slot allocated to another booking request.`,
+            type: 'error',
+            metadata: {
+              bookingId: otherUserBookingId,
+              computerId: booking.computerId._id,
+              computerName: booking.computerId.name
+            }
+          });
+          await otherNotif.save();
+
+          try {
+            const otherUserObj = await User.findOne({ firebaseUid: other.userId });
+            if (otherUserObj && otherUserObj.email) {
+              await sendBookingRejectedEmail(
+                otherUserObj.email,
+                otherUserObj.name || 'User',
+                booking.computerId.name,
+                new Date(other.startDate).toLocaleDateString(),
+                new Date(other.endDate).toLocaleDateString(),
+                other.startTime,
+                other.endTime,
+                'Overlapped slot allocated to another booking request.'
+              );
+            }
+          } catch (emailErr) {
+            console.error('Failed to send auto-rejection email:', emailErr);
+          }
+        }
+      } catch (overlapError) {
+        console.error('Error auto-rejecting overlapping bookings:', overlapError);
+      }
+    }
 
     // Notify user about status change
     let notifTitle = '';

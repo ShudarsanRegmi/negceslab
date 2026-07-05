@@ -131,6 +131,8 @@ const BookingForm: React.FC = (): ReactElement => {
   const [datasetSizeUnit, setDatasetSizeUnit] = useState<string>("GB");
   const [timeSlotError, setTimeSlotError] = useState<string | null>(null);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [showPendingConflictDialog, setShowPendingConflictDialog] = useState(false);
+  const [pendingConflictAcknowledged, setPendingConflictAcknowledged] = useState(false);
   const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([]);
   const [timeValidationError, setTimeValidationError] = useState<string | null>(null);
   const [fullDay, setFullDay] = useState(false);
@@ -259,12 +261,16 @@ const BookingForm: React.FC = (): ReactElement => {
     }
   }, [fullDay, startDate, endDate]);
 
-  // Fetch temporary slots when dates or computer changes
   useEffect(() => {
     if (selectedComputer && startDate && endDate) {
       fetchAvailableTemporarySlots(selectedComputer);
     }
   }, [selectedComputer, startDate, endDate]);
+
+  // Reset pending conflict acknowledgment if slot inputs change
+  useEffect(() => {
+    setPendingConflictAcknowledged(false);
+  }, [selectedComputer, startDate, endDate, startTime, endTime, fullDay]);
 
   const fetchComputers = async () => {
     try {
@@ -468,7 +474,7 @@ const BookingForm: React.FC = (): ReactElement => {
     console.log('Available release dates map:', availableReleaseDatesMap);
 
     const conflicts = selectedComputer.bookings?.filter((booking) => {
-      if (booking.status === "rejected" || booking.status === "cancelled" || booking.status === "completed") return false;
+      if (booking.status !== "approved") return false;
 
       console.log(`\nChecking booking ${booking._id}:`, {
         booking: {
@@ -576,6 +582,52 @@ const BookingForm: React.FC = (): ReactElement => {
     return conflicts;
   };
 
+  const checkPendingConflicts = (selectedComputer: any) => {
+    if (!selectedComputer || !startDate || !endDate || !startTime || !endTime) return [];
+
+    const proposedDates = [];
+    const startDateStr = format(startDate, 'yyyy-MM-dd');
+    const endDateStr = format(endDate, 'yyyy-MM-dd');
+    
+    const currentDate = new Date(startDateStr + 'T00:00:00');
+    const endDateNormalized = new Date(endDateStr + 'T00:00:00');
+    
+    while (currentDate <= endDateNormalized) {
+      proposedDates.push(format(currentDate, 'yyyy-MM-dd'));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const pendingConflicts = selectedComputer.bookings?.filter((booking: any) => {
+      if (booking.status !== "pending") return false;
+
+      // Get booking date range
+      const bookingDates = [];
+      const bookingDateStart = new Date(booking.startDate + 'T00:00:00');
+      const bookingDateEnd = new Date(booking.endDate + 'T00:00:00');
+      
+      const tempDate = new Date(bookingDateStart);
+      while (tempDate <= bookingDateEnd) {
+        bookingDates.push(format(tempDate, 'yyyy-MM-dd'));
+        tempDate.setDate(tempDate.getDate() + 1);
+      }
+
+      // Check if dates overlap
+      const hasOverlappingDates = bookingDates.some(date => proposedDates.includes(date));
+      if (!hasOverlappingDates) return false;
+
+      const startT = format(startTime, "HH:mm");
+      const endT = format(endTime, "HH:mm");
+
+      // Same day check
+      if (booking.startDate === startDateStr && booking.endDate === endDateStr) {
+        return (startT < booking.endTime && endT > booking.startTime);
+      }
+      return true;
+    }) || [];
+
+    return pendingConflicts;
+  };
+
   const handleNext = () => {
     // Check email validity first
     if (!hasValidAmritaEmail) {
@@ -603,6 +655,12 @@ const BookingForm: React.FC = (): ReactElement => {
         if (conflicts.length > 0) {
           setConflictingBookings(conflicts);
           setShowConflictDialog(true);
+          return;
+        }
+
+        const pendingConflicts = checkPendingConflicts(selectedComp);
+        if (pendingConflicts.length > 0 && !pendingConflictAcknowledged) {
+          setShowPendingConflictDialog(true);
           return;
         }
       }
@@ -978,6 +1036,118 @@ const BookingForm: React.FC = (): ReactElement => {
     );
   };
 
+  const PendingConflictDialog: React.FC = () => {
+    const theme = useTheme();
+    
+    return (
+      <Dialog 
+        open={showPendingConflictDialog} 
+        onClose={() => setShowPendingConflictDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            background: '#fff',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          background: theme.palette.warning.light,
+          color: theme.palette.warning.dark,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          py: 2,
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            gap: 1,
+          }}>
+            <Warning sx={{ color: theme.palette.warning.main }} />
+            <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
+              Time Slot Already Requested
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="body1" sx={{ fontWeight: 600, mb: 2, color: 'warning.dark' }}>
+            Another pending request exists for your selected time slot.
+          </Typography>
+          
+          {(() => {
+            const compObj = computers.find((c) => c._id === selectedComputer);
+            if (!compObj) return null;
+            const pendingConflicts = checkPendingConflicts(compObj);
+            if (pendingConflicts.length === 0) return null;
+            return (
+              <Box sx={{ mb: 3, p: 2, bgcolor: '#fffbeb', border: '1px solid #fef3c7', borderRadius: 1.5 }}>
+                <Typography variant="subtitle2" fontWeight={800} color="#b45309" sx={{ mb: 1, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
+                  Conflicting Bookings Details:
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {pendingConflicts.map((booking: any) => (
+                    <Typography key={booking._id} variant="body2" sx={{ fontWeight: 600, color: '#78350f' }}>
+                      • {new Date(booking.startDate).toLocaleDateString()} to {new Date(booking.endDate).toLocaleDateString()} ({booking.startTime} - {booking.endTime})
+                    </Typography>
+                  ))}
+                </Box>
+              </Box>
+            );
+          })()}
+
+          <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.6, mb: 3 }}>
+            If you proceed with this booking, the administrator will make the final decision based on need and urgency. 
+            <strong>Please note that if the administrator approves the other request, yours will be automatically rejected.</strong>
+            <br /><br />
+            To maximize your chance of approval, we strongly recommend choosing a different time slot or computer.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ 
+          p: 2,
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          bgcolor: 'rgba(0, 0, 0, 0.02)',
+          justifyContent: 'flex-end',
+          gap: 1.5,
+        }}>
+          <Button 
+            onClick={() => setShowPendingConflictDialog(false)}
+            variant="contained"
+            color="primary"
+            sx={{
+              px: 3,
+              py: 1,
+              fontWeight: 600,
+              textTransform: 'none',
+            }}
+          >
+            Change Time Slot
+          </Button>
+          <Button 
+            onClick={() => {
+              setPendingConflictAcknowledged(true);
+              setShowPendingConflictDialog(false);
+              setActiveStep(activeStep + 1);
+            }}
+            variant="outlined"
+            color="warning"
+            sx={{
+              px: 3,
+              py: 1,
+              fontWeight: 600,
+              textTransform: 'none',
+            }}
+          >
+            Proceed Anyway
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
 
 
   const getStepContent = (step: number) => {
@@ -1231,6 +1401,46 @@ const BookingForm: React.FC = (): ReactElement => {
                 {timeValidationError}
               </Alert>
             )}
+
+            {(() => {
+              const compObj = computers.find((c) => c._id === selectedComputer);
+              if (!compObj) return null;
+              const pendingConflicts = checkPendingConflicts(compObj);
+              if (pendingConflicts.length === 0) return null;
+              return (
+                <Alert 
+                  severity="warning" 
+                  sx={{ 
+                    mt: 2, 
+                    borderRadius: 2,
+                    border: "2px solid #ea580c",
+                    backgroundColor: "#fff7ed",
+                    color: "#c2410c",
+                    "& .MuiAlert-icon": { color: "#ea580c" }
+                  }}
+                >
+                  <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>
+                    Conflict Warning: Time Slot Already Requested
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    Another user has already requested a booking for this computer during your selected time slot. 
+                    We strongly encourage you to choose a different time slot or computer to avoid automatic rejection if their request gets approved first.
+                  </Typography>
+                  <Box sx={{ borderTop: "1px solid rgba(234, 88, 12, 0.25)", pt: 1.5 }}>
+                    <Typography variant="caption" fontWeight={800} display="block" sx={{ mb: 1, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      Conflicting Pending Booking Slots:
+                    </Typography>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      {pendingConflicts.map((booking: any) => (
+                        <Typography key={booking._id} variant="body2" sx={{ fontWeight: 600 }}>
+                          • {new Date(booking.startDate).toLocaleDateString()} to {new Date(booking.endDate).toLocaleDateString()} ({booking.startTime} - {booking.endTime})
+                        </Typography>
+                      ))}
+                    </Box>
+                  </Box>
+                </Alert>
+              );
+            })()}
 
             {/* Duration Display */}
             {startDate && endDate && startTime && endTime && (
@@ -1498,6 +1708,31 @@ const BookingForm: React.FC = (): ReactElement => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Please review your booking details before confirming
             </Typography>
+
+            {(() => {
+              const comp = computers.find((c) => c._id === selectedComputer);
+              if (!comp) return null;
+              const pendingOverlaps = checkPendingConflicts(comp);
+              if (pendingOverlaps.length === 0) return null;
+              return (
+                <Alert 
+                  severity="warning" 
+                  sx={{ 
+                    mb: 3, 
+                    borderRadius: 2,
+                    border: "1px solid rgba(217, 119, 6, 0.3)"
+                  }}
+                >
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ color: "#b45309", mb: 0.5 }}>
+                    Overlapping Pending Request Notice
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "#78350f" }}>
+                    There is another pending request for this time slot. You can still submit your booking. 
+                    The final approval will be decided by the administrator based on the need and urgency of the conflicting requests.
+                  </Typography>
+                </Alert>
+              );
+            })()}
 
             <Paper sx={{ p: 3, mb: 3 }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -1770,6 +2005,7 @@ const BookingForm: React.FC = (): ReactElement => {
       </Card>
 
       <ConflictDialog />
+      <PendingConflictDialog />
       <TermsAndConditionsDialog 
         open={showTermsDialog}
         onClose={() => setShowTermsDialog(false)}
