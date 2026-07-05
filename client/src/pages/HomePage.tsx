@@ -14,6 +14,7 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
+  Link,
 } from "@mui/material";
 import ComputerIcon from "@mui/icons-material/Computer";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
@@ -1078,7 +1079,7 @@ export default function HomePage() {
                     fontWeight={700}
                     sx={{ color: "#60a5fa", fontSize: "0.75rem" }}
                   >
-                    v3.0
+                    v3.1
                   </Typography>
                 </Box>
               </Box>
@@ -1166,7 +1167,16 @@ export default function HomePage() {
               &copy; {new Date().getFullYear()} NegcesLab Slot Booking Management System. All rights reserved.
             </Typography>
             <Typography variant="caption" sx={{ color: "#64748b" }}>
-              Version 3.0.0
+              <Link 
+                href="/version" 
+                sx={{ 
+                  color: "#64748b", 
+                  textDecoration: "underline", 
+                  "&:hover": { color: "#3b82f6" } 
+                }}
+              >
+                Version 3.1.0
+              </Link>
             </Typography>
           </Box>
         </Container>

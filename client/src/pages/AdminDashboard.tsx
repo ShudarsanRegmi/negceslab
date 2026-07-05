@@ -526,6 +526,21 @@ const AdminDashboard: React.FC = () => {
   const getBookingUserEmail = (booking: any) =>
     booking.userInfo?.email || booking.user?.email || booking.userId;
 
+  const getBookingDelayText = (startDateStr: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(startDateStr);
+    start.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - start.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 0) {
+      return `Delayed by ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+    }
+    return null;
+  };
+
   // Helper to find overlapping pending bookings
   const getOverlappingPendingBookings = (currentBooking: Booking) => {
     if (!currentBooking) return [];
@@ -1505,21 +1520,43 @@ const AdminDashboard: React.FC = () => {
                                       <Typography variant="body2" fontWeight={800} color="text.primary">
                                         {getBookingUserName(booking)}
                                       </Typography>
-                                      <Chip 
-                                        label={bIdx === 0 ? "1st Applied (First)" : `${bIdx + 1}${bIdx === 1 ? "nd" : bIdx === 2 ? "rd" : "th"} Applied`}
-                                        size="small"
-                                        color={bIdx === 0 ? "success" : "default"}
-                                        sx={{ 
-                                          mt: 0.75, 
-                                          height: 18, 
-                                          fontSize: '0.65rem', 
-                                          fontWeight: 700,
-                                          backgroundColor: bIdx === 0 ? '#10b981' : 'rgba(0,0,0,0.06)',
-                                          color: bIdx === 0 ? '#fff' : 'text.secondary'
-                                        }}
-                                      />
-                                    </Box>
-                                    <Typography variant="caption" sx={{ fontFamily: "monospace", color: "#64748b" }}>
+                                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+                                        <Chip 
+                                          label={bIdx === 0 ? "1st Applied (First)" : `${bIdx + 1}${bIdx === 1 ? "nd" : bIdx === 2 ? "rd" : "th"} Applied`}
+                                          size="small"
+                                          color={bIdx === 0 ? "success" : "default"}
+                                          sx={{ 
+                                            mt: 0.75, 
+                                            height: 18, 
+                                            fontSize: '0.65rem', 
+                                            fontWeight: 700,
+                                            backgroundColor: bIdx === 0 ? '#10b981' : 'rgba(0,0,0,0.06)',
+                                            color: bIdx === 0 ? '#fff' : 'text.secondary'
+                                          }}
+                                        />
+                                        {(() => {
+                                          const delayText = getBookingDelayText(booking.startDate);
+                                          if (!delayText) return null;
+                                          return (
+                                            <Chip 
+                                              label={delayText}
+                                              size="small"
+                                              color="error"
+                                              sx={{ 
+                                                mt: 0.75, 
+                                                height: 18, 
+                                                fontSize: '0.65rem', 
+                                                fontWeight: 800,
+                                                backgroundColor: '#fee2e2',
+                                                color: '#ef4444',
+                                                border: '1px solid #fca5a5'
+                                              }}
+                                            />
+                                          );
+                                        })()}
+                                       </Box>
+                                     </Box>
+                                     <Typography variant="caption" sx={{ fontFamily: "monospace", color: "#64748b" }}>
                                       ID: {bookingIdShort}
                                     </Typography>
                                   </Box>
@@ -1621,7 +1658,18 @@ const AdminDashboard: React.FC = () => {
                           <Box>
                             <Typography variant="body2" color="text.secondary">User: {getBookingUserName(booking)}</Typography>
                             <Typography variant="body2" color="text.secondary">Email: {getBookingUserEmail(booking)}</Typography>
-                            <Typography variant="body2" color="text.secondary">Date: {formatBookingDateRange(booking.startDate, booking.endDate)}</Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Date: {formatBookingDateRange(booking.startDate, booking.endDate)}
+                              {(() => {
+                                const delayText = getBookingDelayText(booking.startDate);
+                                if (!delayText) return null;
+                                return (
+                                  <Typography component="span" variant="caption" sx={{ ml: 1, px: 0.75, py: 0.25, bgcolor: '#fee2e2', color: '#ef4444', borderRadius: 1, fontWeight: 700 }}>
+                                    {delayText}
+                                  </Typography>
+                                );
+                              })()}
+                            </Typography>
                             <Typography variant="body2" color="text.secondary">Time: {booking.startTime} - {booking.endTime}</Typography>
                             <Typography variant="body2" color="text.secondary">Reason: {booking.reason}</Typography>
                           </Box>
@@ -1682,7 +1730,20 @@ const AdminDashboard: React.FC = () => {
                         <TableCell>{getBookingUserName(booking)}</TableCell>
                         <TableCell>{getBookingUserEmail(booking)}</TableCell>
                         <TableCell>{booking.computerId?.name || "Unknown Computer"}</TableCell>
-                        <TableCell>{formatBookingDateRange(booking.startDate, booking.endDate)}</TableCell>
+                        <TableCell>
+                          {formatBookingDateRange(booking.startDate, booking.endDate)}
+                          {(() => {
+                            const delayText = getBookingDelayText(booking.startDate);
+                            if (!delayText) return null;
+                            return (
+                              <Box sx={{ mt: 0.5 }}>
+                                <Typography component="span" variant="caption" sx={{ px: 0.75, py: 0.25, bgcolor: '#fee2e2', color: '#ef4444', borderRadius: 1, fontWeight: 700, display: 'inline-block' }}>
+                                  {delayText}
+                                </Typography>
+                              </Box>
+                            );
+                          })()}
+                        </TableCell>
                         <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
                         <TableCell>{booking.reason}</TableCell>
                         <TableCell>
