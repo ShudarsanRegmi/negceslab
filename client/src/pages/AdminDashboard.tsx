@@ -37,6 +37,8 @@ import {
   Skeleton,
   Badge,
   CircularProgress,
+  TablePagination,
+  Collapse,
 } from "@mui/material";
 import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -59,6 +61,7 @@ import {
   CheckCircleOutline as CompletedIcon,
   Cancel as RejectedIcon,
   Assignment as TotalBookingsIcon,
+  FilterList as FilterIcon,
 } from "@mui/icons-material";
 import { format, addDays, isWithinInterval, parseISO } from "date-fns";
 import { computersAPI, bookingsAPI, temporaryReleaseAPI } from "../services/api";
@@ -108,6 +111,7 @@ interface Booking {
   datasetLink?: string;
   bottleneckExplanation?: string;
   mentor?: string; // Added mentor field
+  rejectionReason?: string;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -173,6 +177,14 @@ const AdminDashboard: React.FC = () => {
   });
 
   const [bookingTab, setBookingTab] = useState<'all' | 'pending'>('all');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Reset page to 0 when search or filter criteria change
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery, statusFilter, dateRange.startDate, dateRange.endDate]);
 
   // Add loading states
   const [actionLoading, setActionLoading] = useState({
@@ -1713,178 +1725,248 @@ const AdminDashboard: React.FC = () => {
       })()}
 
       {/* All Bookings Tab (remove pending bookings) */}
-      {activeTab === 3 && (
-        <Box>
-          {/* Header and Search Section */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' }, 
-            justifyContent: 'space-between',
-            alignItems: { xs: 'stretch', sm: 'center' },
-            gap: 2,
-            mb: 2 
-          }}>
-            {/* Left side - Title and Results Count */}
-            <Box>
-              <Typography variant="h6" sx={{ mb: 0.5 }}>
-                All Bookings Management
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Showing {filteredBookings.filter(b => b.status !== 'pending').length} of {nonPendingBookings.length} bookings
-              </Typography>
-            </Box>
+      {activeTab === 3 && (() => {
+        const nonPendingFilteredBookings = filteredBookings.filter(b => b.status !== 'pending');
+        const paginatedBookings = nonPendingFilteredBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+        
+        let activeFiltersCount = 0;
+        if (searchQuery) activeFiltersCount++;
+        if (statusFilter !== 'all') activeFiltersCount++;
+        if (dateRange.startDate) activeFiltersCount++;
+        if (dateRange.endDate) activeFiltersCount++;
 
-            {/* Right side - Refresh button */}
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={fetchData}
-              disabled={loading}
-              size="small"
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </Button>
-
-            {/* Right side - Search and Filters */}
+        return (
+          <Box>
+            {/* Header and Search Section */}
             <Box sx={{ 
               display: 'flex', 
-              flexWrap: 'wrap',
-              gap: 1,
-              flex: { xs: '1', sm: '0.7' },
-              '& > *': { 
-                minWidth: { xs: '100%', sm: '150px' }
-              }
+              flexDirection: { xs: 'column', sm: 'row' }, 
+              justifyContent: 'space-between',
+              alignItems: { xs: 'stretch', sm: 'center' },
+              gap: 2,
+              mb: 3
             }}>
-              <TextField
-                size="small"
-                placeholder="Search bookings..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <Box component="span" sx={{ color: 'text.secondary', mr: 1 }}>
-                      🔍
-                    </Box>
-                  ),
-                }}
-              />
-              <FormControl size="small">
-                <Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  displayEmpty
-                  sx={{ minWidth: 120 }}
+              {/* Left side - Title and Results Count */}
+              <Box>
+                <Typography variant="h6" sx={{ mb: 0.5 }}>
+                  All Bookings Management
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Showing {nonPendingFilteredBookings.length} of {nonPendingBookings.length} bookings
+                </Typography>
+              </Box>
+
+              {/* Right side - Actions */}
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={fetchData}
+                  disabled={loading}
+                  size="small"
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
                 >
-                  <MenuItem value="all">All Status</MenuItem>
-                  <MenuItem value="approved">Approved</MenuItem>
-                  <MenuItem value="rejected">Rejected</MenuItem>
-                  <MenuItem value="cancelled">Cancelled</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                size="small"
-                type="date"
-                value={dateRange.startDate || ""}
-                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                InputProps={{
-                  startAdornment: (
-                    <Box component="span" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.875rem' }}>
-                      From:
-                    </Box>
-                  ),
-                }}
-                sx={{ maxWidth: { sm: '200px' } }}
-              />
-              <TextField
-                size="small"
-                type="date"
-                value={dateRange.endDate || ""}
-                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                InputProps={{
-                  startAdornment: (
-                    <Box component="span" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.875rem' }}>
-                      To:
-                    </Box>
-                  ),
-                }}
-                sx={{ maxWidth: { sm: '200px' } }}
-              />
+                  {loading ? "Refreshing..." : "Refresh"}
+                </Button>
+                
+                <Badge badgeContent={activeFiltersCount} color="warning" overlap="circular">
+                  <Button
+                    variant={showFilters ? "contained" : "outlined"}
+                    color="primary"
+                    startIcon={<FilterIcon />}
+                    onClick={() => setShowFilters(!showFilters)}
+                    size="small"
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                  >
+                    {showFilters ? "Hide Filters" : "Filters"}
+                  </Button>
+                </Badge>
+              </Box>
             </Box>
-          </Box>
 
-          {/* Table/List Content */}
-          {isMobile ? (
-            <List>
-              {filteredBookings.filter(b => b.status !== 'pending').map((booking) => (
-                <React.Fragment key={booking._id}>
-                  <ListItem>
-                    <ListItemText
-                      primary={booking.computerId?.name || "Unknown Computer"}
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">User: {getBookingUserName(booking)}</Typography>
-                          <Typography variant="body2" color="text.secondary">Email: {getBookingUserEmail(booking)}</Typography>
-                          <Typography variant="body2" color="text.secondary">Date: {formatBookingDateRange(booking.startDate, booking.endDate)}</Typography>
-                          <Typography variant="body2" color="text.secondary">Time: {booking.startTime} - {booking.endTime}</Typography>
-                          <Typography variant="body2" color="text.secondary">Reason: {booking.reason}</Typography>
-                          <Chip label={booking.status} color={getStatusColor(booking.status) as any} size="small" sx={{ mt: 1 }} />
+            {/* Expandable Filters Panel */}
+            <Collapse in={showFilters} timeout="auto" unmountOnExit sx={{ mb: 3 }}>
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 2.5, 
+                  borderRadius: 2, 
+                  backgroundColor: 'rgba(0,0,0,0.01)',
+                  borderColor: '#e2e8f0'
+                }}
+              >
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, 
+                  gap: 2,
+                  alignItems: 'center'
+                }}>
+                  {/* Search query */}
+                  <TextField
+                    size="small"
+                    label="Search Booking / User / Comp"
+                    placeholder="Search bookings..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    fullWidth
+                    InputProps={{
+                      startAdornment: (
+                        <Box component="span" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.875rem' }}>
+                          🔍
                         </Box>
-                      }
-                    />
-                    <ListItemSecondaryAction>
-                      {/* Only show actions for non-pending bookings if needed */}
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  <Divider />
-                </React.Fragment>
-              ))}
-            </List>
-          ) : (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>User Name</TableCell>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Computer</TableCell>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Time</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredBookings.filter(b => b.status !== 'pending').map((booking) => (
-                    <TableRow
-                      key={booking._id}
-                      onClick={() => handleViewDetails(booking)}
-                      sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
-                    >
-                      <TableCell>{getBookingUserName(booking)}</TableCell>
-                      <TableCell>{getBookingUserEmail(booking)}</TableCell>
-                      <TableCell>{booking.computerId?.name || "Unknown Computer"}</TableCell>
-                      <TableCell>{formatBookingDateRange(booking.startDate, booking.endDate)}</TableCell>
-                      <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
-                      <TableCell>
-                        <Chip label={booking.status} color={getStatusColor(booking.status) as any} size="small" />
-                      </TableCell>
-                      <TableCell>{/* Only show actions for non-pending bookings if needed */}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+                      ),
+                    }}
+                  />
 
-          {filteredBookings.filter(b => b.status !== 'pending').length === 0 && (
-            <Box sx={{ textAlign: 'center', py: 2 }}>
-              <Typography variant="body1" color="text.secondary">
-                No bookings found matching your filters
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      )}
+                  {/* Status selection */}
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      label="Status"
+                    >
+                      <MenuItem value="all">All Status</MenuItem>
+                      <MenuItem value="approved">Approved</MenuItem>
+                      <MenuItem value="rejected">Rejected</MenuItem>
+                      <MenuItem value="cancelled">Cancelled</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  {/* Date range start */}
+                  <TextField
+                    size="small"
+                    type="date"
+                    label="From Date"
+                    value={dateRange.startDate || ""}
+                    onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                  />
+
+                  {/* Date range end */}
+                  <TextField
+                    size="small"
+                    type="date"
+                    label="To Date"
+                    value={dateRange.endDate || ""}
+                    onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Box>
+
+                {activeFiltersCount > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                    <Button
+                      size="small"
+                      variant="text"
+                      color="secondary"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setStatusFilter("all");
+                        setDateRange({ startDate: null, endDate: null });
+                      }}
+                      sx={{ textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Clear All Filters
+                    </Button>
+                  </Box>
+                )}
+              </Paper>
+            </Collapse>
+
+            {/* Table/List Content */}
+            {isMobile ? (
+              <List>
+                {paginatedBookings.map((booking) => (
+                  <React.Fragment key={booking._id}>
+                    <ListItem>
+                      <ListItemText
+                        primary={booking.computerId?.name || "Unknown Computer"}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">User: {getBookingUserName(booking)}</Typography>
+                            <Typography variant="body2" color="text.secondary">Email: {getBookingUserEmail(booking)}</Typography>
+                            <Typography variant="body2" color="text.secondary">Date: {formatBookingDateRange(booking.startDate, booking.endDate)}</Typography>
+                            <Typography variant="body2" color="text.secondary">Time: {booking.startTime} - {booking.endTime}</Typography>
+                            <Typography variant="body2" color="text.secondary">Reason: {booking.reason}</Typography>
+                            <Chip label={booking.status} color={getStatusColor(booking.status) as any} size="small" sx={{ mt: 1 }} />
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        {/* Only show actions for non-pending bookings if needed */}
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                ))}
+              </List>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Computer</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Time</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedBookings.map((booking) => (
+                      <TableRow
+                        key={booking._id}
+                        onClick={() => handleViewDetails(booking)}
+                        sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                      >
+                        <TableCell>{getBookingUserName(booking)}</TableCell>
+                        <TableCell>{getBookingUserEmail(booking)}</TableCell>
+                        <TableCell>{booking.computerId?.name || "Unknown Computer"}</TableCell>
+                        <TableCell>{formatBookingDateRange(booking.startDate, booking.endDate)}</TableCell>
+                        <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
+                        <TableCell>
+                          <Chip label={booking.status} color={getStatusColor(booking.status) as any} size="small" />
+                        </TableCell>
+                        <TableCell>{/* Only show actions for non-pending bookings if needed */}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+
+            {nonPendingFilteredBookings.length === 0 && (
+              <Box sx={{ textAlign: 'center', py: 5 }}>
+                <Typography variant="body1" color="text.secondary">
+                  No bookings found matching your filters
+                </Typography>
+              </Box>
+            )}
+
+            {/* Pagination Controls */}
+            {nonPendingFilteredBookings.length > 0 && (
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                component="div"
+                count={nonPendingFilteredBookings.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(_, newPage) => setPage(newPage)}
+                onRowsPerPageChange={(e) => {
+                  setRowsPerPage(parseInt(e.target.value, 10));
+                  setPage(0);
+                }}
+                sx={{ borderTop: '1px solid rgba(0, 0, 0, 0.08)', mt: 2 }}
+              />
+            )}
+          </Box>
+        );
+      })()}
 
       {/* Notifications Tab */}
       {activeTab === 4 && <AdminNotificationPanel />}
@@ -2190,11 +2272,22 @@ const AdminDashboard: React.FC = () => {
                     <Typography variant="subtitle2" color="text.secondary">
                       Request Status
                     </Typography>
-                    <Box sx={{ mt: 1 }}>
+                    <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <Chip
                         label={selectedBookingDetails.status}
                         color={getStatusColor(selectedBookingDetails.status) as any}
+                        sx={{ alignSelf: 'flex-start' }}
                       />
+                      {selectedBookingDetails.status === 'rejected' && selectedBookingDetails.rejectionReason && (
+                        <Box sx={{ mt: 0.5, p: 1.5, bgcolor: 'rgba(239, 68, 68, 0.08)', borderRadius: 1.5, border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                          <Typography variant="caption" color="error.main" display="block" sx={{ fontWeight: 800, textTransform: 'uppercase', mb: 0.5 }}>
+                            Rejection Reason
+                          </Typography>
+                          <Typography variant="body2" color="text.primary">
+                            {selectedBookingDetails.rejectionReason}
+                          </Typography>
+                        </Box>
+                      )}
                     </Box>
                   </Box>
                   <Box>
