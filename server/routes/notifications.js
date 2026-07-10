@@ -146,10 +146,8 @@ router.get("/users", verifyToken, async (req, res) => {
       return res.status(403).json({ message: "Admin access required" });
     }
 
-    // Get unique user IDs from notifications
-    const users = await Notification.distinct("userId", {
-      userId: { $ne: "admin" },
-    });
+    const User = require("../models/user");
+    const users = await User.find({}, "firebaseUid name email role");
     res.json(users);
   } catch (error) {
     console.error("Get Users Error:", error);
