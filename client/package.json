@@ -33,6 +33,7 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.7.0",
     "react-spring": "^10.0.1",
+    "xlsx": "^0.18.5",
     "yup": "^1.6.1"
   },
   "devDependencies": {
