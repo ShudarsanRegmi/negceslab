@@ -123,6 +123,10 @@ const Version: React.FC = () => {
                     <ListItemIcon sx={{ minWidth: 32 }}><CheckCircleIcon color="success" fontSize="small" /></ListItemIcon>
                     <ListItemText primary="Added table pagination options and collapsible search filter drawer sections." />
                   </ListItem>
+                  <ListItem disableGutters>
+                    <ListItemIcon sx={{ minWidth: 32 }}><CheckCircleIcon color="success" fontSize="small" /></ListItemIcon>
+                    <ListItemText primary="Introduced a comprehensive visual Admin Analytics & Insights dashboard, rendering dynamic booking volume trend graphs, GPU vs CPU load splits, system utilisation rankings, and active user insights across weekly, monthly, and yearly timeframes." />
+                  </ListItem>
                 </List>
               </Box>
 

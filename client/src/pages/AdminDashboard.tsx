@@ -39,6 +39,9 @@ import {
   CircularProgress,
   TablePagination,
   Collapse,
+  Grid,
+  Avatar,
+  Tooltip,
 } from "@mui/material";
 import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -66,6 +69,7 @@ import {
 import { format, addDays, isWithinInterval, parseISO } from "date-fns";
 import { computersAPI, bookingsAPI, temporaryReleaseAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
+import AdminAnalytics from "../components/AdminAnalytics";
 
 interface Computer {
   _id: string;
@@ -541,6 +545,7 @@ const AdminDashboard: React.FC = () => {
     return null;
   };
 
+
   // Helper to find overlapping pending bookings
   const getOverlappingPendingBookings = (currentBooking: Booking) => {
     if (!currentBooking) return [];
@@ -669,7 +674,8 @@ const AdminDashboard: React.FC = () => {
         }
       />
         <Tab label="All Bookings" />
-        {/* <Tab label="Notifications" /> */}
+        <Tab label="Analytics" />
+        <Tab label="Notifications" />
       </Tabs>
 
       {/* Overview Tab */}
@@ -2029,8 +2035,12 @@ const AdminDashboard: React.FC = () => {
         );
       })()}
 
+      {/* Analytics Tab */}
+      {activeTab === 4 && <AdminAnalytics bookings={bookings} onViewDetails={handleViewDetails} />}
+
       {/* Notifications Tab */}
-      {activeTab === 4 && <AdminNotificationPanel />}
+      {activeTab === 5 && <AdminNotificationPanel />}
+
 
       {/* Add Computer Dialog */}
       <Dialog
