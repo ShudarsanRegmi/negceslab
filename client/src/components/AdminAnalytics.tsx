@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import * as XLSX from 'xlsx';
+import { buildExcelReport, exportUserReport, exportSystemReport } from '../utils/excelExport';
 import {
   Box,
   Typography,
@@ -398,155 +398,9 @@ function buildExcel(
   allBookings: Booking[],
   periodBookings: Booking[],
 ) {
-  const wb = XLSX.utils.book_new();
-
-  // Helper to apply column widths and header style
-  function addSheet(name: string, rows: (string | number | undefined)[][], headers: string[]) {
-    const data = [headers, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(data);
-
-    // Column widths
-    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 18) }));
-
-    // Bold header row
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    for (let C = range.s.c; C <= range.e.c; C++) {
-      const addr = XLSX.utils.encode_cell({ r: 0, c: C });
-      if (ws[addr]) {
-        ws[addr].s = {
-          font: { bold: true, color: { rgb: 'FFFFFF' } },
-          fill: { fgColor: { rgb: '1E3A5F' } },
-          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-          border: {
-            bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
-            right: { style: 'thin', color: { rgb: 'CCCCCC' } },
-          },
-        };
-      }
-    }
-    XLSX.utils.book_append_sheet(wb, ws, name);
-  }
-
-  // ── Sheet 1: Summary KPIs ────────────────────────────────────────────────
-  const approved = periodBookings.filter(b => b.status === 'approved' || b.status === 'completed').length;
-  const rejected = periodBookings.filter(b => b.status === 'rejected').length;
-  const pending = periodBookings.filter(b => b.status === 'pending').length;
-  const cancelled = periodBookings.filter(b => b.status === 'cancelled').length;
-  const total = periodBookings.length;
-  const gpuCount = periodBookings.filter(b => b.requiresGPU).length;
-  const approvalRate = (approved + rejected) > 0 ? `${Math.round((approved / (approved + rejected)) * 100)}%` : 'N/A';
-
-  const summaryWs = XLSX.utils.aoa_to_sheet([
-    ['NegcesLab Booking Analytics Report'],
-    [`Period: ${periodLabel}`],
-    [`Generated: ${new Date().toLocaleString()}`],
-    [],
-    ['Metric', 'Value'],
-    ['Total Bookings', total],
-    ['Approved / Completed', approved],
-    ['Pending', pending],
-    ['Rejected', rejected],
-    ['Cancelled', cancelled],
-    ['GPU Requests', gpuCount],
-    ['CPU Only Requests', total - gpuCount],
-    ['Approval Rate', approvalRate],
-  ]);
-  summaryWs['!cols'] = [{ wch: 30 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, summaryWs, '📊 Summary');
-
-  // ── Sheet 2: All Booking Records ────────────────────────────────────────
-  addSheet(
-    '📋 All Bookings',
-    periodBookings.map((b, i) => [
-      i + 1,
-      getDisplayName(b),
-      getUserEmail(b),
-      b.computerId?.name || '',
-      b.startDate,
-      b.endDate,
-      b.startTime,
-      b.endTime,
-      b.status,
-      b.requiresGPU ? 'Yes' : 'No',
-      b.gpuMemoryRequired || '',
-      b.mentor || '',
-      b.reason,
-      b.problemStatement || '',
-      b.datasetType || '',
-      b.rejectionReason || '',
-      fmtDateFull(b.createdAt),
-    ]),
-    ['#', 'User Name', 'User Email', 'Computer', 'Start Date', 'End Date', 'Start Time', 'End Time', 'Status', 'GPU Required', 'GPU Memory (GB)', 'Mentor', 'Reason', 'Problem Statement', 'Dataset Type', 'Rejection Reason', 'Requested On'],
+  buildExcelReport(periodLabel, allBookings, periodBookings).catch(err =>
+    console.error('Export failed:', err)
   );
-
-  // ── Sheet 3: Per User Summary ────────────────────────────────────────────
-  const userMap: Record<string, { name: string; email: string; total: number; approved: number; rejected: number; pending: number; cancelled: number; gpu: number; hours: number }> = {};
-  periodBookings.forEach(b => {
-    const key = getUserEmail(b) || b._id;
-    if (!userMap[key]) userMap[key] = { name: getDisplayName(b), email: getUserEmail(b), total: 0, approved: 0, rejected: 0, pending: 0, cancelled: 0, gpu: 0, hours: 0 };
-    userMap[key].total++;
-    if (b.status === 'approved' || b.status === 'completed') { userMap[key].approved++; userMap[key].hours += calcHours(b); }
-    if (b.status === 'rejected') userMap[key].rejected++;
-    if (b.status === 'pending') userMap[key].pending++;
-    if (b.status === 'cancelled') userMap[key].cancelled++;
-    if (b.requiresGPU) userMap[key].gpu++;
-  });
-  addSheet(
-    '👤 Per User Summary',
-    Object.values(userMap).sort((a, b) => b.total - a.total).map((u, i) => [
-      i + 1, u.name, u.email, u.total, u.approved, u.pending, u.rejected, u.cancelled, u.gpu, u.hours,
-    ]),
-    ['#', 'User Name', 'Email', 'Total Requests', 'Approved', 'Pending', 'Rejected', 'Cancelled', 'GPU Requests', 'Total Approved Hours'],
-  );
-
-  // ── Sheet 4: Per System Summary ──────────────────────────────────────────
-  const sysMap: Record<string, { name: string; total: number; approved: number; rejected: number; pending: number; cancelled: number; gpu: number; hours: number; users: Set<string> }> = {};
-  periodBookings.forEach(b => {
-    const key = b.computerId?._id || 'unknown';
-    if (!sysMap[key]) sysMap[key] = { name: b.computerId?.name || 'Unknown', total: 0, approved: 0, rejected: 0, pending: 0, cancelled: 0, gpu: 0, hours: 0, users: new Set() };
-    sysMap[key].total++;
-    sysMap[key].users.add(getUserEmail(b));
-    if (b.status === 'approved' || b.status === 'completed') { sysMap[key].approved++; sysMap[key].hours += calcHours(b); }
-    if (b.status === 'rejected') sysMap[key].rejected++;
-    if (b.status === 'pending') sysMap[key].pending++;
-    if (b.status === 'cancelled') sysMap[key].cancelled++;
-    if (b.requiresGPU) sysMap[key].gpu++;
-  });
-  addSheet(
-    '🖥️ Per System Summary',
-    Object.values(sysMap).sort((a, b) => b.hours - a.hours).map((s, i) => [
-      i + 1, s.name, s.total, s.approved, s.pending, s.rejected, s.cancelled, s.gpu, s.hours, s.users.size,
-    ]),
-    ['#', 'Computer Name', 'Total Bookings', 'Approved', 'Pending', 'Rejected', 'Cancelled', 'GPU Requests', 'Total Approved Hours', 'Unique Users'],
-  );
-
-  // ── Sheet 5: Historical (All Time, last 12 months) ─────────────────────
-  const now = new Date();
-  const monthlyRows: (string | number)[][] = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const mb = allBookings.filter(b => {
-      const bd = new Date(b.createdAt || b.startDate);
-      return bd.getMonth() === d.getMonth() && bd.getFullYear() === d.getFullYear();
-    });
-    monthlyRows.push([
-      `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`,
-      mb.length,
-      mb.filter(b => b.status === 'approved' || b.status === 'completed').length,
-      mb.filter(b => b.status === 'pending').length,
-      mb.filter(b => b.status === 'rejected').length,
-      mb.filter(b => b.status === 'cancelled').length,
-      mb.filter(b => b.requiresGPU).length,
-    ]);
-  }
-  addSheet(
-    '📈 Monthly Trend (12mo)',
-    monthlyRows,
-    ['Month', 'Total', 'Approved', 'Pending', 'Rejected', 'Cancelled', 'GPU Requests'],
-  );
-
-  // Save
-  XLSX.writeFile(wb, `NegcesLab_Analytics_${periodLabel.replace(/\s+/g, '_')}.xlsx`);
 }
 
 // ─── Period Navigator ─────────────────────────────────────────────────────────
@@ -968,21 +822,7 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
                     size="small"
                     variant="outlined"
                     startIcon={<DownloadIcon />}
-                    onClick={() => {
-                      const wb = XLSX.utils.book_new();
-                      const ws = XLSX.utils.aoa_to_sheet([
-                        ['User Name', selectedUser.name],
-                        ['Email', selectedUser.email],
-                        [],
-                        ['Total', 'Approved', 'Pending', 'Rejected', 'GPU', 'Total Hours'],
-                        [uKpis.total, uKpis.approved, uKpis.pending, uKpis.rejected, uKpis.gpu, uKpis.hours],
-                        [],
-                        ['#', 'Computer', 'Start Date', 'End Date', 'Time', 'Status', 'GPU', 'Mentor', 'Reason'],
-                        ...userBookings.map((b, i) => [i + 1, b.computerId?.name || '', b.startDate, b.endDate, `${b.startTime}–${b.endTime}`, b.status, b.requiresGPU ? 'Yes' : 'No', b.mentor || '', b.reason]),
-                      ]);
-                      XLSX.utils.book_append_sheet(wb, ws, selectedUser.name.slice(0, 31));
-                      XLSX.writeFile(wb, `User_${selectedUser.name.replace(/\s+/g, '_')}_Bookings.xlsx`);
-                    }}
+                    onClick={() => exportUserReport(selectedUser.name, selectedUser.email, userBookings, uKpis).catch(console.error)}
                     sx={{ ml: 'auto', fontWeight: 700, fontSize: '0.72rem', borderColor: '#c4b5fd', color: '#8b5cf6' }}
                   >
                     Export
@@ -1143,20 +983,7 @@ function PerSystemTab({ allBookings, onViewDetails }: { allBookings: Booking[]; 
                 size="small"
                 variant="outlined"
                 startIcon={<DownloadIcon />}
-                onClick={() => {
-                  const wb = XLSX.utils.book_new();
-                  const ws = XLSX.utils.aoa_to_sheet([
-                    ['System Name', selectedSys.name],
-                    [],
-                    ['Total', 'Approved', 'Pending', 'Rejected', 'GPU', 'Total Hours', 'Unique Users'],
-                    [sKpis.total, sKpis.approved, sKpis.pending, sKpis.rejected, sKpis.gpu, sKpis.hours, sKpis.uniqueUsers],
-                    [],
-                    ['#', 'User Name', 'Email', 'Start Date', 'End Date', 'Time', 'Status', 'GPU', 'Mentor', 'Reason'],
-                    ...sysBookings.map((b, i) => [i + 1, getDisplayName(b), getUserEmail(b), b.startDate, b.endDate, `${b.startTime}–${b.endTime}`, b.status, b.requiresGPU ? 'Yes' : 'No', b.mentor || '', b.reason]),
-                  ]);
-                  XLSX.utils.book_append_sheet(wb, ws, selectedSys.name.slice(0, 31));
-                  XLSX.writeFile(wb, `System_${selectedSys.name.replace(/\s+/g, '_')}_Bookings.xlsx`);
-                }}
+                onClick={() => exportSystemReport(selectedSys.name, sysBookings, sKpis).catch(console.error)}
                 sx={{ fontWeight: 700, fontSize: '0.72rem' }}
               >
                 Export System
@@ -1306,8 +1133,8 @@ const AdminAnalytics: React.FC<Props> = ({ bookings, onViewDetails }) => {
           }}
         >
           <Tab icon={<BarChartIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Overview" />
-          <Tab icon={<PersonIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Per User" />
-          <Tab icon={<StorageIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Per System" />
+          <Tab icon={<PersonIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="User Analytics" />
+          <Tab icon={<StorageIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="System Analytics" />
         </Tabs>
       </Box>
 
