@@ -704,17 +704,23 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
     // Notify admins about the cancellation (if user cancelled)
     if (isOwner) {
+      await booking.populate('computerId');
+      const computerName = booking.computerId?.name || 'Unknown System';
+      const userName = req.user.name || req.user.email || 'A user';
+      
       const userBookingId = booking._id.toString().slice(-6).toUpperCase();
       const admins = await User.find({ role: 'admin' });
       const adminNotifications = admins.map(admin => new Notification({
         userId: admin.firebaseUid,
         title: 'Booking Cancelled',
-        message: `Booking (ID: ${userBookingId}) for computer ${booking.computerId} has been cancelled by user ${req.user.firebaseUid}.`,
+        message: `Booking (ID: ${userBookingId}) for computer ${computerName} has been cancelled by user ${userName}.`,
         type: 'info',
         metadata: {
           bookingId: userBookingId,
-          computerId: booking.computerId,
-          userId: req.user.firebaseUid
+          computerId: booking.computerId?._id || booking.computerId,
+          computerName: computerName,
+          userId: req.user.firebaseUid,
+          userName: userName
         }
       }));
       if (adminNotifications.length > 0) {
@@ -830,17 +836,19 @@ router.patch('/:id/free', verifyToken, async (req, res) => {
       const bookingType = isActiveNow ? 'active' : 'future';
       const actionMessage = isActiveNow ? 'freed early' : 'cancelled';
       
+      const userName = req.user.name || req.user.email || 'A user';
       const admins = await User.find({ role: 'admin' });
       const adminNotifications = admins.map(admin => new Notification({
         userId: admin.firebaseUid,
         title: `${isActiveNow ? 'System Freed Early' : 'Future Booking Cancelled'}`,
-        message: `User has ${actionMessage} their ${bookingType} booking for ${booking.computerId.name} (Booking ID: ${userBookingId}). System is now available.`,
+        message: `${userName} has ${actionMessage} their ${bookingType} booking for ${booking.computerId.name} (Booking ID: ${userBookingId}). System is now available.`,
         type: 'info',
         metadata: {
           bookingId: userBookingId,
           computerId: booking.computerId._id,
           computerName: booking.computerId.name,
           userId: req.user.firebaseUid,
+          userName: userName,
           freedAt: booking.freedAt,
           bookingType
         }

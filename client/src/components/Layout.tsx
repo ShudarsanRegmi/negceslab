@@ -27,6 +27,8 @@ import {
   Chip,
   Tooltip,
   Collapse,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -59,6 +61,10 @@ import {
   ManageAccounts as ManageAccountsIcon,
   EmojiEvents as EmojiEventsIcon,
   Feedback as FeedbackIcon,
+  CancelScheduleSend as CancelScheduleSendIcon,
+  EventAvailable as EventAvailableIcon,
+  OpenInNew as OpenInNewIcon,
+  MarkEmailRead as MarkEmailReadIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -85,6 +91,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
+  const [dropdownFilterTab, setDropdownFilterTab] = useState<string>('all');
   const { userRole, currentUser, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
     useNotifications();
@@ -154,13 +161,49 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     setNotificationAnchor(null);
   };
 
-  const handleNotificationItemClick = (notificationId: string) => {
-    markAsRead(notificationId);
+  const handleNotificationItemClick = (notification: any) => {
+    markAsRead(notification._id);
     handleNotificationClose();
+
+    // Parse booking code from metadata or message
+    const code = notification.metadata?.bookingId || notification.message.match(/ID:\s*([A-F0-9]{6})/i)?.[1];
+    if (code) {
+      // Trigger inspect-booking event
+      window.dispatchEvent(new CustomEvent('inspect-booking', { detail: { bookingId: code } }));
+      // Also ensure we change tab to booking list or notifications if needed
+      const titleLower = notification.title.toLowerCase();
+      const msgLower = notification.message.toLowerCase();
+      if (titleLower.includes('request') || msgLower.includes('request')) {
+        window.dispatchEvent(new CustomEvent('change-tab', { detail: { tabIndex: 0 } }));
+      } else if (titleLower.includes('cancel') || msgLower.includes('cancel') || titleLower.includes('freed') || msgLower.includes('freed')) {
+        window.dispatchEvent(new CustomEvent('change-tab', { detail: { tabIndex: 1 } }));
+      }
+    } else {
+      const titleLower = notification.title.toLowerCase();
+      const msgLower = notification.message.toLowerCase();
+      if (titleLower.includes('request') || msgLower.includes('request')) {
+        window.dispatchEvent(new CustomEvent('change-tab', { detail: { tabIndex: 0 } }));
+      } else if (titleLower.includes('cancel') || msgLower.includes('cancel') || titleLower.includes('freed') || msgLower.includes('freed')) {
+        window.dispatchEvent(new CustomEvent('change-tab', { detail: { tabIndex: 1 } }));
+      }
+    }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
+  const getNotificationIcon = (notification: any) => {
+    const titleLower = (notification.title || '').toLowerCase();
+    const msgLower = (notification.message || '').toLowerCase();
+
+    if (titleLower.includes('cancel') || msgLower.includes('cancel')) {
+      return <CancelScheduleSendIcon sx={{ color: 'error.main' }} />;
+    }
+    if (titleLower.includes('freed') || msgLower.includes('freed') || msgLower.includes('available')) {
+      return <EventAvailableIcon sx={{ color: 'success.main' }} />;
+    }
+    if (titleLower.includes('request') || msgLower.includes('request')) {
+      return <Notifications sx={{ color: 'primary.main' }} />;
+    }
+
+    switch (notification.type) {
       case "success":
         return <CheckCircle sx={{ color: "success.main" }} />;
       case "warning":
@@ -659,81 +702,160 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               onClose={handleNotificationClose}
               PaperProps={{
                 sx: {
-                  width: { xs: "100vw", sm: 350 },
-                  maxHeight: 400,
-                  maxWidth: { xs: "calc(100vw - 32px)", sm: 350 },
+                  width: { xs: "100vw", sm: 520 },
+                  maxHeight: "calc(100vh - 120px)",
+                  maxWidth: { xs: "calc(100vw - 32px)", sm: 520 },
+                  borderRadius: 1.5,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                  border: '1px solid #e2e8f0',
                 },
               }}
               transformOrigin={{ horizontal: "right", vertical: "top" }}
               anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
             >
-              <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
-                <Typography variant="h6">Notifications</Typography>
+              <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: "divider" }}>
+                <Typography variant="subtitle1" fontWeight={800} color="#0f172a">Notifications</Typography>
                 {unreadCount > 0 && (
-                  <Button size="small" onClick={markAllAsRead}>
-                    Mark all as read
+                  <Button 
+                    size="small" 
+                    onClick={markAllAsRead}
+                    startIcon={<MarkEmailReadIcon style={{ fontSize: 14 }} />}
+                    sx={{ textTransform: 'none', fontWeight: 700 }}
+                  >
+                    Mark all read
                   </Button>
                 )}
               </Box>
-              {notifications.length === 0 ? (
-                <MenuItem>
-                  <Typography variant="body2" color="text.secondary">
-                    No notifications
-                  </Typography>
-                </MenuItem>
-              ) : (
-                notifications.map((notification) => (
-                  <MenuItem
-                    key={notification._id}
-                    onClick={() =>
-                      handleNotificationItemClick(notification._id)
+
+              {/* Sub-tabs / Categories */}
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: '#f8fafc' }}>
+                <Tabs
+                  value={dropdownFilterTab}
+                  onChange={(_, val) => setDropdownFilterTab(val)}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  TabIndicatorProps={{ style: { backgroundColor: '#0f172a' } }}
+                  sx={{
+                    minHeight: 34,
+                    '& .MuiTab-root': { fontWeight: 700, fontSize: '0.7rem', textTransform: 'none', color: '#64748b', minHeight: 34, py: 0.5, minWidth: 65 },
+                    '& .Mui-selected': { color: '#0f172a !important' },
+                  }}
+                >
+                  <Tab value="all" label={`All (${notifications.length})`} />
+                  <Tab value="requests" label={`Requests (${notifications.filter(n => n.title.toLowerCase().includes('request') || n.message.toLowerCase().includes('request')).length})`} />
+                  <Tab value="cancellations" label={`Cancel (${notifications.filter(n => n.title.toLowerCase().includes('cancel') || n.message.toLowerCase().includes('cancel')).length})`} />
+                  <Tab value="freed" label={`Freed (${notifications.filter(n => n.title.toLowerCase().includes('freed') || n.message.toLowerCase().includes('freed') || n.message.toLowerCase().includes('available')).length})`} />
+                  <Tab value="broadcasts" label={`Manual (${notifications.filter(n => !n.title.toLowerCase().includes('request') && !n.message.toLowerCase().includes('request') && !n.title.toLowerCase().includes('cancel') && !n.message.toLowerCase().includes('cancel') && !n.title.toLowerCase().includes('freed') && !n.message.toLowerCase().includes('freed')).length})`} />
+                </Tabs>
+              </Box>
+
+              <Box sx={{ maxHeight: "calc(100vh - 220px)", overflowY: 'auto' }}>
+                {(() => {
+                  const filtered = notifications.filter(n => {
+                    if (dropdownFilterTab === 'all') return true;
+                    const titleLower = n.title.toLowerCase();
+                    const msgLower = n.message.toLowerCase();
+                    if (dropdownFilterTab === 'requests') {
+                      return titleLower.includes('request') || msgLower.includes('request');
                     }
-                    sx={{
-                      opacity: notification.isRead ? 0.7 : 1,
-                      bgcolor: notification.isRead
-                        ? "transparent"
-                        : "action.hover",
-                    }}
-                  >
-                    <ListItemAvatar>
-                      {getNotificationIcon(notification.type)}
-                    </ListItemAvatar>
-                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                      <Typography
-                        variant="body2"
-                        fontWeight={notification.isRead ? "normal" : "bold"}
-                        noWrap
-                      >
-                        {notification.title}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{
-                          whiteSpace: 'normal',
-                          wordBreak: 'break-word',
-                          display: 'block',
-                          maxWidth: 260,
-                          overflowWrap: 'break-word',
-                        }}
-                        title={notification.message}
-                      >
-                        {notification.message}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        display="block"
-                        color="text.secondary"
-                      >
-                        {format(
-                          new Date(notification.createdAt),
-                          "MMM d, h:mm a"
-                        )}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))
-              )}
+                    if (dropdownFilterTab === 'cancellations') {
+                      return titleLower.includes('cancel') || msgLower.includes('cancel');
+                    }
+                    if (dropdownFilterTab === 'freed') {
+                      return titleLower.includes('freed') || msgLower.includes('freed') || msgLower.includes('available');
+                    }
+                    if (dropdownFilterTab === 'broadcasts') {
+                      return !titleLower.includes('request') && !msgLower.includes('request') &&
+                             !titleLower.includes('cancel') && !msgLower.includes('cancel') &&
+                             !titleLower.includes('freed') && !msgLower.includes('freed');
+                    }
+                    return true;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <Box sx={{ py: 5, textAlign: 'center' }}>
+                        <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                          No notifications in this filter
+                        </Typography>
+                      </Box>
+                    );
+                  }
+
+                  return filtered.map((notification) => (
+                    <MenuItem
+                      key={notification._id}
+                      onClick={() => handleNotificationItemClick(notification)}
+                      sx={{
+                        py: 1.5,
+                        px: 2.5,
+                        borderBottom: '1px solid #f1f5f9',
+                        bgcolor: notification.isRead ? 'transparent' : '#eff6ff',
+                        display: 'flex',
+                        gap: 2,
+                        alignItems: 'flex-start',
+                        transition: 'background-color 0.2s',
+                        '&:hover': {
+                          bgcolor: notification.isRead ? '#f8fafc' : '#eff6ff',
+                        }
+                      }}
+                    >
+                      <ListItemAvatar sx={{ minWidth: 'auto', mt: 0.25 }}>
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: notification.isRead ? '#f1f5f9' : '#fff', color: '#1e293b', border: '1px solid #e2e8f0' }}>
+                          {getNotificationIcon(notification)}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={notification.isRead ? 600 : 800}
+                            color="#0f172a"
+                            sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}
+                          >
+                            {notification.title}
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                            {!notification.isRead && (
+                              <Chip 
+                                label="New" 
+                                size="small" 
+                                color="primary" 
+                                sx={{ height: 14, fontSize: '0.55rem', fontWeight: 800, borderRadius: 1 }} 
+                              />
+                            )}
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ ml: 0.5, fontSize: '0.68rem' }}
+                            >
+                              {format(new Date(notification.createdAt), "MMM d, h:mm a")}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Typography
+                          variant="caption"
+                          color="text.primary"
+                          sx={{
+                            display: 'block',
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-word',
+                            lineHeight: 1.45,
+                            mb: 0.5,
+                          }}
+                        >
+                          {notification.message}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Typography variant="caption" color="primary.main" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.68rem' }}>
+                            <OpenInNewIcon sx={{ fontSize: 11 }} /> Inspect Action
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                  ));
+                })()}
+              </Box>
             </Menu>
 
             {/* Professional User Menu */}

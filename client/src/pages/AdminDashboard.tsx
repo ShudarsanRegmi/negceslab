@@ -214,6 +214,30 @@ const AdminDashboard: React.FC = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const handleInspectBooking = (e: any) => {
+      const code = e.detail?.bookingId;
+      if (code) {
+        const match = bookings.find(b => b._id.toUpperCase().endsWith(code.toUpperCase()));
+        if (match) {
+          handleViewDetails(match);
+        }
+      }
+    };
+    const handleChangeTab = (e: any) => {
+      if (typeof e.detail?.tabIndex === 'number') {
+        setActiveTab(e.detail.tabIndex);
+      }
+    };
+
+    window.addEventListener('inspect-booking', handleInspectBooking);
+    window.addEventListener('change-tab', handleChangeTab);
+    return () => {
+      window.removeEventListener('inspect-booking', handleInspectBooking);
+      window.removeEventListener('change-tab', handleChangeTab);
+    };
+  }, [bookings]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -2039,7 +2063,13 @@ const AdminDashboard: React.FC = () => {
       {activeTab === 4 && <AdminAnalytics bookings={bookings} onViewDetails={handleViewDetails} />}
 
       {/* Notifications Tab */}
-      {activeTab === 5 && <AdminNotificationPanel />}
+      {activeTab === 5 && (
+        <AdminNotificationPanel
+          bookings={bookings}
+          setActiveTab={setActiveTab}
+          onViewDetails={handleViewDetails}
+        />
+      )}
 
 
       {/* Add Computer Dialog */}
