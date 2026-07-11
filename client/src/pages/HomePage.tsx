@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
@@ -367,6 +367,7 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.6 }}
+                style={{ marginBottom: '32px' }}
               >
                 <motion.div
                   whileHover={{ scale: 1.05 }}
@@ -1168,14 +1169,15 @@ export default function HomePage() {
             </Typography>
             <Typography variant="caption" sx={{ color: "#64748b" }}>
               <Link 
-                href="/version" 
+                component={RouterLink}
+                to="/version" 
                 sx={{ 
                   color: "#64748b", 
                   textDecoration: "underline", 
                   "&:hover": { color: "#3b82f6" } 
                 }}
               >
-                Version 3.1.0
+                Version 4.0.0
               </Link>
             </Typography>
           </Box>
