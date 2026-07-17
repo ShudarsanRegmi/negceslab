@@ -4,6 +4,9 @@
 
 ---
 
+**Demo Link-** https://youtu.be/MB_2VwwThAA <br>
+**Project Highlights** https://shudarsanregmi.com.np/#/projects
+
 ## 🌟 **Project Overview**
 
 The NEGCES Lab Management System is a modern, full-stack web application designed to streamline laboratory operations in educational institutions. It provides an intuitive interface for students to book computer lab sessions while giving administrators powerful tools to manage resources, track achievements, and handle user feedback.
