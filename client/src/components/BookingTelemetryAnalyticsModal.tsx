@@ -22,11 +22,16 @@ import {
   Paper,
   IconButton,
   LinearProgress,
-  Tooltip,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import {
   Close as CloseIcon,
-  Timeline as TimelineIcon,
   Assessment as AssessmentIcon,
   AssignmentTurnedIn as AuditIcon,
   TableChart as TableIcon,
@@ -37,6 +42,8 @@ import {
   Thermostat as TempIcon,
   WifiTethering as NetworkIcon,
   ShowChart as ChartIcon,
+  FilterList as FilterIcon,
+  CalendarToday as CalendarIcon,
 } from "@mui/icons-material";
 import {
   ResponsiveContainer,
@@ -97,9 +104,34 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
 }) => {
   const [activeTab, setActiveTab] = useState(0);
 
-  // Compute Statistical Summary (Averages, Peaks, Totals)
+  // Exploratory Filters State
+  const [selectedDayFilter, setSelectedDayFilter] = useState<string>("ALL");
+  const [showCpu, setShowCpu] = useState<boolean>(true);
+  const [showRam, setShowRam] = useState<boolean>(true);
+  const [showGpu, setShowGpu] = useState<boolean>(true);
+
+  // Extract unique dates present in metrics & booking
+  const availableDates = useMemo(() => {
+    const set = new Set<string>();
+    metrics.forEach((m) => {
+      const d = new Date(m.timestamp).toISOString().split("T")[0];
+      set.add(d);
+    });
+    return Array.from(set).sort();
+  }, [metrics]);
+
+  // Filter metrics based on chosen date
+  const filteredMetrics = useMemo(() => {
+    if (selectedDayFilter === "ALL") return metrics;
+    return metrics.filter((m) => {
+      const d = new Date(m.timestamp).toISOString().split("T")[0];
+      return d === selectedDayFilter;
+    });
+  }, [metrics, selectedDayFilter]);
+
+  // Compute Statistical Summary on filtered metrics
   const analyticsSummary = useMemo(() => {
-    if (!metrics || metrics.length === 0) {
+    if (!filteredMetrics || filteredMetrics.length === 0) {
       return {
         avgCpu: 0,
         maxCpu: 0,
@@ -115,7 +147,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
         totalNetMB: 0,
         maxCpuTemp: 0,
         maxGpuTemp: 0,
-        workloadType: "Idle / Unused",
+        workloadType: "No Telemetry Recorded",
       };
     }
 
@@ -125,7 +157,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
     let sumNetSent = 0, sumNetRecv = 0, totalNetBytes = 0;
     let maxCpuTemp = 0, maxGpuTemp = 0;
 
-    metrics.forEach((m) => {
+    filteredMetrics.forEach((m) => {
       sumCpu += m.cpuUtil || 0;
       if (m.cpuUtil > maxCpu) maxCpu = m.cpuUtil;
       if (m.cpuUtil < minCpu) minCpu = m.cpuUtil;
@@ -146,7 +178,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
       if (m.gpuTemp > maxGpuTemp) maxGpuTemp = m.gpuTemp;
     });
 
-    const count = metrics.length;
+    const count = filteredMetrics.length;
     const avgCpu = Math.round((sumCpu / count) * 10) / 10;
     const avgRam = Math.round((sumRam / count) * 10) / 10;
     const avgGpu = Math.round((sumGpu / count) * 10) / 10;
@@ -173,13 +205,12 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
       maxGpuTemp: Math.round(maxGpuTemp),
       workloadType,
     };
-  }, [metrics]);
+  }, [filteredMetrics]);
 
   // Formatted chart time series data
   const chartData = useMemo(() => {
-    return metrics.map((m) => ({
-      time: new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-      date: new Date(m.timestamp).toLocaleDateString(),
+    return filteredMetrics.map((m) => ({
+      time: `${new Date(m.timestamp).toLocaleDateString([], { month: "short", day: "numeric" })} ${new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
       "CPU Load (%)": Math.round(m.cpuUtil),
       "RAM Load (%)": Math.round(m.ramUtil),
       "GPU Load (%)": Math.round(m.gpuUtil),
@@ -187,10 +218,10 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
       "Net In (KB/s)": Math.round((m.netRecvSpeed || 0) / 1024),
       "Net Out (KB/s)": Math.round((m.netSentSpeed || 0) / 1024),
     }));
-  }, [metrics]);
+  }, [filteredMetrics]);
 
   const exportCSV = () => {
-    if (!metrics || metrics.length === 0) return;
+    if (!filteredMetrics || filteredMetrics.length === 0) return;
     const headers = [
       "Timestamp",
       "CPU Util (%)",
@@ -205,7 +236,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
       "GPU Temp (C)",
     ];
 
-    const rows = metrics.map((m) => [
+    const rows = filteredMetrics.map((m) => [
       `"${new Date(m.timestamp).toLocaleString()}"`,
       m.cpuUtil,
       m.ramUtil,
@@ -227,7 +258,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `telemetry_export_${bookingName.replace(/\s+/g, "_")}.csv`
+      `telemetry_export_${selectedDayFilter}_${bookingName.replace(/\s+/g, "_")}.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -268,7 +299,102 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
         </IconButton>
       </DialogTitle>
 
-      <Box sx={{ borderBottom: 1, borderColor: "divider", bgcolor: "#f8fafc", px: 2 }}>
+      {/* Explorer Global Controls Toolbar */}
+      <Paper elevation={0} sx={{ p: 2, bgcolor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+        <Grid container spacing={2} alignItems="center">
+          {/* Specific Day Selector */}
+          <Grid item xs={12} sm={4} md={3}>
+            <FormControl fullSize size="small" sx={{ minWidth: 200 }}>
+              <InputLabel id="day-filter-label" sx={{ fontWeight: 700 }}>
+                Select Specific Date
+              </InputLabel>
+              <Select
+                labelId="day-filter-label"
+                value={selectedDayFilter}
+                label="Select Specific Date"
+                onChange={(e) => setSelectedDayFilter(e.target.value)}
+                sx={{ bgcolor: "#ffffff", fontWeight: 700 }}
+              >
+                <MenuItem value="ALL">All Dates (Full Slot Overview)</MenuItem>
+                {availableDates.map((dateStr) => (
+                  <MenuItem key={dateStr} value={dateStr}>
+                    {new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Metric Stream Toggles (CPU / RAM / GPU Isolation) */}
+          <Grid item xs={12} sm={8} md={6}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography variant="caption" fontWeight={800} color="#475569" sx={{ mr: 1 }}>
+                ISOLATE METRICS:
+              </Typography>
+              <FormGroup row>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={showCpu}
+                      onChange={(e) => setShowCpu(e.target.checked)}
+                      sx={{ color: "#3b82f6", "&.Mui-checked": { color: "#3b82f6" } }}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" fontWeight={700} color="#3b82f6">
+                      CPU
+                    </Typography>
+                  }
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={showRam}
+                      onChange={(e) => setShowRam(e.target.checked)}
+                      sx={{ color: "#10b981", "&.Mui-checked": { color: "#10b981" } }}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" fontWeight={700} color="#10b981">
+                      RAM
+                    </Typography>
+                  }
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={showGpu}
+                      onChange={(e) => setShowGpu(e.target.checked)}
+                      sx={{ color: "#8b5cf6", "&.Mui-checked": { color: "#8b5cf6" } }}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" fontWeight={700} color="#8b5cf6">
+                      GPU
+                    </Typography>
+                  }
+                />
+              </FormGroup>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} md={3} sx={{ textAlign: { md: "right" } }}>
+            <Chip
+              icon={<CalendarIcon />}
+              label={`Records: ${filteredMetrics.length}`}
+              color="primary"
+              variant="outlined"
+              sx={{ fontWeight: 800 }}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      <Box sx={{ borderBottom: 1, borderColor: "divider", bgcolor: "#ffffff", px: 2 }}>
         <Tabs
           value={activeTab}
           onChange={(_, val) => setActiveTab(val)}
@@ -293,15 +419,23 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {/* Chart 1: CPU, RAM, GPU Utilization */}
             <Paper sx={{ p: 2.5, borderRadius: 2.5, border: "1px solid #cbd5e1" }}>
-              <Typography variant="subtitle2" fontWeight={800} color="#0f172a" sx={{ mb: 2 }}>
-                Compute Core Utilization % Timeline (CPU / RAM / GPU)
-              </Typography>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                <Typography variant="subtitle2" fontWeight={800} color="#0f172a">
+                  Compute Core Utilization Timeline ({selectedDayFilter === "ALL" ? "Full Booking Range" : selectedDayFilter})
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  {showCpu && <Chip size="small" label="CPU Active" sx={{ bgcolor: "#dbeafe", color: "#1d4ed8", fontWeight: 700 }} />}
+                  {showRam && <Chip size="small" label="RAM Active" sx={{ bgcolor: "#d1fae5", color: "#047857", fontWeight: 700 }} />}
+                  {showGpu && <Chip size="small" label="GPU Active" sx={{ bgcolor: "#ede9fe", color: "#6d28d9", fontWeight: 700 }} />}
+                </Box>
+              </Box>
+
               {chartData.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-                  No telemetry metrics logged for this date range yet.
+                  No telemetry metrics logged for the selected date filter.
                 </Typography>
               ) : (
-                <Box sx={{ width: "100%", height: 260 }}>
+                <Box sx={{ width: "100%", height: 280 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                       <defs>
@@ -323,9 +457,9 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
                       <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                       <RechartsTooltip />
                       <Legend />
-                      <Area type="monotone" dataKey="CPU Load (%)" stroke="#3b82f6" fillOpacity={1} fill="url(#colorCpu)" />
-                      <Area type="monotone" dataKey="RAM Load (%)" stroke="#10b981" fillOpacity={1} fill="url(#colorRam)" />
-                      <Area type="monotone" dataKey="GPU Load (%)" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorGpu)" />
+                      {showCpu && <Area type="monotone" dataKey="CPU Load (%)" stroke="#3b82f6" fillOpacity={1} fill="url(#colorCpu)" />}
+                      {showRam && <Area type="monotone" dataKey="RAM Load (%)" stroke="#10b981" fillOpacity={1} fill="url(#colorRam)" />}
+                      {showGpu && <Area type="monotone" dataKey="GPU Load (%)" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorGpu)" />}
                     </AreaChart>
                   </ResponsiveContainer>
                 </Box>
@@ -335,11 +469,11 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
             {/* Chart 2: Network Throughput Speed */}
             <Paper sx={{ p: 2.5, borderRadius: 2.5, border: "1px solid #cbd5e1" }}>
               <Typography variant="subtitle2" fontWeight={800} color="#0f172a" sx={{ mb: 2 }}>
-                Network Throughput Speed (Ingress & Egress KB/s)
+                Network Bandwidth Throughput Speed (Ingress & Egress KB/s)
               </Typography>
               {chartData.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-                  No network metrics logged for this date range yet.
+                  No network metrics logged for the selected date filter.
                 </Typography>
               ) : (
                 <Box sx={{ width: "100%", height: 220 }}>
@@ -378,13 +512,13 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
                 <Grid container spacing={2} alignItems="center">
                   <Grid item xs={12} md={8}>
                     <Typography variant="subtitle2" color="text.secondary" fontWeight={700}>
-                      COMPUTE WORKLOAD PROFILE
+                      COMPUTE WORKLOAD PROFILE ({selectedDayFilter === "ALL" ? "Full Slot Overview" : selectedDayFilter})
                     </Typography>
                     <Typography variant="h5" fontWeight={800} color="#0f172a" sx={{ mt: 0.5 }}>
                       {analyticsSummary.workloadType}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Aggregated metrics recorded across {metrics.length} telemetry polling points.
+                      Aggregated metrics recorded across {filteredMetrics.length} telemetry polling points.
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={4} sx={{ textAlign: { md: "right" } }}>
@@ -587,7 +721,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
             <Paper sx={{ p: 2.5, borderRadius: 2.5, border: "1px solid #cbd5e1" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                 <Typography variant="subtitle2" fontWeight={800} color="#334155">
-                  Raw InfluxDB Time-Series Record Ingestion Table
+                  Raw InfluxDB Time-Series Record Ingestion Table ({filteredMetrics.length} Records)
                 </Typography>
                 <Button
                   size="small"
@@ -614,7 +748,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {metrics.map((m, idx) => (
+                    {filteredMetrics.map((m, idx) => (
                       <TableRow key={idx} hover>
                         <TableCell sx={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
                           {new Date(m.timestamp).toISOString()}

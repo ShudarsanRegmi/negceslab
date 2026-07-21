@@ -385,7 +385,7 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
                   {m && m.count > 0 ? (
                     <Box sx={{ mt: 1, pt: 0.5, borderTop: '1px dashed #e2e8f0' }}>
                       <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#475569', fontWeight: 700 }}>
-                        ⚡ Avg {m.avgCpu}% CPU
+                        Avg {m.avgCpu}% CPU
                       </Typography>
                     </Box>
                   ) : (
@@ -404,9 +404,20 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
 
       {/* Day Exploration Panel */}
       <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, border: '1px solid #e2e8f0' }}>
-        <Typography variant="subtitle1" fontWeight={800} color="#0f172a" sx={{ mb: 2 }}>
-          🔍 Date Inspection: {format(new Date(`${selectedDateStr}T00:00:00`), 'EEEE, MMMM d, yyyy')}
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="subtitle1" fontWeight={800} color="#0f172a">
+            Date Inspection: {format(new Date(`${selectedDateStr}T00:00:00`), 'EEEE, MMMM d, yyyy')}
+          </Typography>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AnalyticsIcon />}
+            onClick={() => setAnalyticsModalOpen(true)}
+            sx={{ fontWeight: 700, textTransform: 'none' }}
+          >
+            Explore {format(new Date(`${selectedDateStr}T00:00:00`), 'MMM d')} Charts
+          </Button>
+        </Box>
 
         <Grid container spacing={3}>
           {/* Left Side: Session & Attendance Info */}
