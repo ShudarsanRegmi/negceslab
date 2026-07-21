@@ -19,6 +19,7 @@ import (
 )
 
 type StaticInfo struct {
+	SystemID     string `json:"systemId,omitempty"`
 	Hostname     string `json:"hostname"`
 	OS           string `json:"os"`
 	OSVersion    string `json:"os_version"`

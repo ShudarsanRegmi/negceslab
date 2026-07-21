@@ -1,5 +1,6 @@
 const express = require("express");
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 const router = express.Router();
 const Computer = require("../models/computer");
 const Metric = require("../models/metric");
@@ -29,22 +30,31 @@ const verifyAgentToken = async (req, res, next) => {
   }
 };
 
-// 1. Machine Registration Endpoint
+// 1. Machine Registration Endpoint (Supports systemId or hostname)
 router.post("/register", async (req, res) => {
   try {
-    const { hostname, os, osVersion, cpuModel, ram, storage, gpu } = req.body;
+    const { systemId, hostname, os, osVersion, cpuModel, ram, storage, gpu } = req.body;
 
-    if (!hostname) {
-      return res.status(400).json({ message: "Hostname is required for registration" });
+    let computer = null;
+
+    // 1. Try finding by systemId (MongoDB _id) if provided
+    if (systemId && mongoose.Types.ObjectId.isValid(systemId)) {
+      computer = await Computer.findById(systemId);
     }
 
-    // Check if machine already registered by name (case-insensitive)
-    let computer = await Computer.findOne({ name: new RegExp(`^${hostname}$`, "i") });
+    // 2. Fallback: Find by hostname if systemId not found or not provided
+    if (!computer && hostname) {
+      computer = await Computer.findOne({ name: new RegExp(`^${hostname}$`, "i") });
+    }
+
+    if (!computer && !hostname && !systemId) {
+      return res.status(400).json({ message: "Either systemId or hostname is required for registration" });
+    }
 
     const generatedToken = crypto.randomBytes(32).toString("hex");
 
     if (computer) {
-      // Update existing record with latest specs and assign/keep token
+      // Update existing record with latest specs and assign new token
       computer.agentToken = generatedToken;
       computer.systemDetails = {
         operatingSystem: os === "linux" ? "Linux" : (os === "windows" ? "Windows" : "Other"),
@@ -61,7 +71,7 @@ router.post("/register", async (req, res) => {
     } else {
       // Create a brand new Computer document
       computer = new Computer({
-        name: hostname,
+        name: hostname || `System-${Date.now().toString().slice(-4)}`,
         location: "Negces Lab",
         status: "available",
         agentToken: generatedToken,
@@ -82,8 +92,9 @@ router.post("/register", async (req, res) => {
 
     res.status(200).json({
       machineId: computer._id,
+      systemName: computer.name,
       authToken: generatedToken,
-      message: "Machine registered successfully"
+      message: `Registered machine '${computer.name}' successfully`
     });
   } catch (error) {
     console.error("Machine Registration Error:", error);

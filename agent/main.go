@@ -19,6 +19,7 @@ import (
 func main() {
 	// Parse CLI parameters
 	registerFlag := flag.Bool("register", false, "Register the machine with the backend")
+	systemIDFlag := flag.String("systemid", "", "Assign this machine to a specific systemId during registration")
 	attendanceFlag := flag.Bool("attendance", false, "Prompt user for attendance (GUI)")
 	cliFlag := flag.Bool("cli", false, "Use CLI prompt instead of web browser GUI")
 	checkoutFlag := flag.Bool("checkout", false, "Perform checkout and release machine")
@@ -41,8 +42,8 @@ func main() {
 	agentClient := client.NewClient(cfg, store)
 
 	// 2. Process immediate CLI commands
-	if *registerFlag {
-		registerMachine(cfg, agentClient)
+	if *registerFlag || *systemIDFlag != "" {
+		registerMachine(cfg, agentClient, *systemIDFlag)
 		return
 	}
 
@@ -67,7 +68,7 @@ func main() {
 	creds := store.GetCredentials()
 	if creds.AuthToken == "" {
 		fmt.Println("Machine is not registered. Running auto-registration...")
-		registerMachine(cfg, agentClient)
+		registerMachine(cfg, agentClient, "")
 	}
 
 	// Double check registration status
@@ -111,7 +112,7 @@ func main() {
 	fmt.Println("NegcesLab Agent cleanly terminated.")
 }
 
-func registerMachine(cfg *config.Config, c *client.Client) {
+func registerMachine(cfg *config.Config, c *client.Client, targetSystemID string) {
 	fmt.Println("Gathering static system inventory details...")
 	static, err := sysinfo.CollectStaticInfo()
 	if err != nil {
@@ -119,8 +120,10 @@ func registerMachine(cfg *config.Config, c *client.Client) {
 		os.Exit(1)
 	}
 
-	// Apply hostname override if specified in configuration (perfect for system slot mapping tests)
-	if cfg.MachineName != "" {
+	if targetSystemID != "" {
+		static.SystemID = targetSystemID
+		fmt.Printf("[INFO] Registering directly for Target System ID: %s\n", targetSystemID)
+	} else if cfg.MachineName != "" {
 		fmt.Printf("[INFO] Overriding local hostname '%s' with configured machine name '%s'\n", static.Hostname, cfg.MachineName)
 		static.Hostname = cfg.MachineName
 	}

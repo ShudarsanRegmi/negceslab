@@ -50,8 +50,9 @@ func (c *Client) RegisterMachine(static *sysinfo.StaticInfo) error {
 	}
 
 	var res struct {
-		MachineID string `json:"machine_id"`
-		AuthToken string `json:"authToken"`
+		MachineID  string `json:"machineId"`
+		SystemName string `json:"systemName"`
+		AuthToken  string `json:"authToken"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
@@ -67,7 +68,11 @@ func (c *Client) RegisterMachine(static *sysinfo.StaticInfo) error {
 		return fmt.Errorf("failed to save registration details locally: %w", err)
 	}
 
-	fmt.Printf("Registered machine ID: %s\n", res.MachineID)
+	if res.SystemName != "" {
+		fmt.Printf("Successfully registered as System: '%s' (ID: %s)\n", res.SystemName, res.MachineID)
+	} else {
+		fmt.Printf("Registered machine ID: %s\n", res.MachineID)
+	}
 	return nil
 }
 
