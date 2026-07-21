@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { buildExcelReport, exportUserReport, exportSystemReport } from '../utils/excelExport';
 import {
   Box,
@@ -27,7 +27,14 @@ import {
   FormControl,
   InputLabel,
   Paper,
+  LinearProgress,
+  Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
+import { computersAPI } from '../services/api';
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -1135,6 +1142,7 @@ const AdminAnalytics: React.FC<Props> = ({ bookings, onViewDetails }) => {
           <Tab icon={<BarChartIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Overview" />
           <Tab icon={<PersonIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="User Analytics" />
           <Tab icon={<StorageIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="System Analytics" />
+          <Tab icon={<ComputerIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Real-Time View" />
         </Tabs>
       </Box>
 
@@ -1151,8 +1159,445 @@ const AdminAnalytics: React.FC<Props> = ({ bookings, onViewDetails }) => {
       )}
       {innerTab === 1 && <PerUserTab allBookings={bookings} onViewDetails={onViewDetails} />}
       {innerTab === 2 && <PerSystemTab allBookings={bookings} onViewDetails={onViewDetails} />}
+      {innerTab === 3 && <RealTimeTab />}
     </Box>
   );
 };
+
+interface RealTimeComputer {
+  _id: string;
+  name: string;
+  location: string;
+  isOnline: boolean;
+  lastSeen: string | null;
+  agentActiveSession?: {
+    currentUser: string;
+    email: string;
+    agenda: string;
+    sessionType: string;
+    checkedIn: boolean;
+    checkInTime: string;
+  };
+  liveMetrics?: {
+    cpuUtil: number;
+    ramUtil: number;
+    gpuUtil: number;
+    gpuMemUsed: number;
+    gpuMemTotal: number;
+    netSentSpeed: number;
+    netRecvSpeed: number;
+    diskUtil: number;
+    cpuTemp: number;
+    gpuTemp: number;
+  };
+}
+
+function RealTimeTab() {
+  const [computers, setComputers] = useState<RealTimeComputer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterOnline, setFilterOnline] = useState<'all' | 'online' | 'offline'>('all');
+  const [selectedComp, setSelectedComp] = useState<RealTimeComputer | null>(null);
+
+  const fetchLive = useCallback(async (showLoader = false) => {
+    try {
+      if (showLoader) setLoading(true);
+      const res = await computersAPI.getAllComputers(false);
+      const sorted = res.data.sort((a: any, b: any) => 
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+      );
+      setComputers(sorted);
+    } catch (err) {
+      console.error("Failed to load real-time agent metrics:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLive(true);
+    const interval = setInterval(() => {
+      fetchLive(false);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fetchLive]);
+
+  const filtered = useMemo(() => {
+    return computers.filter(c => {
+      const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.location.toLowerCase().includes(search.toLowerCase()) ||
+        (c.agentActiveSession?.currentUser || '').toLowerCase().includes(search.toLowerCase());
+      
+      if (filterOnline === 'online') return matchSearch && c.isOnline;
+      if (filterOnline === 'offline') return matchSearch && !c.isOnline;
+      return matchSearch;
+    });
+  }, [computers, search, filterOnline]);
+
+  const stats = useMemo(() => {
+    const total = computers.length;
+    const online = computers.filter(c => c.isOnline).length;
+    const activeSessions = computers.filter(c => c.isOnline && c.agentActiveSession?.checkedIn).length;
+    return { total, online, activeSessions };
+  }, [computers]);
+
+  const formatNetSpeed = (bytes: number) => {
+    if (!bytes || bytes === 0) return "0 B/s";
+    const k = 1024;
+    const sizes = ["B/s", "KB/s", "MB/s", "GB/s"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
+  const getMetricColor = (val: number) => {
+    if (val > 80) return 'error';
+    if (val > 50) return 'warning';
+    return 'primary';
+  };
+
+  if (loading && computers.length === 0) {
+    return (
+      <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+        <Typography variant="body1" color="text.secondary">Connecting to live metrics gateway...</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase' }}>
+                Total Computers
+              </Typography>
+              <Typography variant="h4" fontWeight={800} color="#0f172a" sx={{ mt: 0.5 }}>
+                {stats.total}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase' }}>
+                Online Agents
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.5 }}>
+                <Typography variant="h4" fontWeight={800} color="#10b981">
+                  {stats.online}
+                </Typography>
+                <Chip label="Live" color="success" size="small" sx={{ fontWeight: 800, height: 20, fontSize: '0.65rem' }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase' }}>
+                Active Checked-In Sessions
+              </Typography>
+              <Typography variant="h4" fontWeight={800} color="#3b82f6" sx={{ mt: 0.5 }}>
+                {stats.activeSessions}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+        <TextField
+          size="small"
+          placeholder="Search by machine name, user, location..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          sx={{ flexGrow: 1, maxWidth: 400, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            label="Status"
+            value={filterOnline}
+            onChange={e => setFilterOnline(e.target.value as any)}
+            sx={{ borderRadius: 2 }}
+          >
+            <MenuItem value="all">All Systems</MenuItem>
+            <MenuItem value="online">Online Only</MenuItem>
+            <MenuItem value="offline">Offline Only</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none', overflow: 'hidden' }}>
+        <Table>
+          <TableHead sx={{ bgcolor: '#f8fafc' }}>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 800, color: '#475569' }}>Machine</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#475569' }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#475569' }}>Logged User / Agenda</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#475569' }}>Session</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#475569' }}>CPU</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#475569' }}>RAM</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#475569' }}>GPU</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#475569' }}>Network Traffic</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#475569' }}>Temps</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                  No online computers or matching results found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map(computer => (
+                <TableRow key={computer._id} hover onClick={() => setSelectedComp(computer)} sx={{ cursor: 'pointer' }}>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <ComputerIcon sx={{ color: computer.isOnline ? '#10b981' : '#94a3b8' }} />
+                      <Box>
+                        <Typography variant="subtitle2" fontWeight={700} color="#0f172a">{computer.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{computer.location}</Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  
+                  <TableCell>
+                    {computer.isOnline ? (
+                      <Chip label="Online" color="success" size="small" sx={{ fontWeight: 800, height: 22 }} />
+                    ) : (
+                      <Tooltip title={computer.lastSeen ? `Last seen: ${new Date(computer.lastSeen).toLocaleString()}` : 'Never seen'}>
+                        <Chip label="Offline" color="default" size="small" sx={{ fontWeight: 700, height: 22 }} />
+                      </Tooltip>
+                    )}
+                  </TableCell>
+                  
+                  <TableCell>
+                    {computer.isOnline && computer.agentActiveSession?.checkedIn ? (
+                      <Box>
+                        <Typography variant="body2" fontWeight={700} color="primary.main">
+                          {computer.agentActiveSession.currentUser}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          Agenda: {computer.agentActiveSession.agenda}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        Idle / Available
+                      </Typography>
+                    )}
+                  </TableCell>
+                  
+                  <TableCell>
+                    {computer.isOnline && computer.agentActiveSession?.checkedIn ? (
+                      <Chip 
+                        label={computer.agentActiveSession.sessionType} 
+                        size="small" 
+                        variant="outlined" 
+                        sx={{ fontSize: '0.65rem', fontWeight: 700 }} 
+                      />
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+
+                  <TableCell>
+                    {computer.isOnline && computer.liveMetrics ? (
+                      <Box sx={{ minWidth: 60 }}>
+                        <Typography variant="body2" fontWeight={700}>{Math.round(computer.liveMetrics.cpuUtil)}%</Typography>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={computer.liveMetrics.cpuUtil} 
+                          color={getMetricColor(computer.liveMetrics.cpuUtil)}
+                          sx={{ height: 4, borderRadius: 2, mt: 0.5 }} 
+                        />
+                      </Box>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+
+                  <TableCell>
+                    {computer.isOnline && computer.liveMetrics ? (
+                      <Box sx={{ minWidth: 60 }}>
+                        <Typography variant="body2" fontWeight={700}>{Math.round(computer.liveMetrics.ramUtil)}%</Typography>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={computer.liveMetrics.ramUtil} 
+                          color={getMetricColor(computer.liveMetrics.ramUtil)}
+                          sx={{ height: 4, borderRadius: 2, mt: 0.5 }} 
+                        />
+                      </Box>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+
+                  <TableCell>
+                    {computer.isOnline && computer.liveMetrics ? (
+                      <Box sx={{ minWidth: 60 }}>
+                        <Typography variant="body2" fontWeight={700}>{Math.round(computer.liveMetrics.gpuUtil)}%</Typography>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={computer.liveMetrics.gpuUtil} 
+                          color={getMetricColor(computer.liveMetrics.gpuUtil)}
+                          sx={{ height: 4, borderRadius: 2, mt: 0.5 }} 
+                        />
+                      </Box>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+
+                  <TableCell>
+                    {computer.isOnline && computer.liveMetrics ? (
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'nowrap' }}>
+                          ↑ {formatNetSpeed(computer.liveMetrics.netSentSpeed)}
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'nowrap' }}>
+                          ↓ {formatNetSpeed(computer.liveMetrics.netRecvSpeed)}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+
+                  <TableCell>
+                    {computer.isOnline && computer.liveMetrics && (computer.liveMetrics.cpuTemp > 0 || computer.liveMetrics.gpuTemp > 0) ? (
+                      <Box>
+                        {computer.liveMetrics.cpuTemp > 0 && (
+                          <Typography variant="caption" sx={{ display: 'block' }}>
+                            CPU: {Math.round(computer.liveMetrics.cpuTemp)}°C
+                          </Typography>
+                        )}
+                        {computer.liveMetrics.gpuTemp > 0 && (
+                          <Typography variant="caption" sx={{ display: 'block' }}>
+                            GPU: {Math.round(computer.liveMetrics.gpuTemp)}°C
+                          </Typography>
+                        )}
+                      </Box>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Selected Computer Data Explorer Modal */}
+      <Dialog open={!!selectedComp} onClose={() => setSelectedComp(null)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Typography variant="h6" fontWeight="800">
+            💻 Data Explorer: {selectedComp?.name}
+          </Typography>
+          <Chip
+            label={selectedComp?.isOnline ? "Online" : "Offline"}
+            color={selectedComp?.isOnline ? "success" : "default"}
+            size="small"
+            sx={{ fontWeight: 800 }}
+          />
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedComp && (
+            <Grid container spacing={3}>
+              {/* Specs & Active Session */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" fontWeight="700" sx={{ mb: 1 }}>Live Attendance Session</Typography>
+                <Card variant="outlined" sx={{ p: 2, mb: 3, bgcolor: selectedComp.agentActiveSession?.checkedIn ? "#f0fdf4" : "#f8fafc" }}>
+                  {selectedComp.agentActiveSession?.checkedIn ? (
+                    <Box>
+                      <Typography variant="body2" fontWeight="700">Student: {selectedComp.agentActiveSession.currentUser}</Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">Email: {selectedComp.agentActiveSession.email}</Typography>
+                      <Typography variant="body2" sx={{ mt: 1 }}><strong>Agenda:</strong> {selectedComp.agentActiveSession.agenda}</Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                        Check-In: {new Date(selectedComp.agentActiveSession.checkInTime).toLocaleString()}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic">Machine is currently available / idle.</Typography>
+                  )}
+                </Card>
+
+                <Typography variant="subtitle1" fontWeight="700" sx={{ mb: 1 }}>Static System Specs</Typography>
+                <Card variant="outlined" sx={{ p: 2 }}>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                    <Typography variant="body2"><strong>Location:</strong> {selectedComp.location}</Typography>
+                    <Typography variant="body2"><strong>Last Seen:</strong> {selectedComp.lastSeen ? new Date(selectedComp.lastSeen).toLocaleString() : "Never"}</Typography>
+                  </Box>
+                </Card>
+              </Grid>
+
+              {/* Live Metrics Breakdown */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" fontWeight="700" sx={{ mb: 1 }}>Live Resource Telemetry</Typography>
+                {selectedComp.isOnline && selectedComp.liveMetrics ? (
+                  <Card variant="outlined" sx={{ p: 2 }}>
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight={700}>CPU Load</Typography>
+                        <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.cpuUtil)}%</Typography>
+                      </Box>
+                      <LinearProgress variant="determinate" value={selectedComp.liveMetrics.cpuUtil} color={getMetricColor(selectedComp.liveMetrics.cpuUtil)} sx={{ height: 6, borderRadius: 3 }} />
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight={700}>Memory Load (RAM)</Typography>
+                        <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.ramUtil)}%</Typography>
+                      </Box>
+                      <LinearProgress variant="determinate" value={selectedComp.liveMetrics.ramUtil} color={getMetricColor(selectedComp.liveMetrics.ramUtil)} sx={{ height: 6, borderRadius: 3 }} />
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight={700}>GPU Core Util</Typography>
+                        <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.gpuUtil)}%</Typography>
+                      </Box>
+                      <LinearProgress variant="determinate" value={selectedComp.liveMetrics.gpuUtil} color={getMetricColor(selectedComp.liveMetrics.gpuUtil)} sx={{ height: 6, borderRadius: 3 }} />
+                    </Box>
+
+                    {selectedComp.liveMetrics.gpuMemTotal > 0 && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2"><strong>GPU VRAM:</strong> {Math.round(selectedComp.liveMetrics.gpuMemUsed)} / {Math.round(selectedComp.liveMetrics.gpuMemTotal)} MB</Typography>
+                      </Box>
+                    )}
+
+                    <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
+                      <Typography variant="caption"><strong>CPU Temp:</strong> {selectedComp.liveMetrics.cpuTemp}°C</Typography>
+                      <Typography variant="caption"><strong>GPU Temp:</strong> {selectedComp.liveMetrics.gpuTemp}°C</Typography>
+                    </Box>
+                  </Card>
+                ) : (
+                  <Card variant="outlined" sx={{ p: 2, bgcolor: "#fffbeb", border: "1px dashed #f59e0b" }}>
+                    <Typography variant="body2" color="text.secondary">No live telemetry packets. Computer is currently offline.</Typography>
+                  </Card>
+                )}
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectedComp(null)}>Close Explorer</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
 
 export default AdminAnalytics;

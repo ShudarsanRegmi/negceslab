@@ -1,0 +1,15 @@
+{
+  "credentials": {
+    "machine_id": "",
+    "auth_token": "6ea9f684592feecc99846e027435fa63642d4958c5d745ac772c2baca7325189"
+  },
+  "attendance": {
+    "student_name": "",
+    "student_email": "",
+    "agenda": "",
+    "session_type": "",
+    "check_in_time": "0001-01-01T00:00:00Z",
+    "checked_in": false
+  },
+  "offline_metrics": []
+}

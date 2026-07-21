@@ -70,6 +70,8 @@ export const computersAPI = {
   createComputer: (data: { name: string; location: string; specifications: string; status: string }) => api.post('/computers', data),
   updateComputer: (computerId: string, data: { name: string; location: string; specifications: string; status: string }) => api.put(`/computers/${computerId}`, data),
   deleteComputer: (computerId: string) => api.delete(`/computers/${computerId}`),
+  getComputerHistory: (computerId: string, hours = 168) => api.get(`/agent/${computerId}/history?hours=${hours}`),
+  getComputerHistoryByRange: (computerId: string, startDate: string, endDate: string) => api.get(`/agent/${computerId}/history?startDate=${startDate}&endDate=${endDate}`),
 };
 
 export const bookingsAPI = {

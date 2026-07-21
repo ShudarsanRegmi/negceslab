@@ -31,6 +31,7 @@ import {
   Tooltip,
   Badge,
   Divider,
+  LinearProgress,
 } from "@mui/material";
 import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -54,6 +55,7 @@ import { computersAPI, temporaryReleaseAPI } from "../services/api";
 import { bookingsAPI } from "../services/api";
 import { format, isWithinInterval, parseISO, isSameDay, addDays, startOfMonth, endOfMonth } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
+import BookingUsageExplorer from "../components/BookingUsageExplorer";
 
 // Lab policy constants (keeping in sync with shared/policy.js)
 const LAB_OPEN_HOUR = 8;
@@ -62,6 +64,15 @@ const LAB_CLOSE_HOUR = 17;
 const LAB_CLOSE_MINUTE = 30;
 const CLOSED_DAYS = [0]; // 0 = Sunday
 const MAX_BOOKING_AHEAD_DAYS = 30; // Only allow booking up to 1 month ahead
+
+const formatBytes = (bytes: number, decimals = 1) => {
+  if (!bytes || bytes === 0) return "0 B";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+};
 
 interface Computer {
   _id: string;
@@ -73,6 +84,27 @@ interface Computer {
   nextAvailable?: string;
   nextAvailableDate?: string;
   bookings: Booking[];
+  isOnline?: boolean;
+  lastSeen?: string;
+  agentActiveSession?: {
+    currentUser: string;
+    email: string;
+    agenda: string;
+    sessionType: string;
+    checkedIn: boolean;
+  };
+  liveMetrics?: {
+    cpuUtil: number;
+    ramUtil: number;
+    gpuUtil: number;
+    gpuMemUsed: number;
+    gpuMemTotal: number;
+    netSentSpeed: number;
+    netRecvSpeed: number;
+    diskUtil: number;
+    cpuTemp: number;
+    gpuTemp: number;
+  };
 }
 
 interface Booking {
@@ -104,6 +136,17 @@ interface Booking {
   };
   // Keep the old structure for backward compatibility
   temporaryReleases?: TemporaryRelease[];
+  attendanceActive?: {
+    name: string;
+    agentActiveSession?: {
+      currentUser: string;
+      email: string;
+      agenda: string;
+      sessionType: string;
+      checkInTime: string;
+      checkedIn: boolean;
+    };
+  };
 }
 
 interface CalendarEvent {
@@ -171,12 +214,18 @@ const ComputerGrid: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   useEffect(() => {
-    fetchComputers();
+    fetchComputers(true);
+
+    const interval = setInterval(() => {
+      fetchComputers(false);
+    }, 10000); // Poll every 10s for live metrics
+
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchComputers = async () => {
+  const fetchComputers = async (showLoader = false) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const usePublic = !currentUser; // Use public API if no user is authenticated
       const [computersRes, bookingsRes] = await Promise.all([
         computersAPI.getComputersWithBookings(usePublic),
@@ -565,6 +614,9 @@ const ComputerGrid: React.FC = () => {
                         Time: {booking.startTime} - {booking.endTime}
                       </Typography>
                     </Box>
+
+                    {/* Day-Wise Exploratory Attendance & Telemetry Chronograph */}
+                    <BookingUsageExplorer booking={booking as any} />
 
                     {/* Temporary Releases for this booking */}
                     {booking.temporaryReleases && booking.temporaryReleases.length > 0 && (
@@ -1252,12 +1304,31 @@ const ComputerGrid: React.FC = () => {
                     textAlign: "center",
                   }}
                 >
-                  {/* Computer Icon */}
-                  <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                  {/* Computer Icon & Online Badge */}
+                  <Box sx={{ display: "flex", justifyContent: "center", mb: 2, position: "relative" }}>
                     <ComputerIcon
                       sx={{
                         color: displayInfo.iconColor,
                         fontSize: { xs: 36, sm: 40, md: 44 },
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        backgroundColor: computer.isOnline ? "#4caf50" : "#9e9e9e",
+                        border: "2px solid #fff",
+                        position: "absolute",
+                        bottom: 0,
+                        right: "calc(50% - 22px)",
+                        boxShadow: computer.isOnline ? "0 0 8px #4caf50" : "none",
+                        animation: computer.isOnline ? "pulse 2s infinite" : "none",
+                        "@keyframes pulse": {
+                          "0%": { transform: "scale(0.95)", boxShadow: "0 0 0 0 rgba(76, 175, 80, 0.7)" },
+                          "70%": { transform: "scale(1)", boxShadow: "0 0 0 6px rgba(76, 175, 80, 0)" },
+                          "100%": { transform: "scale(0.95)", boxShadow: "0 0 0 0 rgba(76, 175, 80, 0)" }
+                        }
                       }}
                     />
                   </Box>
@@ -1295,6 +1366,74 @@ const ComputerGrid: React.FC = () => {
                   >
                     {computer.location}
                   </Typography>
+
+                  {/* Agent Live Telemetry (if online) */}
+                  {computer.isOnline && computer.liveMetrics && (
+                    <Box sx={{ mt: 2, mb: 1, width: "100%", textAlign: "left" }}>
+                      <Divider sx={{ my: 1.5 }} />
+                      
+                      {/* Metric Utilization Grid */}
+                      <Grid container spacing={1} sx={{ mb: 1.5 }}>
+                        <Grid item xs={4}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.68rem" }}>CPU</Typography>
+                          <Typography variant="body2" fontWeight={700} color="text.primary">{Math.round(computer.liveMetrics.cpuUtil)}%</Typography>
+                          <LinearProgress variant="determinate" value={computer.liveMetrics.cpuUtil} color="primary" sx={{ height: 4, borderRadius: 2, mt: 0.5 }} />
+                        </Grid>
+                        <Grid item xs={4}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.68rem" }}>RAM</Typography>
+                          <Typography variant="body2" fontWeight={700} color="text.primary">{Math.round(computer.liveMetrics.ramUtil)}%</Typography>
+                          <LinearProgress variant="determinate" value={computer.liveMetrics.ramUtil} color="info" sx={{ height: 4, borderRadius: 2, mt: 0.5 }} />
+                        </Grid>
+                        <Grid item xs={4}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.68rem" }}>GPU</Typography>
+                          <Typography variant="body2" fontWeight={700} color="text.primary">{Math.round(computer.liveMetrics.gpuUtil)}%</Typography>
+                          <LinearProgress variant="determinate" value={computer.liveMetrics.gpuUtil} color="secondary" sx={{ height: 4, borderRadius: 2, mt: 0.5 }} />
+                        </Grid>
+                      </Grid>
+
+                      {/* Network & Temps Info */}
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "flex", gap: 0.5, fontSize: "0.65rem" }}>
+                          Net: ↑ {formatBytes(computer.liveMetrics.netSentSpeed)}/s ↓ {formatBytes(computer.liveMetrics.netRecvSpeed)}/s
+                        </Typography>
+                        {computer.liveMetrics.cpuTemp > 0 && (
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
+                            Temp: {Math.round(computer.liveMetrics.cpuTemp)}°C
+                          </Typography>
+                        )}
+                      </Box>
+
+                      {/* Active Attendance Info */}
+                      {computer.agentActiveSession && computer.agentActiveSession.checkedIn ? (
+                        <Box sx={{ p: 1, borderRadius: 2, bgcolor: "action.hover", border: "1px solid", borderColor: "divider" }}>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                            <Typography variant="caption" fontWeight={700} color="primary">
+                              👤 {computer.agentActiveSession.currentUser}
+                            </Typography>
+                            <Chip 
+                              label={computer.agentActiveSession.sessionType} 
+                              size="small" 
+                              sx={{ height: 16, fontSize: "0.58rem", textTransform: "uppercase" }} 
+                            />
+                          </Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.68rem", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                            <strong>Agenda:</strong> {computer.agentActiveSession.agenda}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Box sx={{ p: 1, borderRadius: 2, bgcolor: "action.hover", border: "1px dashed", borderColor: "divider", textAlign: "center" }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic", fontSize: "0.65rem" }}>
+                            No active attendance check-in
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      {/* Last Seen timestamp */}
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.6rem", textAlign: "right", mt: 1 }}>
+                        Last seen: {computer.lastSeen ? new Date(computer.lastSeen).toLocaleTimeString() : "N/A"}
+                      </Typography>
+                    </Box>
+                  )}
 
                   {/* Action Buttons */}
                   <Box sx={{ mt: 2, display: "flex", gap: 1, justifyContent: "center" }}>

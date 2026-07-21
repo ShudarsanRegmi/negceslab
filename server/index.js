@@ -55,6 +55,7 @@ const systemDetailsRoutes = require('./routes/systemDetails');
 const temporaryReleaseRoutes = require('./routes/temporaryReleases');
 const achievementRoutes = require('./routes/achievements');
 const superadminRoutes = require('./routes/superadmin');
+const agentRoutes = require("./routes/agent");
 const { setupSwagger } = require("./swagger");
 
 // Use routes
@@ -67,6 +68,7 @@ app.use('/api/system-details', systemDetailsRoutes);
 app.use('/api/temporary-releases', temporaryReleaseRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/superadmin', superadminRoutes);
+app.use("/api/agent", agentRoutes);
 
 // Setup Swagger UI (only in development/localhost, not in production)
 if (process.env.NODE_ENV !== "production") {
@@ -121,6 +123,10 @@ const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Initialize WebSocket telemetry for machine agents
+const { initWebSocketServer } = require("./services/websocketService");
+initWebSocketServer(server);
 
 
 // Handle SIGTERM for Docker stop

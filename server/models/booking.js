@@ -140,6 +140,17 @@ const bookingSchema = new mongoose.Schema({
     default: false,
     index: true
   },
+  // Attendance log history per date for this booking
+  attendanceHistory: [{
+    date: { type: String, required: true },
+    currentUser: { type: String },
+    email: { type: String },
+    agenda: { type: String },
+    sessionType: { type: String },
+    checkInTime: { type: Date },
+    checkOutTime: { type: Date, default: null }
+  }],
+
   originalBookingId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking',
@@ -165,6 +176,14 @@ bookingSchema.virtual('user', {
   ref: 'User',
   localField: 'userId',
   foreignField: 'firebaseUid',
+  justOne: true
+});
+
+// Virtual for real-time active attendance tracking
+bookingSchema.virtual('attendanceActive', {
+  ref: 'Computer',
+  localField: '_id',
+  foreignField: 'agentActiveSession.activeBookingId',
   justOne: true
 });
 

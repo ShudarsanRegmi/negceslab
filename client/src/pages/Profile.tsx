@@ -17,8 +17,124 @@ import {
   Save,
   Cancel,
   Edit,
+  History,
+  CheckCircle,
+  Computer as ComputerIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { bookingsAPI } from '../services/api';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Tooltip,
+} from '@mui/material';
+
+const AdminAttendanceHistory: React.FC = () => {
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    bookingsAPI.getUserBookings()
+      .then(res => {
+        // Filter bookings that have active or historic attendance sessions checked into them
+        const withAttendance = res.data.filter((b: any) => b.attendanceActive || (b.status === 'completed' && b.attendanceActive));
+        setBookings(res.data); // Display all bookings but highlight attendance state
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch bookings for attendance history:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return <Typography variant="body2" color="text.secondary">Loading attendance history...</Typography>;
+  }
+
+  const attendanceSessions = bookings.filter(b => b.attendanceActive?.agentActiveSession?.checkedIn || b.status === 'completed');
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+        <History color="primary" />
+        <Typography variant="h6" fontWeight="600">Global Lab Attendance Registry (Admin-Only)</Typography>
+      </Box>
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+        <Table size="small">
+          <TableHead sx={{ bgcolor: '#f8fafc' }}>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.72rem' }}>Student</TableCell>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.72rem' }}>System</TableCell>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.72rem' }}>Agenda</TableCell>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.72rem' }}>Connectivity</TableCell>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.72rem' }}>Check-In Time</TableCell>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.72rem' }}>Status</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {attendanceSessions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                  <Typography variant="body2" color="text.secondary" fontStyle="italic">No active attendance logs found.</Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              attendanceSessions.map((b) => {
+                const session = b.attendanceActive?.agentActiveSession;
+                const studentName = session?.currentUser || b.user?.name || 'Active Student';
+                const studentEmail = session?.email || b.user?.email || '';
+                const systemName = b.computerId?.name || 'System';
+                const agenda = session?.agenda || b.reason;
+                const sessType = session?.sessionType || 'Physical GUI';
+                const checkInTime = session?.checkInTime ? new Date(session.checkInTime).toLocaleString() : 'N/A';
+
+                return (
+                  <TableRow key={b._id} hover>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" fontWeight={700}>{studentName}</Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">{studentEmail}</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <ComputerIcon fontSize="inherit" color="action" />
+                        <Typography variant="body2" fontWeight={600}>{systemName}</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {agenda}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={sessType} size="small" sx={{ fontSize: '0.62rem', height: 18 }} />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption">{checkInTime}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      {session?.checkedIn ? (
+                        <Chip label="Currently Live" size="small" color="success" sx={{ fontSize: '0.6rem', fontWeight: 800, height: 18 }} />
+                      ) : (
+                        <Chip label="Completed" size="small" variant="outlined" sx={{ fontSize: '0.6rem', fontWeight: 700, height: 18 }} />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+};
 
 const Profile: React.FC = () => {
   const { currentUser, userRole } = useAuth();
@@ -131,9 +247,10 @@ const Profile: React.FC = () => {
 
               <Divider sx={{ mb: 4 }} />
 
-              {/* Removed Personal Information Edit Form as it is unnecessary */}
-              
-              {/* You may add other profile-related content here if needed */}
+              {/* Attendance History Section (Visible for Admin users only) */}
+              {userRole === 'admin' && (
+                <AdminAttendanceHistory />
+              )}
             </CardContent>
           </Card>
         </Box>

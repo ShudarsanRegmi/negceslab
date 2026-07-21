@@ -31,10 +31,10 @@ router.get("/public/with-bookings", async (req, res) => {
     const computers = await Computer.find()
       .populate({
         path: 'bookings',
-        populate: {
-          path: 'user',
-          select: 'name email'
-        }
+        populate: [
+          { path: 'user', select: 'name email' },
+          { path: 'attendanceActive' }
+        ]
       })
       .sort({ name: 1 });
 
@@ -119,10 +119,10 @@ router.get("/with-bookings", verifyToken, async (req, res) => {
     const computers = await Computer.find()
       .populate({
         path: 'bookings',
-        populate: {
-          path: 'user',
-          select: 'name email'
-        }
+        populate: [
+          { path: 'user', select: 'name email' },
+          { path: 'attendanceActive' }
+        ]
       })
       .sort({ name: 1 });
 

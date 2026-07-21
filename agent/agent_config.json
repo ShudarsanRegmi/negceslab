@@ -1,0 +1,9 @@
+{
+  "backend_url": "http://localhost:5000",
+  "ws_url": "ws://localhost:5000",
+  "monitor_interval": 10,
+  "metrics_interval": 60,
+  "lab_name": "Negces Lab",
+  "department": "CSE",
+  "machine_name": "System1"
+}

@@ -70,6 +70,7 @@ import { format, addDays, isWithinInterval, parseISO } from "date-fns";
 import { computersAPI, bookingsAPI, temporaryReleaseAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
 import AdminAnalytics from "../components/AdminAnalytics";
+import BookingUsageExplorer from "../components/BookingUsageExplorer";
 
 interface Computer {
   _id: string;
@@ -2404,6 +2405,9 @@ const AdminDashboard: React.FC = () => {
                   </Typography>
                 </Box>
               </Paper>
+
+              {/* Exploratory Usage Pattern Chronograph */}
+              <BookingUsageExplorer booking={selectedBookingDetails as any} />
 
               {/* Project Details Section */}
               <Paper sx={{ p: 2 }}>

@@ -28,6 +28,7 @@ router.get('/', verifyToken, async (req, res) => {
       bookings = await Booking.find()
         .populate('computerId')
         .populate('user', 'name email')
+        .populate('attendanceActive')
         .sort({ createdAt: -1 });
       res.json(bookings);
     } else {
@@ -35,6 +36,7 @@ router.get('/', verifyToken, async (req, res) => {
       bookings = await Booking.find({ userId: req.user.firebaseUid })
         .populate('computerId')
         .populate('user', 'name email')
+        .populate('attendanceActive')
         .sort({ createdAt: -1 });
       res.json(bookings);
     }
