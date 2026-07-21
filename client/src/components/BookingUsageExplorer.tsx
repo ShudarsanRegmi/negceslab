@@ -24,6 +24,9 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { computersAPI } from '../services/api';
+import BookingTelemetryAnalyticsModal from './BookingTelemetryAnalyticsModal';
+import { Button } from '@mui/material';
+import { Assessment as AnalyticsIcon } from '@mui/icons-material';
 
 export interface BookingAttendanceEntry {
   date: string;
@@ -211,8 +214,23 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
 
   const selectedAttendance = getDayAttendance(selectedDateStr);
 
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState<boolean>(false);
+
   return (
     <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Analytics Explorer Dialog */}
+      <BookingTelemetryAnalyticsModal
+        open={analyticsModalOpen}
+        onClose={() => setAnalyticsModalOpen(false)}
+        bookingName={booking.computerId?.name || "System Booking"}
+        userName={booking.user?.name || "Assigned User"}
+        computerId={booking.computerId?._id || ""}
+        startDate={booking.startDate}
+        endDate={booking.endDate}
+        metrics={dayMetrics}
+        attendanceHistory={booking.attendanceHistory}
+      />
+
       {/* Top Banner: Booking-Level Insights */}
       <Paper
         elevation={0}
@@ -224,7 +242,7 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
         }}
       >
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
             <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>
               Attendance Rate
             </Typography>
@@ -238,7 +256,7 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
             </Box>
           </Grid>
 
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
             <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>
               Avg System Compute Load
             </Typography>
@@ -250,7 +268,7 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
             </Box>
           </Grid>
 
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
             <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>
               Usage Profile Intensity
             </Typography>
@@ -267,6 +285,25 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
                 }}
               />
             </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={3} sx={{ textAlign: { sm: 'right' } }}>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<AnalyticsIcon />}
+              onClick={() => setAnalyticsModalOpen(true)}
+              sx={{
+                bgcolor: '#3b82f6',
+                color: '#ffffff',
+                fontWeight: 700,
+                textTransform: 'none',
+                borderRadius: 2,
+                '&:hover': { bgcolor: '#2563eb' }
+              }}
+            >
+              Detailed Analytics
+            </Button>
           </Grid>
         </Grid>
       </Paper>

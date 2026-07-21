@@ -2,7 +2,7 @@ const { InfluxDB, Point } = require('@influxdata/influxdb-client');
 
 // Configuration constants for InfluxDB v3 core connection
 const INFLUX_URL = process.env.INFLUX_URL || 'http://localhost:8181';
-const INFLUX_TOKEN = process.env.INFLUX_TOKEN || 'apiv3_token';
+const INFLUX_TOKEN = process.env.INFLUX_TOKEN || 'apiv3_dIIQmYe8p3-1dx_2tlVQtbs4foLG_WaLda-HWRqUvR1cypk4QcDfi3bOHaZ9Ud6ehp3drVSP_7caDA6sCa9iJA';
 const INFLUX_ORG = process.env.INFLUX_ORG || 'negceslab';
 const INFLUX_BUCKET = process.env.INFLUX_BUCKET || 'system_metrics';
 
@@ -66,57 +66,77 @@ const writeMetricPointsBatch = (computerId, computerName, metricRecords) => {
  * Query telemetry metrics from InfluxDB using Flux / HTTP engine
  */
 const queryMetrics = async (computerId, startDate, endDate) => {
-  if (!influxDB) return null;
-
   try {
-    const queryApi = influxDB.getQueryApi(INFLUX_ORG);
-    
-    // Construct flux query range
-    let startFilter = '-7d';
-    if (startDate) {
-      startFilter = new Date(startDate).toISOString();
-    }
-    
-    let stopFilter = 'now()';
-    if (endDate) {
-      stopFilter = new Date(endDate).toISOString();
-    }
+    const http = require('http');
 
-    const fluxQuery = `
-      from(bucket: "${INFLUX_BUCKET}")
-        |> range(start: ${startFilter}, stop: ${stopFilter})
-        |> filter(fn: (r) => r["_measurement"] == "system_metrics")
-        |> filter(fn: (r) => r["computer_id"] == "${computerId}")
-        |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
-    `;
+    let sql = `SELECT * FROM system_metrics WHERE computer_id = '${computerId}'`;
+    if (startDate && endDate) {
+      const start = new Date(startDate).toISOString();
+      const end = new Date(endDate).toISOString();
+      sql += ` AND time >= '${start}' AND time <= '${end}'`;
+    } else {
+      const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      sql += ` AND time >= '${start}'`;
+    }
+    sql += ` ORDER BY time ASC`;
 
-    const results = [];
+    const postData = JSON.stringify({
+      db: INFLUX_BUCKET,
+      q: sql
+    });
+
     return new Promise((resolve) => {
-      queryApi.queryRows(fluxQuery, {
-        next(row, tableMeta) {
-          const o = tableMeta.toObject(row);
-          results.push({
-            timestamp: o._time,
-            cpuUtil: o.cpu_util || 0,
-            ramUtil: o.ram_util || 0,
-            gpuUtil: o.gpu_util || 0,
-            gpuMemUsed: o.gpu_mem_used || 0,
-            gpuMemTotal: o.gpu_mem_total || 0,
-            netSentSpeed: o.net_sent_speed || 0,
-            netRecvSpeed: o.net_recv_speed || 0,
-            diskUtil: o.disk_util || 0,
-            cpuTemp: o.cpu_temp || 0,
-            gpuTemp: o.gpu_temp || 0,
+      const req = http.request(
+        `${INFLUX_URL}/api/v3/query_sql`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${INFLUX_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+          },
+          timeout: 5000
+        },
+        (res) => {
+          let body = '';
+          res.on('data', (chunk) => { body += chunk; });
+          res.on('end', () => {
+            if (res.statusCode !== 200) {
+              console.warn("[InfluxDB Service] Query error, falling back to MongoDB:", res.statusCode, body);
+              return resolve(null);
+            }
+            try {
+              const rows = JSON.parse(body);
+              if (!Array.isArray(rows)) return resolve([]);
+              const formatted = rows.map(o => ({
+                timestamp: o.time,
+                cpuUtil: o.cpu_util || 0,
+                ramUtil: o.ram_util || 0,
+                gpuUtil: o.gpu_util || 0,
+                gpuMemUsed: o.gpu_mem_used || 0,
+                gpuMemTotal: o.gpu_mem_total || 0,
+                netSentSpeed: o.net_sent_speed || 0,
+                netRecvSpeed: o.net_recv_speed || 0,
+                diskUtil: o.disk_util || 0,
+                cpuTemp: o.cpu_temp || 0,
+                gpuTemp: o.gpu_temp || 0,
+              }));
+              resolve(formatted);
+            } catch (e) {
+              console.warn("[InfluxDB Service] JSON parse error:", e.message);
+              resolve(null);
+            }
           });
-        },
-        error(err) {
-          console.warn("[InfluxDB Service] Query error, falling back to MongoDB:", err.message);
-          resolve(null);
-        },
-        complete() {
-          resolve(results);
-        },
+        }
+      );
+
+      req.on('error', (err) => {
+        console.warn("[InfluxDB Service] Query HTTP error, falling back to MongoDB:", err.message);
+        resolve(null);
       });
+
+      req.write(postData);
+      req.end();
     });
   } catch (err) {
     console.warn("[InfluxDB Service] Query execution failed:", err.message);
