@@ -30,75 +30,186 @@ const verifyAgentToken = async (req, res, next) => {
   }
 };
 
-// 1. Machine Registration Endpoint (Supports systemId or hostname)
+const RegistrationToken = require("../models/registrationToken");
+const RegistrationRequest = require("../models/registrationRequest");
+
+// 1. Machine Registration Endpoint (Requires 30-min window token check & queues approval request)
 router.post("/register", async (req, res) => {
   try {
+    const clientToken = req.headers["x-registration-token"] || req.body.registrationToken;
+    if (!clientToken) {
+      return res.status(401).json({ message: "Unauthorized: Missing active registration token" });
+    }
+
+    // Verify token exists and is valid in database
+    const tokenDoc = await RegistrationToken.findOne({ token: clientToken });
+    if (!tokenDoc) {
+      return res.status(401).json({ message: "Unauthorized: Invalid or expired registration token" });
+    }
+
     const { systemId, hostname, os, osVersion, cpuModel, ram, storage, gpu } = req.body;
 
-    let computer = null;
-
-    // 1. Try finding by systemId (MongoDB _id) if provided
-    if (systemId && mongoose.Types.ObjectId.isValid(systemId)) {
-      computer = await Computer.findById(systemId);
-    }
-
-    // 2. Fallback: Find by hostname if systemId not found or not provided
-    if (!computer && hostname) {
-      computer = await Computer.findOne({ name: new RegExp(`^${hostname}$`, "i") });
-    }
-
-    if (!computer && !hostname && !systemId) {
+    if (!hostname && !systemId) {
       return res.status(400).json({ message: "Either systemId or hostname is required for registration" });
     }
 
-    const generatedToken = crypto.randomBytes(32).toString("hex");
+    // Check if there is already an active registration token cached on target computer
+    let existingComputer = null;
+    if (systemId && mongoose.Types.ObjectId.isValid(systemId)) {
+      existingComputer = await Computer.findById(systemId);
+    }
+    if (!existingComputer && hostname) {
+      existingComputer = await Computer.findOne({ name: new RegExp(`^${hostname}$`, "i") });
+    }
 
-    if (computer) {
-      // Update existing record with latest specs and assign new token
-      computer.agentToken = generatedToken;
-      computer.systemDetails = {
-        operatingSystem: os === "linux" ? "Linux" : (os === "windows" ? "Windows" : "Other"),
+    // Check for existing request from this system or hostname
+    let pendingRequest = await RegistrationRequest.findOne({
+      $or: [
+        { systemId: systemId || null },
+        { hostname: hostname || "" }
+      ],
+      status: "pending"
+    });
+
+    const tempAgentToken = crypto.randomBytes(32).toString("hex");
+
+    if (pendingRequest) {
+      // Update pending request specs
+      pendingRequest.os = os || "Other";
+      pendingRequest.osVersion = osVersion || "";
+      pendingRequest.cpuModel = cpuModel || "";
+      pendingRequest.ram = ram || "";
+      pendingRequest.storage = storage || "";
+      pendingRequest.gpu = gpu || "";
+      pendingRequest.tempAgentToken = tempAgentToken;
+      await pendingRequest.save();
+    } else {
+      pendingRequest = new RegistrationRequest({
+        systemId: systemId || null,
+        hostname: hostname || `System-${Date.now().toString().slice(-4)}`,
+        os: os || "Other",
         osVersion: osVersion || "",
-        architecture: "x86_64",
-        processor: cpuModel || "",
+        cpuModel: cpuModel || "",
         ram: ram || "",
         storage: storage || "",
         gpu: gpu || "",
-        installedSoftware: computer.systemDetails?.installedSoftware || [],
-        lastUpdated: new Date()
+        tempAgentToken: tempAgentToken
+      });
+      await pendingRequest.save();
+    }
+
+    // Inform agent that the request is queued and pending administrator confirmation
+    res.status(202).json({
+      status: "pending",
+      requestId: pendingRequest._id,
+      tempToken: tempAgentToken,
+      systemName: existingComputer ? existingComputer.name : (hostname || "New System"),
+      message: "Registration request submitted. Pending administrator confirmation in the Admin Dashboard."
+    });
+  } catch (error) {
+    console.error("Machine Registration Request Error:", error);
+    res.status(500).json({ message: "Failed to queue registration request", error: error.message });
+  }
+});
+
+// 1.1 Machine Registration Status Polling Endpoint
+router.get("/register/status/:requestId", async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const tempToken = req.headers["x-temp-token"];
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({ message: "Invalid request ID" });
+    }
+
+    const regRequest = await RegistrationRequest.findById(requestId);
+    if (!regRequest) {
+      return res.status(404).json({ message: "Registration request not found" });
+    }
+
+    // Verify temp agent token matches to authorize status check
+    if (regRequest.tempAgentToken !== tempToken) {
+      return res.status(403).json({ message: "Forbidden: Invalid temporary request token" });
+    }
+
+    if (regRequest.status === "pending") {
+      return res.status(200).json({ status: "pending", message: "Awaiting administrator approval" });
+    }
+
+    if (regRequest.status === "rejected") {
+      return res.status(200).json({ status: "rejected", message: "Registration request was declined by administrator" });
+    }
+
+    // If approved, finalize machine creation/token update and return formal agentToken
+    let computer = null;
+    if (regRequest.systemId) {
+      computer = await Computer.findById(regRequest.systemId);
+    } else {
+      computer = await Computer.findOne({ name: new RegExp(`^${regRequest.hostname}$`, "i") });
+    }
+
+    const finalToken = crypto.randomBytes(32).toString("hex");
+
+    if (computer) {
+      const incomingOS = regRequest.os === "linux" ? "Linux" : (regRequest.os === "windows" ? "Windows" : "Other");
+      const existingAgentOS = computer.agentSystemDetails?.operatingSystem;
+      let isDual = computer.agentSystemDetails?.isDualBoot || false;
+
+      if (existingAgentOS && existingAgentOS !== incomingOS) {
+        isDual = true;
+      }
+
+      if (!computer.agentToken) {
+        computer.agentToken = finalToken;
+      }
+
+      computer.agentSystemDetails = {
+        operatingSystem: incomingOS,
+        isDualBoot: isDual,
+        osVersionLinux: incomingOS === "Linux" ? regRequest.osVersion : (computer.agentSystemDetails?.osVersionLinux || ""),
+        osVersionWindows: incomingOS === "Windows" ? regRequest.osVersion : (computer.agentSystemDetails?.osVersionWindows || ""),
+        cpuModel: regRequest.cpuModel || computer.agentSystemDetails?.cpuModel || "",
+        ramTotal: regRequest.ram || computer.agentSystemDetails?.ramTotal || "",
+        storageTotal: regRequest.storage || computer.agentSystemDetails?.storageTotal || "",
+        gpuModel: regRequest.gpu || computer.agentSystemDetails?.gpuModel || "",
+        lastAgentRegistration: new Date()
       };
       await computer.save();
     } else {
-      // Create a brand new Computer document
+      const incomingOS = regRequest.os === "linux" ? "Linux" : (regRequest.os === "windows" ? "Windows" : "Other");
       computer = new Computer({
-        name: hostname || `System-${Date.now().toString().slice(-4)}`,
+        name: regRequest.hostname,
         location: "Negces Lab",
         status: "available",
-        agentToken: generatedToken,
-        systemDetails: {
-          operatingSystem: os === "linux" ? "Linux" : (os === "windows" ? "Windows" : "Other"),
-          osVersion: osVersion || "",
-          architecture: "x86_64",
-          processor: cpuModel || "",
-          ram: ram || "",
-          storage: storage || "",
-          gpu: gpu || "",
-          installedSoftware: [],
-          lastUpdated: new Date()
+        agentToken: finalToken,
+        agentSystemDetails: {
+          operatingSystem: incomingOS,
+          isDualBoot: false,
+          osVersionLinux: incomingOS === "Linux" ? regRequest.osVersion : "",
+          osVersionWindows: incomingOS === "Windows" ? regRequest.osVersion : "",
+          cpuModel: regRequest.cpuModel || "",
+          ramTotal: regRequest.ram || "",
+          storageTotal: regRequest.storage || "",
+          gpuModel: regRequest.gpu || "",
+          lastAgentRegistration: new Date()
         }
       });
       await computer.save();
     }
 
+    // Cleanup confirmed request
+    await RegistrationRequest.findByIdAndDelete(requestId);
+
     res.status(200).json({
+      status: "approved",
       machineId: computer._id,
       systemName: computer.name,
-      authToken: generatedToken,
-      message: `Registered machine '${computer.name}' successfully`
+      authToken: computer.agentToken,
+      message: `Registration confirmed for system ${computer.name}`
     });
   } catch (error) {
-    console.error("Machine Registration Error:", error);
-    res.status(500).json({ message: "Failed to register machine", error: error.message });
+    console.error("Machine Registration Poll Status Error:", error);
+    res.status(500).json({ message: "Failed to resolve registration status", error: error.message });
   }
 });
 

@@ -67,7 +67,7 @@ import {
   FilterList as FilterIcon,
 } from "@mui/icons-material";
 import { format, addDays, isWithinInterval, parseISO } from "date-fns";
-import { computersAPI, bookingsAPI, temporaryReleaseAPI } from "../services/api";
+import { computersAPI, bookingsAPI, temporaryReleaseAPI, agentRegistrationAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
 import AdminAnalytics from "../components/AdminAnalytics";
 import BookingUsageExplorer from "../components/BookingUsageExplorer";
@@ -200,6 +200,9 @@ const AdminDashboard: React.FC = () => {
     tempRelease: false,
   });
 
+  // Agent registration requests status
+  const [registrationRequests, setRegistrationRequests] = useState<any[]>([]);
+
   // Temporary release state
   const [tempReleaseDialogOpen, setTempReleaseDialogOpen] = useState(false);
   const [selectedReleaseDates, setSelectedReleaseDates] = useState<Date[]>([]);
@@ -214,6 +217,8 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+
 
   useEffect(() => {
     const handleInspectBooking = (e: any) => {
@@ -242,14 +247,16 @@ const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [computersRes, bookingsRes, currentBookingsRes] = await Promise.all([
+      const [computersRes, bookingsRes, currentBookingsRes, regRequestsRes] = await Promise.all([
         computersAPI.getComputersWithBookings(),
         bookingsAPI.getAllBookings(),
         bookingsAPI.getCurrentBookings(),
+        agentRegistrationAPI.getRegistrationRequests().catch(() => ({ data: [] }))
       ]);
       setComputers(computersRes.data);
       setBookings(bookingsRes.data);
       setCurrentBookings(currentBookingsRes.data);
+      setRegistrationRequests(regRequestsRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
       setError("Failed to load data");
@@ -257,6 +264,8 @@ const AdminDashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+
 
   const handleAddComputer = async () => {
     try {
@@ -2071,8 +2080,6 @@ const AdminDashboard: React.FC = () => {
           onViewDetails={handleViewDetails}
         />
       )}
-
-
       {/* Add Computer Dialog */}
       <Dialog
         open={computerDialogOpen}

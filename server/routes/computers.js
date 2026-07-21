@@ -337,4 +337,96 @@ router.delete("/:id", verifyToken, async (req, res) => {
   }
 });
 
+// ==========================================
+// AGENT REGISTRATION MANAGEMENT ENDPOINTS (Admin Only)
+// ==========================================
+const RegistrationToken = require("../models/registrationToken");
+const RegistrationRequest = require("../models/registrationRequest");
+const crypto = require("crypto");
+const { isAdmin } = require("../middleware/auth");
+
+// 1. Get current active token or generate one if none exists (Auto-expires in 30 mins)
+router.get("/admin/registration-token", verifyToken, isAdmin, async (req, res) => {
+  try {
+    let tokenDoc = await RegistrationToken.findOne({ expiresAt: { $gt: new Date() } });
+    if (!tokenDoc) {
+      const token = crypto.randomBytes(16).toString("hex").toUpperCase();
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes life window
+      tokenDoc = new RegistrationToken({ token, expiresAt });
+      await tokenDoc.save();
+    }
+    res.json({
+      token: tokenDoc.token,
+      expiresAt: tokenDoc.expiresAt,
+      minutesRemaining: Math.max(0, Math.round((tokenDoc.expiresAt.getTime() - Date.now()) / 60000))
+    });
+  } catch (error) {
+    console.error("Error fetching/generating registration token:", error);
+    res.status(500).json({ message: "Error management of registration token" });
+  }
+});
+
+// 2. Force rotate/refresh the registration token
+router.post("/admin/registration-token/rotate", verifyToken, isAdmin, async (req, res) => {
+  try {
+    await RegistrationToken.deleteMany({});
+    const token = crypto.randomBytes(16).toString("hex").toUpperCase();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const tokenDoc = new RegistrationToken({ token, expiresAt });
+    await tokenDoc.save();
+
+    res.json({
+      token: tokenDoc.token,
+      expiresAt: tokenDoc.expiresAt,
+      minutesRemaining: 30
+    });
+  } catch (error) {
+    console.error("Error rotating registration token:", error);
+    res.status(500).json({ message: "Error rotating registration token" });
+  }
+});
+
+// 3. List all pending agent registration confirmation requests
+router.get("/admin/registration-requests", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const requests = await RegistrationRequest.find({ status: "pending" })
+      .populate("systemId", "name location")
+      .sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (error) {
+    console.error("Error fetching registration requests:", error);
+    res.status(500).json({ message: "Error fetching registration requests" });
+  }
+});
+
+// 4. Admin confirmation action: Approve or Reject a request
+router.post("/admin/registration-requests/:requestId/action", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { action } = req.body; // "approve" or "reject"
+    const { requestId } = req.params;
+
+    if (!["approve", "reject"].includes(action)) {
+      return res.status(400).json({ message: "Action must be approve or reject" });
+    }
+
+    const regRequest = await RegistrationRequest.findById(requestId);
+    if (!regRequest) {
+      return res.status(404).json({ message: "Registration request not found" });
+    }
+
+    if (action === "approve") {
+      regRequest.status = "approved";
+      await regRequest.save();
+      res.json({ message: "Request approved. Agent will complete registration upon next poll." });
+    } else {
+      regRequest.status = "rejected";
+      await regRequest.save();
+      res.json({ message: "Request declined successfully" });
+    }
+  } catch (error) {
+    console.error("Error handling registration request action:", error);
+    res.status(500).json({ message: "Error handling registration request" });
+  }
+});
+
 module.exports = router;

@@ -79,6 +79,18 @@ const computerSchema = new mongoose.Schema({
       default: Date.now
     }
   },
+  // Dedicated Agent System Specs (Populated automatically by background agent, separated from user-facing UI systemDetails)
+  agentSystemDetails: {
+    operatingSystem: { type: String, default: "" },
+    isDualBoot: { type: Boolean, default: false },
+    osVersionLinux: { type: String, default: "" },
+    osVersionWindows: { type: String, default: "" },
+    cpuModel: { type: String, default: "" },
+    ramTotal: { type: String, default: "" },
+    storageTotal: { type: String, default: "" },
+    gpuModel: { type: String, default: "" },
+    lastAgentRegistration: { type: Date, default: Date.now }
+  },
   isOnline: {
     type: Boolean,
     default: false,

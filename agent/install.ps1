@@ -24,6 +24,10 @@ if ([string]::IsNullOrEmpty($BackendUrl)) {
 # Prompt for Target System ID
 $SystemId = Read-Host "Enter Target System ID (MongoDB _id from Admin Panel) [leave empty to use OS hostname]"
 
+# Prompt for Server Registration Secret
+$RegSecret = Read-Host -AsSecureString "Enter Server Registration Secret Passcode"
+$RegSecretText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($RegSecret))
+
 Write-Host ""
 Write-Host "[1/4] Creating installation directory at $InstallDir..."
 if (-not (Test-Path $InstallDir)) {
@@ -52,6 +56,7 @@ $ConfigJson = @{
     poll_interval_sec = 10
     offline_sync_interval_sec = 60
     retry_attempts = 5
+    registration_secret = $RegSecretText
 } | ConvertTo-Json
 
 Set-Content -Path (Join-Path $InstallDir "agent_config.json") -Value $ConfigJson
@@ -62,10 +67,10 @@ Set-Location $InstallDir
 
 if (-not [string]::IsNullOrEmpty($SystemId)) {
     Write-Host "Registering with target system ID: $SystemId..."
-    & $BinaryPath --systemid=$SystemId
+    & $BinaryPath --systemid=$SystemId --secret=$RegSecretText
 } else {
     Write-Host "Registering using OS Hostname..."
-    & $BinaryPath --register
+    & $BinaryPath --register --secret=$RegSecretText
 }
 
 Write-Host ""

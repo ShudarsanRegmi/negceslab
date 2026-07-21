@@ -30,7 +30,7 @@ func NewClient(cfg *config.Config, store *storage.Storage) *Client {
 	}
 }
 
-// RegisterMachine sends specs to backend and caches auth token
+// RegisterMachine sends specs to backend, queues a confirmation request, and polls until administrator confirms
 func (c *Client) RegisterMachine(static *sysinfo.StaticInfo) error {
 	url := fmt.Sprintf("%s/api/agent/register", c.cfg.BackendURL)
 	
@@ -39,41 +39,112 @@ func (c *Client) RegisterMachine(static *sysinfo.StaticInfo) error {
 		return err
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	
+	// Bind active 30-min UI rotation registration token to authenticate request
+	if c.cfg.RegistrationSecret != "" {
+		req.Header.Set("X-Registration-Token", c.cfg.RegistrationSecret)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to reach server: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server registration failed, code: %d", resp.StatusCode)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("server rejected registration request: invalid or expired registration token")
 	}
 
-	var res struct {
-		MachineID  string `json:"machineId"`
+	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server registration request failed, code: %d", resp.StatusCode)
+	}
+
+	var initRes struct {
+		Status     string `json:"status"`
+		RequestId  string `json:"requestId"`
+		TempToken  string `json:"tempToken"`
 		SystemName string `json:"systemName"`
-		AuthToken  string `json:"authToken"`
+		Message    string `json:"message"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return fmt.Errorf("failed to parse registration response: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&initRes); err != nil {
+		return fmt.Errorf("failed to parse registration queue response: %w", err)
 	}
 
-	// Persist credentials
-	err = c.store.SaveCredentials(storage.MachineCredentials{
-		MachineID: res.MachineID,
-		AuthToken: res.AuthToken,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to save registration details locally: %w", err)
-	}
+	fmt.Printf("[QUEUE] Request submitted for System: '%s'. Status: PENDING.\n", initRes.SystemName)
+	fmt.Println("Waiting for Lab Administrator approval in Admin Panel...")
 
-	if res.SystemName != "" {
-		fmt.Printf("Successfully registered as System: '%s' (ID: %s)\n", res.SystemName, res.MachineID)
-	} else {
-		fmt.Printf("Registered machine ID: %s\n", res.MachineID)
+	// 2. Poll Status Endpoint until Approved or Rejected
+	pollUrl := fmt.Sprintf("%s/api/agent/register/status/%s", c.cfg.BackendURL, initRes.RequestId)
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		<-ticker.C
+		pollReq, err := http.NewRequest("GET", pollUrl, nil)
+		if err != nil {
+			continue
+		}
+		pollReq.Header.Set("X-Temp-Token", initRes.TempToken)
+
+		pollResp, err := client.Do(pollReq)
+		if err != nil {
+			fmt.Printf("Connection error during status check: %v. Retrying...\n", err)
+			continue
+		}
+
+		if pollResp.StatusCode != http.StatusOK {
+			pollResp.Body.Close()
+			continue
+		}
+
+		var pollRes struct {
+			Status     string `json:"status"`
+			MachineID  string `json:"machineId"`
+			SystemName string `json:"systemName"`
+			AuthToken  string `json:"authToken"`
+			Message    string `json:"message"`
+		}
+
+		err = json.NewDecoder(pollResp.Body).Decode(&pollRes)
+		pollResp.Body.Close()
+		if err != nil {
+			continue
+		}
+
+		if pollRes.Status == "pending" {
+			// Print visual keep-alive pulse
+			fmt.Print(".")
+			continue
+		}
+
+		if pollRes.Status == "rejected" {
+			fmt.Println("\n[DECLINED] Registration request was declined by the administrator.")
+			return fmt.Errorf("registration rejected by administrator")
+		}
+
+		if pollRes.Status == "approved" {
+			fmt.Println("\n[APPROVED] Administrator confirmed agent registration!")
+
+			// Persist formal credentials
+			err = c.store.SaveCredentials(storage.MachineCredentials{
+				MachineID: pollRes.MachineID,
+				AuthToken: pollRes.AuthToken,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to save registration details locally: %w", err)
+			}
+
+			fmt.Printf("Successfully registered as System: '%s' (ID: %s)\n", pollRes.SystemName, pollRes.MachineID)
+			return nil
+		}
 	}
-	return nil
 }
 
 // AttendanceCheckInOut submits attendance events via REST

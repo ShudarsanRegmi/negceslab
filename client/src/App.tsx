@@ -26,6 +26,7 @@ import AdminTemporaryReleases from "./pages/AdminTemporaryReleases";
 import AdminComputerManagement from "./pages/AdminComputerManagement";
 import AdminAchievementManagement from "./pages/AdminAchievementManagement";
 import AdminFeedbackManagement from "./pages/AdminFeedbackManagement";
+import AdminAgentRegistration from "./pages/AdminAgentRegistration";
 import BookingForm from "./pages/BookingForm";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
@@ -181,6 +182,16 @@ const AppContent = () => {
                     <ProtectedRoute requiredRole="admin">
                       <Layout>
                         <AdminFeedbackManagement />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/agent-registration"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <Layout>
+                        <AdminAgentRegistration />
                       </Layout>
                     </ProtectedRoute>
                   }

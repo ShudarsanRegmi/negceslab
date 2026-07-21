@@ -25,6 +25,12 @@ if [ -z "$SYSTEM_ID" ]; then
   read -p "Enter Target System ID (MongoDB _id from Admin Panel) [leave empty to use OS hostname]: " SYSTEM_ID
 fi
 
+# Prompt for Server Registration Secret
+if [ -z "$REG_SECRET" ]; then
+  read -sp "Enter Server Registration Secret Passcode: " REG_SECRET
+  echo ""
+fi
+
 echo ""
 echo "[1/4] Preparing installation directory: $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
@@ -50,17 +56,18 @@ cat <<EOF > "$INSTALL_DIR/agent_config.json"
   "ws_url": "$WS_URL",
   "poll_interval_sec": 10,
   "offline_sync_interval_sec": 60,
-  "retry_attempts": 5
+  "retry_attempts": 5,
+  "registration_secret": "$REG_SECRET"
 }
 EOF
 
 echo "[2/4] Registering Machine with Backend Server..."
 if [ -n "$SYSTEM_ID" ]; then
   echo "Registering with Target System ID: $SYSTEM_ID..."
-  "$INSTALL_DIR/negceslab-agent-linux" --systemid="$SYSTEM_ID"
+  "$INSTALL_DIR/negceslab-agent-linux" --systemid="$SYSTEM_ID" --secret="$REG_SECRET"
 else
   echo "Registering using OS Hostname..."
-  "$INSTALL_DIR/negceslab-agent-linux" --register
+  "$INSTALL_DIR/negceslab-agent-linux" --register --secret="$REG_SECRET"
 fi
 
 echo ""

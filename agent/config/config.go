@@ -8,24 +8,26 @@ import (
 )
 
 type Config struct {
-	BackendURL      string `json:"backend_url"`       // e.g. "https://negces.lab.example"
-	WSURL           string `json:"ws_url"`            // e.g. "wss://negces.lab.example"
-	MonitorInterval int    `json:"monitor_interval"`  // in seconds (default: 10)
-	MetricsInterval int    `json:"metrics_interval"`  // in seconds (default: 60)
-	LabName         string `json:"lab_name"`          // e.g. "Negces High Performance Lab"
-	Department      string `json:"department"`        // e.g. "Computer Science"
-	MachineName     string `json:"machine_name"`       // e.g. "System1" (overrides local OS hostname if set for testing)
+	BackendURL         string `json:"backend_url"`
+	WSURL              string `json:"ws_url"`
+	MonitorInterval    int    `json:"monitor_interval"`
+	MetricsInterval    int    `json:"metrics_interval"`
+	LabName            string `json:"lab_name"`
+	Department         string `json:"department"`
+	MachineName        string `json:"machine_name"`
+	RegistrationSecret string `json:"registration_secret"`
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		BackendURL:      "http://localhost:5000",
-		WSURL:           "ws://localhost:5000",
-		MonitorInterval: 10,
-		MetricsInterval: 60,
-		LabName:         "Negces Lab",
-		Department:      "CSE",
-		MachineName:     "",
+		BackendURL:         "http://localhost:5000",
+		WSURL:              "ws://localhost:5000",
+		MonitorInterval:    10,
+		MetricsInterval:    60,
+		LabName:            "Negces Lab",
+		Department:         "CSE",
+		MachineName:        "",
+		RegistrationSecret: "",
 	}
 }
 

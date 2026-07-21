@@ -284,6 +284,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       path: "/admin/feedback",
       roles: ["admin"],
     },
+    {
+      text: "Agent Registration",
+      icon: <MarkEmailReadIcon />,
+      path: "/admin/agent-registration",
+      roles: ["admin"],
+    },
     // {
     //   text: "User Management",
     //   icon: <ManageAccountsIcon />,

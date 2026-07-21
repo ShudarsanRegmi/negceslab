@@ -239,4 +239,13 @@ export const achievementsAPI = {
     api.patch(`/achievements/${id}/status`, { status }),
 };
 
-export default api; 
+// Agent Registration Confirmation API endpoints (Admin only)
+export const agentRegistrationAPI = {
+  getRegistrationToken: () => api.get('/computers/admin/registration-token'),
+  rotateRegistrationToken: () => api.post('/computers/admin/registration-token/rotate'),
+  getRegistrationRequests: () => api.get('/computers/admin/registration-requests'),
+  handleRequestAction: (requestId: string, action: 'approve' | 'reject') => 
+    api.post(`/computers/admin/registration-requests/${requestId}/action`, { action }),
+};
+
+export default api;
