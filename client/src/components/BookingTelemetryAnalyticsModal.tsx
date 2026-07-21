@@ -29,6 +29,7 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Tooltip,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -42,13 +43,16 @@ import {
   Thermostat as TempIcon,
   WifiTethering as NetworkIcon,
   ShowChart as ChartIcon,
-  FilterList as FilterIcon,
   CalendarToday as CalendarIcon,
+  GridOn as GridIcon,
+  CompareArrows as CompareIcon,
 } from "@mui/icons-material";
 import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip as RechartsTooltip,
@@ -104,14 +108,29 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
 }) => {
   const [activeTab, setActiveTab] = useState(0);
 
-  // Exploratory Filters State
+  // Exploratory Controls
   const [selectedDayFilter, setSelectedDayFilter] = useState<string>("ALL");
   const [showCpu, setShowCpu] = useState<boolean>(true);
   const [showRam, setShowRam] = useState<boolean>(true);
   const [showGpu, setShowGpu] = useState<boolean>(true);
 
-  // Extract unique dates present in metrics & booking
-  const availableDates = useMemo(() => {
+  // Heatmap Metric Dimension Selector (CPU, RAM, GPU, VRAM, Network)
+  const [heatmapMetric, setHeatmapMetric] = useState<"cpu" | "ram" | "gpu" | "vram">("cpu");
+
+  // Generate date list between startDate & endDate
+  const fullBookingDates = useMemo(() => {
+    if (!startDate || !endDate) return [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const list: string[] = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      list.push(d.toISOString().split("T")[0]);
+    }
+    return list;
+  }, [startDate, endDate]);
+
+  // Unique dates in metrics
+  const availableMetricsDates = useMemo(() => {
     const set = new Set<string>();
     metrics.forEach((m) => {
       const d = new Date(m.timestamp).toISOString().split("T")[0];
@@ -128,6 +147,115 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
       return d === selectedDayFilter;
     });
   }, [metrics, selectedDayFilter]);
+
+  // Day-wise aggregates map for comparison & heatmap matrix
+  const dayAggregates = useMemo(() => {
+    const map: Record<
+      string,
+      {
+        date: string;
+        avgCpu: number;
+        maxCpu: number;
+        avgRam: number;
+        maxRam: number;
+        avgGpu: number;
+        maxGpu: number;
+        maxVram: number;
+        totalNetMB: number;
+        count: number;
+        hours: Record<number, { cpu: number; ram: number; gpu: number; count: number }>;
+      }
+    > = {};
+
+    metrics.forEach((m) => {
+      const dateStr = new Date(m.timestamp).toISOString().split("T")[0];
+      const hour = new Date(m.timestamp).getHours();
+
+      if (!map[dateStr]) {
+        map[dateStr] = {
+          date: dateStr,
+          avgCpu: 0,
+          maxCpu: 0,
+          avgRam: 0,
+          maxRam: 0,
+          avgGpu: 0,
+          maxGpu: 0,
+          maxVram: 0,
+          totalNetMB: 0,
+          count: 0,
+          hours: {},
+        };
+      }
+
+      const d = map[dateStr];
+      d.avgCpu += m.cpuUtil || 0;
+      if (m.cpuUtil > d.maxCpu) d.maxCpu = m.cpuUtil;
+
+      d.avgRam += m.ramUtil || 0;
+      if (m.ramUtil > d.maxRam) d.maxRam = m.ramUtil;
+
+      d.avgGpu += m.gpuUtil || 0;
+      if (m.gpuUtil > d.maxGpu) d.maxGpu = m.gpuUtil;
+
+      if (m.gpuMemUsed > d.maxVram) d.maxVram = m.gpuMemUsed;
+      d.totalNetMB += ((m.netSentSpeed || 0) * 10 + (m.netRecvSpeed || 0) * 10) / (1024 * 1024);
+      d.count += 1;
+
+      // Hour bucket
+      if (!d.hours[hour]) {
+        d.hours[hour] = { cpu: 0, ram: 0, gpu: 0, count: 0 };
+      }
+      d.hours[hour].cpu += m.cpuUtil || 0;
+      d.hours[hour].ram += m.ramUtil || 0;
+      d.hours[hour].gpu += m.gpuUtil || 0;
+      d.hours[hour].count += 1;
+    });
+
+    // Finalize averages
+    Object.values(map).forEach((d) => {
+      if (d.count > 0) {
+        d.avgCpu = Math.round(d.avgCpu / d.count);
+        d.avgRam = Math.round(d.avgRam / d.count);
+        d.avgGpu = Math.round(d.avgGpu / d.count);
+        d.maxCpu = Math.round(d.maxCpu);
+        d.maxRam = Math.round(d.maxRam);
+        d.maxGpu = Math.round(d.maxGpu);
+        d.maxVram = Math.round(d.maxVram);
+        d.totalNetMB = Math.round(d.totalNetMB * 10) / 10;
+      }
+      Object.keys(d.hours).forEach((hKey) => {
+        const h = d.hours[Number(hKey)];
+        if (h.count > 0) {
+          h.cpu = Math.round(h.cpu / h.count);
+          h.ram = Math.round(h.ram / h.count);
+          h.gpu = Math.round(h.gpu / h.count);
+        }
+      });
+    });
+
+    return map;
+  }, [metrics]);
+
+  // Comparison bar chart dataset (Day vs Day)
+  const comparisonData = useMemo(() => {
+    return fullBookingDates.map((dateStr) => {
+      const agg = dayAggregates[dateStr];
+      const dLabel = new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+      return {
+        date: dLabel,
+        fullDate: dateStr,
+        "Avg CPU %": agg ? agg.avgCpu : 0,
+        "Max CPU %": agg ? agg.maxCpu : 0,
+        "Avg RAM %": agg ? agg.avgRam : 0,
+        "Avg GPU %": agg ? agg.avgGpu : 0,
+        "Max GPU %": agg ? agg.maxGpu : 0,
+        "VRAM (MB)": agg ? agg.maxVram : 0,
+      };
+    });
+  }, [fullBookingDates, dayAggregates]);
 
   // Compute Statistical Summary on filtered metrics
   const analyticsSummary = useMemo(() => {
@@ -273,6 +401,24 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
+  // Heatmap Color Scale Helper
+  const getHeatmapColor = (val: number, metricType: string) => {
+    if (val === 0) return "#f1f5f9"; // Empty / Idle
+    if (metricType === "cpu" || metricType === "gpu" || metricType === "ram") {
+      if (val > 85) return "#ef4444"; // Severe red
+      if (val > 65) return "#f97316"; // Heavy orange
+      if (val > 40) return "#eab308"; // Moderate yellow
+      if (val > 20) return "#3b82f6"; // Mild blue
+      return "#86efac"; // Light green
+    } else {
+      // VRAM
+      if (val > 8000) return "#ef4444";
+      if (val > 4000) return "#a855f7";
+      if (val > 1000) return "#3b82f6";
+      return "#93c5fd";
+    }
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle
@@ -304,7 +450,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
         <Grid container spacing={2} alignItems="center">
           {/* Specific Day Selector */}
           <Grid item xs={12} sm={4} md={3}>
-            <FormControl fullSize size="small" sx={{ minWidth: 200 }}>
+            <FormControl fullWidth size="small">
               <InputLabel id="day-filter-label" sx={{ fontWeight: 700 }}>
                 Select Specific Date
               </InputLabel>
@@ -316,7 +462,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
                 sx={{ bgcolor: "#ffffff", fontWeight: 700 }}
               >
                 <MenuItem value="ALL">All Dates (Full Slot Overview)</MenuItem>
-                {availableDates.map((dateStr) => (
+                {fullBookingDates.map((dateStr) => (
                   <MenuItem key={dateStr} value={dateStr}>
                     {new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
                       weekday: "short",
@@ -329,7 +475,7 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
             </FormControl>
           </Grid>
 
-          {/* Metric Stream Toggles (CPU / RAM / GPU Isolation) */}
+          {/* Metric Stream Toggles */}
           <Grid item xs={12} sm={8} md={6}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Typography variant="caption" fontWeight={800} color="#475569" sx={{ mr: 1 }}>
@@ -406,18 +552,19 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
             },
           }}
         >
-          <Tab icon={<ChartIcon />} iconPosition="start" label="Interactive Charts & Time-Series" />
+          <Tab icon={<ChartIcon />} iconPosition="start" label="Interactive Time-Series" />
+          <Tab icon={<GridIcon />} iconPosition="start" label="Day-Wise Workload Heatmap" />
+          <Tab icon={<CompareIcon />} iconPosition="start" label="Day-to-Day Comparative Analysis" />
           <Tab icon={<AssessmentIcon />} iconPosition="start" label="Statistical Aggregates" />
           <Tab icon={<AuditIcon />} iconPosition="start" label="Session Audit Log" />
           <Tab icon={<TableIcon />} iconPosition="start" label="Raw Telemetry Data" />
         </Tabs>
       </Box>
 
-      <DialogContent sx={{ p: 3, bgcolor: "#f1f5f9", minHeight: 480 }}>
-        {/* TAB 0: INTERACTIVE CHARTS & TIME-SERIES */}
+      <DialogContent sx={{ p: 3, bgcolor: "#f1f5f9", minHeight: 500 }}>
+        {/* TAB 0: INTERACTIVE TIME-SERIES */}
         {activeTab === 0 && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {/* Chart 1: CPU, RAM, GPU Utilization */}
             <Paper sx={{ p: 2.5, borderRadius: 2.5, border: "1px solid #cbd5e1" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                 <Typography variant="subtitle2" fontWeight={800} color="#0f172a">
@@ -466,7 +613,6 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
               )}
             </Paper>
 
-            {/* Chart 2: Network Throughput Speed */}
             <Paper sx={{ p: 2.5, borderRadius: 2.5, border: "1px solid #cbd5e1" }}>
               <Typography variant="subtitle2" fontWeight={800} color="#0f172a" sx={{ mb: 2 }}>
                 Network Bandwidth Throughput Speed (Ingress & Egress KB/s)
@@ -504,8 +650,165 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
           </Box>
         )}
 
-        {/* TAB 1: STATISTICAL AGGREGATES */}
+        {/* TAB 1: DAY-WISE WORKLOAD HEATMAP */}
         {activeTab === 1 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Paper sx={{ p: 2.5, borderRadius: 2.5, border: "1px solid #cbd5e1" }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={800} color="#0f172a">
+                    Day-Wise & Hourly Workload Intensity Matrix
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Inspect how compute intensity shifted hour-by-hour across all booking dates
+                  </Typography>
+                </Box>
+
+                {/* Heatmap Metric Switcher */}
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <Select
+                    value={heatmapMetric}
+                    onChange={(e) => setHeatmapMetric(e.target.value as any)}
+                    sx={{ fontWeight: 700, bgcolor: "#ffffff" }}
+                  >
+                    <MenuItem value="cpu">Metric: CPU Util %</MenuItem>
+                    <MenuItem value="ram">Metric: RAM Util %</MenuItem>
+                    <MenuItem value="gpu">Metric: GPU Util %</MenuItem>
+                    <MenuItem value="vram">Metric: Peak VRAM (MB)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {/* Heatmap Grid Matrix */}
+              <Box sx={{ overflowX: "auto" }}>
+                <Box sx={{ minWidth: 720 }}>
+                  {/* Hours Header Row (8 AM to 8 PM) */}
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 1, pl: 12 }}>
+                    {Array.from({ length: 13 }, (_, i) => i + 8).map((hour) => (
+                      <Box key={hour} sx={{ flex: 1, textAlign: "center" }}>
+                        <Typography variant="caption" fontWeight={700} color="#64748b">
+                          {hour}:00
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+
+                  {/* Dates Rows */}
+                  {fullBookingDates.map((dateStr) => {
+                    const agg = dayAggregates[dateStr];
+                    const dayLabel = new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    });
+
+                    return (
+                      <Box key={dateStr} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                        <Box sx={{ width: 96, pr: 1.5, textAlign: "right" }}>
+                          <Typography variant="body2" fontWeight={800} color="#334155">
+                            {dayLabel}
+                          </Typography>
+                        </Box>
+
+                        <Box sx={{ flex: 1, display: "flex", gap: 0.8 }}>
+                          {Array.from({ length: 13 }, (_, i) => i + 8).map((hour) => {
+                            const hData = agg?.hours[hour];
+                            let val = 0;
+                            if (hData) {
+                              if (heatmapMetric === "cpu") val = hData.cpu;
+                              else if (heatmapMetric === "ram") val = hData.ram;
+                              else if (heatmapMetric === "gpu") val = hData.gpu;
+                              else val = agg.maxVram;
+                            }
+                            const bg = getHeatmapColor(val, heatmapMetric);
+
+                            return (
+                              <Tooltip
+                                key={hour}
+                                title={
+                                  hData
+                                    ? `${dateStr} @ ${hour}:00 - ${heatmapMetric.toUpperCase()}: ${val}${heatmapMetric === "vram" ? " MB" : "%"}`
+                                    : `${dateStr} @ ${hour}:00 - No Activity`
+                                }
+                              >
+                                <Box
+                                  sx={{
+                                    flex: 1,
+                                    height: 36,
+                                    borderRadius: 1.5,
+                                    bgcolor: bg,
+                                    border: "1px solid rgba(0,0,0,0.06)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    transition: "transform 0.15s ease",
+                                    "&:hover": { transform: "scale(1.1)", zIndex: 2 },
+                                  }}
+                                >
+                                  {val > 0 && (
+                                    <Typography variant="caption" sx={{ fontSize: "0.62rem", fontWeight: 800, color: val > 65 ? "#ffffff" : "#0f172a" }}>
+                                      {val}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </Tooltip>
+                            );
+                          })}
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+
+              {/* Legend scale */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1, mt: 2, pt: 1, borderTop: "1px dashed #e2e8f0" }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                  Load Intensity:
+                </Typography>
+                <Box sx={{ width: 14, height: 14, bgcolor: "#f1f5f9", borderRadius: 0.5 }} />
+                <Typography variant="caption" color="text.secondary">Idle</Typography>
+                <Box sx={{ width: 14, height: 14, bgcolor: "#86efac", borderRadius: 0.5 }} />
+                <Typography variant="caption" color="text.secondary">Low</Typography>
+                <Box sx={{ width: 14, height: 14, bgcolor: "#3b82f6", borderRadius: 0.5 }} />
+                <Typography variant="caption" color="text.secondary">Normal</Typography>
+                <Box sx={{ width: 14, height: 14, bgcolor: "#eab308", borderRadius: 0.5 }} />
+                <Typography variant="caption" color="text.secondary">Elevated</Typography>
+                <Box sx={{ width: 14, height: 14, bgcolor: "#ef4444", borderRadius: 0.5 }} />
+                <Typography variant="caption" color="text.secondary">Peak</Typography>
+              </Box>
+            </Paper>
+          </Box>
+        )}
+
+        {/* TAB 2: DAY-TO-DAY COMPARATIVE ANALYSIS */}
+        {activeTab === 2 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Paper sx={{ p: 2.5, borderRadius: 2.5, border: "1px solid #cbd5e1" }}>
+              <Typography variant="subtitle1" fontWeight={800} color="#0f172a" sx={{ mb: 2 }}>
+                Day-vs-Day Compute Load Comparison Bar Charts
+              </Typography>
+              <Box sx={{ width: "100%", height: 320 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={comparisonData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
+                    <RechartsTooltip />
+                    <Legend />
+                    <Bar dataKey="Avg CPU %" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Max CPU %" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Avg RAM %" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Avg GPU %" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            </Paper>
+          </Box>
+        )}
+
+        {/* TAB 3: STATISTICAL AGGREGATES */}
+        {activeTab === 3 && (
           <Box>
             <Card sx={{ mb: 3, borderRadius: 2.5, boxShadow: "none", border: "1px solid #cbd5e1" }}>
               <CardContent sx={{ p: 2.5 }}>
@@ -657,8 +960,8 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
           </Box>
         )}
 
-        {/* TAB 2: SESSION & ATTENDANCE AUDIT LOG */}
-        {activeTab === 2 && (
+        {/* TAB 4: SESSION & ATTENDANCE AUDIT LOG */}
+        {activeTab === 4 && (
           <Box>
             <Paper sx={{ p: 2.5, borderRadius: 2.5, border: "1px solid #cbd5e1" }}>
               <Typography variant="subtitle2" fontWeight={800} color="#334155" sx={{ mb: 2 }}>
@@ -715,8 +1018,8 @@ const BookingTelemetryAnalyticsModal: React.FC<BookingTelemetryAnalyticsModalPro
           </Box>
         )}
 
-        {/* TAB 3: RAW DATA TABLE */}
-        {activeTab === 3 && (
+        {/* TAB 5: RAW DATA TABLE */}
+        {activeTab === 5 && (
           <Box>
             <Paper sx={{ p: 2.5, borderRadius: 2.5, border: "1px solid #cbd5e1" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
