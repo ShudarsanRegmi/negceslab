@@ -706,6 +706,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               anchorEl={notificationAnchor}
               open={Boolean(notificationAnchor)}
               onClose={handleNotificationClose}
+              marginThreshold={0}
               PaperProps={{
                 sx: {
                   width: { xs: "100vw", sm: 520 },

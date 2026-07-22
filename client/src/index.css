@@ -16,12 +16,26 @@ html, body {
   min-height: 100vh;
 }
 
-/* Scale entire layout to 75% on desktop displays without clipping/dark gaps */
+/*
+  Scale the entire page to 75% on desktop.
+  Zoom is applied to <html> so it expands the layout viewport (like browser Ctrl−),
+  making ALL elements — including position:fixed AppBar, Drawer, Menus, Dialogs —
+  scale and position correctly without left-shift.
+*/
 @media (min-width: 960px) {
-  body {
-    zoom: 0.75; /* Zoom property scales the layout, preventing empty spaces at the bottom */
+  html {
+    zoom: 0.75;
+  }
+
+  /*
+    MUI Tab indicator: `will-change` forces the browser to composite the
+    indicator in the correct zoom coordinate layer, resolving sub-pixel offset.
+  */
+  .MuiTabs-indicator {
+    will-change: left, width;
   }
 }
+
 
 a {
   font-weight: 500;
@@ -46,4 +60,3 @@ button {
   font-family: inherit;
   cursor: pointer;
 }
-

@@ -3,11 +3,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
-    width: 100vw;
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;                /* top:0 right:0 bottom:0 left:0 — always fills the full viewport */
     background: radial-gradient(circle at center, #f0f8ff, #e6f0ff, #ffffff);
     z-index: 9999;
     overflow: hidden;
