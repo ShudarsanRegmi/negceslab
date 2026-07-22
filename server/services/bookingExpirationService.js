@@ -2,9 +2,70 @@ const Booking = require('../models/booking');
 const User = require('../models/user');
 const { sendBookingExpiredEmail } = require('./emailService');
 
+const Computer = require('../models/computer');
+
+// Function to automatically check out checked-in sessions from previous days (after 11:59 PM)
+const autoCheckoutPreviousDaysSessions = async () => {
+  try {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+
+    // Find all computers with active checked-in sessions
+    const computers = await Computer.find({ 'agentActiveSession.checkedIn': true });
+    
+    let checkoutCount = 0;
+    for (const computer of computers) {
+      const checkInTime = computer.agentActiveSession.checkInTime;
+      if (!checkInTime) continue;
+
+      const checkInDateStr = new Date(checkInTime).toISOString().split('T')[0];
+      
+      // If check-in date is in the past, it means it is a previous day's session
+      if (checkInDateStr < today) {
+        console.log(`Auto-checking out stale session for computer ${computer.name} (checked in on ${checkInDateStr})`);
+        
+        // 1. Update the booking's attendance history checkout time
+        if (computer.agentActiveSession.activeBookingId) {
+          const booking = await Booking.findById(computer.agentActiveSession.activeBookingId);
+          if (booking && booking.attendanceHistory) {
+            const entry = booking.attendanceHistory.find(h => h.date === checkInDateStr);
+            if (entry && !entry.checkOutTime) {
+              // Mark checkout as 23:59:59 of that day
+              entry.checkOutTime = new Date(`${checkInDateStr}T23:59:59.999Z`);
+              await booking.save();
+            }
+          }
+        }
+
+        // 2. Reset agent session on computer
+        computer.agentActiveSession = {
+          currentUser: "",
+          email: "",
+          agenda: "",
+          sessionType: "",
+          checkInTime: null,
+          checkedIn: false,
+          activeBookingId: null
+        };
+        computer.status = "available";
+        await computer.save();
+        checkoutCount++;
+      }
+    }
+    if (checkoutCount > 0) {
+      console.log(`Successfully auto-checked out ${checkoutCount} stale session(s).`);
+    }
+  } catch (error) {
+    console.error('Error during auto-checkout service:', error);
+  }
+};
+
 // Function to check and handle expired bookings
 const checkExpiredBookings = async () => {
   try {
+    // Run stale sessions cleanup first
+    await autoCheckoutPreviousDaysSessions();
+
     const now = new Date();
     const currentDate = now.toISOString().split('T')[0];
     const currentTime = now.toLocaleTimeString('en-US', { 

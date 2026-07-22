@@ -93,6 +93,10 @@ interface Computer {
     sessionType: string;
     checkedIn: boolean;
   };
+  systemDetails?: {
+    operatingSystem: string;
+    osVersion?: string;
+  };
   liveMetrics?: {
     cpuUtil: number;
     ramUtil: number;
@@ -1333,17 +1337,38 @@ const ComputerGrid: React.FC = () => {
                     />
                   </Box>
 
-                  {/* Computer Name */}
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 600,
-                      fontSize: { xs: "1rem", sm: "1.125rem" },
-                      mb: 1.5,
-                    }}
-                  >
-                    {computer.name}
-                  </Typography>
+                  {/* Computer Name & OS Info */}
+                  <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 1.5 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: { xs: "1rem", sm: "1.125rem" },
+                        mb: 0.5
+                      }}
+                    >
+                      {computer.name}
+                    </Typography>
+                    {computer.isOnline && computer.systemDetails?.operatingSystem && (
+                      <Chip
+                        label={
+                          computer.systemDetails.operatingSystem === "Windows" ? "🪟 Windows" : 
+                          computer.systemDetails.operatingSystem === "Linux" ? "🐧 Linux" : 
+                          `💻 ${computer.systemDetails.operatingSystem}`
+                        }
+                        size="small"
+                        sx={{
+                          height: 18,
+                          fontSize: "0.65rem",
+                          fontWeight: 700,
+                          backgroundColor: computer.systemDetails.operatingSystem === "Windows" ? "rgba(25, 118, 210, 0.08)" : "rgba(76, 175, 80, 0.08)",
+                          color: computer.systemDetails.operatingSystem === "Windows" ? "#1976d2" : "#2e7d32",
+                          border: "1px solid",
+                          borderColor: computer.systemDetails.operatingSystem === "Windows" ? "rgba(25, 118, 210, 0.2)" : "rgba(76, 175, 80, 0.2)"
+                        }}
+                      />
+                    )}
+                  </Box>
 
                   {/* Status/Booking Information */}
                   <Box>

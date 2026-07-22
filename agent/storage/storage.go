@@ -121,8 +121,25 @@ func (s *Storage) SaveAttendance(state AttendanceState) error {
 
 func (s *Storage) GetAttendance() AttendanceState {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.db.Attendance
+	att := s.db.Attendance
+	s.mu.RUnlock()
+
+	if att.CheckedIn && !att.CheckInTime.IsZero() {
+		today := time.Now()
+		if att.CheckInTime.Year() != today.Year() || 
+		   att.CheckInTime.Month() != today.Month() || 
+		   att.CheckInTime.Day() != today.Day() {
+			
+			s.mu.Lock()
+			s.db.Attendance.CheckedIn = false
+			s.db.Attendance.CheckInTime = time.Time{}
+			_ = s.saveUnlocked()
+			att = s.db.Attendance
+			s.mu.Unlock()
+		}
+	}
+
+	return att
 }
 
 func (s *Storage) QueueMetric(data map[string]interface{}) error {

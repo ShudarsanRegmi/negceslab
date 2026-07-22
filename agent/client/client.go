@@ -299,9 +299,12 @@ func (c *Client) connectAndStream(ctxDone <-chan struct{}, telemetryChan <-chan 
 	}()
 
 	// 1. Authenticate WebSocket session
+	osName, osVer := sysinfo.GetOSAndVersion()
 	authMsg := map[string]interface{}{
-		"type":  "auth",
-		"token": creds.AuthToken,
+		"type":      "auth",
+		"token":     creds.AuthToken,
+		"os":        osName,
+		"osVersion": osVer,
 	}
 	authData, _ := json.Marshal(authMsg)
 	if err := conn.WriteMessage(websocket.TextMessage, authData); err != nil {

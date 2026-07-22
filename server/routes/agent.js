@@ -219,18 +219,23 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
     const { studentName, studentEmail, agenda, sessionType, action } = req.body;
     const computer = req.computer;
 
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const currentTime = `${hours}:${minutes}`;
+
     if (action === "checkin") {
       if (!studentName || !studentEmail) {
         return res.status(400).json({ message: "Student credentials are required for check-in" });
       }
 
-      // Resolve today's booking to map to this attendance session
-      const now = new Date();
-      const today = now.toISOString().split("T")[0];
-      const hours = String(now.getHours()).padStart(2, "0");
-      const minutes = String(now.getMinutes()).padStart(2, "0");
-      const currentTime = `${hours}:${minutes}`;
+      // Enforce: Cannot check in if already checked in
+      if (computer.agentActiveSession?.checkedIn) {
+        return res.status(400).json({ message: "This machine already has an active check-in session. Please check out first." });
+      }
 
+      // Resolve today's booking to map to this attendance session
       const bookings = await Booking.find({
         computerId: computer._id,
         status: "approved",
@@ -246,6 +251,14 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         return false;
       }) || bookings[0];
 
+      // Enforce: Cannot mark attendance if already marked for today in this slot/booking
+      if (activeBooking) {
+        const existingEntry = (activeBooking.attendanceHistory || []).find(h => h.date === today);
+        if (existingEntry) {
+          return res.status(400).json({ message: "Attendance has already been marked for today on this slot." });
+        }
+      }
+
       computer.agentActiveSession = {
         currentUser: studentName,
         email: studentEmail,
@@ -258,28 +271,23 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
       computer.status = "reserved";
 
       if (activeBooking) {
-        // Record into booking's attendanceHistory
-        const existingEntry = (activeBooking.attendanceHistory || []).find(h => h.date === today);
-        if (existingEntry) {
-          existingEntry.currentUser = studentName;
-          existingEntry.email = studentEmail;
-          existingEntry.agenda = agenda || "Working";
-          existingEntry.sessionType = sessionType || "Physical GUI";
-          existingEntry.checkInTime = new Date();
-        } else {
-          activeBooking.attendanceHistory.push({
-            date: today,
-            currentUser: studentName,
-            email: studentEmail,
-            agenda: agenda || "Working",
-            sessionType: sessionType || "Physical GUI",
-            checkInTime: new Date()
-          });
-        }
+        activeBooking.attendanceHistory.push({
+          date: today,
+          currentUser: studentName,
+          email: studentEmail,
+          agenda: agenda || "Working",
+          sessionType: sessionType || "Physical GUI",
+          checkInTime: new Date()
+        });
         await activeBooking.save();
       }
     } else if (action === "checkout") {
-      if (computer.agentActiveSession?.activeBookingId) {
+      // Enforce: Cannot check out if not checked in
+      if (!computer.agentActiveSession?.checkedIn) {
+        return res.status(400).json({ message: "This machine does not have an active session to check out from." });
+      }
+
+      if (computer.agentActiveSession.activeBookingId) {
         const bk = await Booking.findById(computer.agentActiveSession.activeBookingId);
         if (bk && bk.attendanceHistory) {
           const entry = bk.attendanceHistory.find(h => h.date === today);

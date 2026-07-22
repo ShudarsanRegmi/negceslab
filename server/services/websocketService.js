@@ -54,12 +54,42 @@ const initWebSocketServer = (server) => {
           authenticatedComputer = computer;
           activeConnections.set(computer._id.toString(), socket);
 
-          // Update computer status online
+          // Update computer status online and dynamic booted OS
           computer.isOnline = true;
           computer.lastSeen = new Date();
+
+          if (payload.os) {
+            const incomingOS = payload.os === "linux" ? "Linux" : (payload.os === "windows" ? "Windows" : "Other");
+            
+            // Auto-detect dual boot if the booted OS changes between Linux and Windows
+            if (computer.agentSystemDetails?.operatingSystem && computer.agentSystemDetails.operatingSystem !== incomingOS) {
+              computer.agentSystemDetails.isDualBoot = true;
+            }
+
+            if (!computer.agentSystemDetails) {
+              computer.agentSystemDetails = { lastAgentRegistration: new Date() };
+            }
+            computer.agentSystemDetails.operatingSystem = incomingOS;
+            if (incomingOS === "Linux") {
+              computer.agentSystemDetails.osVersionLinux = payload.osVersion || "";
+            } else if (incomingOS === "Windows") {
+              computer.agentSystemDetails.osVersionWindows = payload.osVersion || "";
+            }
+
+            // Sync with user-facing systemDetails so dashboard/grid shows correct booted OS
+            if (!computer.systemDetails) {
+              computer.systemDetails = {};
+            }
+            computer.systemDetails.operatingSystem = incomingOS;
+            if (payload.osVersion) {
+              computer.systemDetails.osVersion = payload.osVersion;
+            }
+            computer.systemDetails.lastUpdated = new Date();
+          }
+
           await computer.save();
 
-          console.log(`Agent authenticated for machine: ${computer.name} (${computer._id})`);
+          console.log(`Agent authenticated for machine: ${computer.name} (${computer._id}) on OS: ${payload.os || 'Unknown'}`);
           socket.send(JSON.stringify({ type: "auth_success", message: "Successfully authenticated" }));
           return;
         }

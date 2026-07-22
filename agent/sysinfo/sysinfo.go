@@ -254,3 +254,11 @@ func readCPUTemperature() float64 {
 	}
 	return 0.0 // Default fallback if unsupported or missing permissions
 }
+
+func GetOSAndVersion() (string, string) {
+	hInfo, err := host.Info()
+	if err == nil {
+		return runtime.GOOS, fmt.Sprintf("%s %s", hInfo.Platform, hInfo.PlatformVersion)
+	}
+	return runtime.GOOS, runtime.GOOS
+}
