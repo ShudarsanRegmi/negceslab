@@ -64,7 +64,7 @@ import {
   CancelScheduleSend as CancelScheduleSendIcon,
   EventAvailable as EventAvailableIcon,
   OpenInNew as OpenInNewIcon,
-  MarkEmailRead as MarkEmailReadIcon,
+  AppRegistration as AppRegistrationIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -286,7 +286,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     },
     {
       text: "Agent Registration",
-      icon: <MarkEmailReadIcon />,
+      icon: <AppRegistrationIcon />,
       path: "/admin/agent-registration",
       roles: ["admin"],
     },

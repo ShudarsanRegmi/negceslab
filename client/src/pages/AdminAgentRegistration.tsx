@@ -19,7 +19,11 @@ import {
   CircularProgress,
   Skeleton,
 } from '@mui/material';
-import { Refresh as RefreshIcon } from '@mui/icons-material';
+import { 
+  Refresh as RefreshIcon,
+  ContentCopy as CopyIcon,
+  Check as CheckIcon 
+} from '@mui/icons-material';
 import { agentRegistrationAPI } from '../services/api';
 
 const AdminAgentRegistration: React.FC = () => {
@@ -30,9 +34,18 @@ const AdminAgentRegistration: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  const handleCopyToken = () => {
+    if (registrationToken?.token) {
+      navigator.clipboard.writeText(registrationToken.token);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -133,20 +146,38 @@ const AdminAgentRegistration: React.FC = () => {
             {tokenLoading || loading ? (
               <Skeleton width={180} height={40} />
             ) : (
-              <Box
-                sx={{
-                  fontFamily: 'monospace',
-                  fontSize: '1.25rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.15em',
-                  bgcolor: '#f1f5f9',
-                  p: '8px 16px',
-                  borderRadius: 1.5,
-                  border: '1px solid #cbd5e1',
-                  color: '#0f172a'
-                }}
-              >
-                {registrationToken?.token || "NO_ACTIVE_TOKEN"}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box
+                  sx={{
+                    fontFamily: 'monospace',
+                    fontSize: '1.25rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.15em',
+                    bgcolor: '#f1f5f9',
+                    p: '8px 16px',
+                    borderRadius: 1.5,
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a'
+                  }}
+                >
+                  {registrationToken?.token || "NO_ACTIVE_TOKEN"}
+                </Box>
+                
+                <Button
+                  variant="contained"
+                  color={copied ? "success" : "primary"}
+                  startIcon={copied ? <CheckIcon /> : <CopyIcon />}
+                  onClick={handleCopyToken}
+                  disabled={tokenLoading || loading || !registrationToken?.token}
+                  sx={{ 
+                    textTransform: 'none', 
+                    fontWeight: 700,
+                    height: '42px',
+                    borderRadius: 1.5
+                  }}
+                >
+                  {copied ? "Copied!" : "Copy"}
+                </Button>
               </Box>
             )}
 
