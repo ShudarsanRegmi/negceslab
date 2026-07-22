@@ -50,6 +50,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import PersonIcon from '@mui/icons-material/Person';
 import StorageIcon from '@mui/icons-material/Storage';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import SystemTelemetryAnalyticsModal from './SystemTelemetryAnalyticsModal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1170,6 +1171,7 @@ interface RealTimeComputer {
   location: string;
   isOnline: boolean;
   lastSeen: string | null;
+  bookings?: any[];
   agentActiveSession?: {
     currentUser: string;
     email: string;
@@ -1198,6 +1200,7 @@ function RealTimeTab() {
   const [search, setSearch] = useState('');
   const [filterOnline, setFilterOnline] = useState<'all' | 'online' | 'offline'>('all');
   const [selectedComp, setSelectedComp] = useState<RealTimeComputer | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   const fetchLive = useCallback(async (showLoader = false) => {
     try {
@@ -1592,10 +1595,33 @@ function RealTimeTab() {
             </Grid>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSelectedComp(null)}>Close Explorer</Button>
+        <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2 }}>
+          {selectedComp && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<BarChartIcon />}
+              onClick={() => setHistoryModalOpen(true)}
+              sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2 }}
+            >
+              Analyze Historical Telemetry
+            </Button>
+          )}
+          <Button onClick={() => setSelectedComp(null)} sx={{ textTransform: "none", fontWeight: 700 }}>
+            Close Explorer
+          </Button>
         </DialogActions>
       </Dialog>
+
+      {selectedComp && (
+        <SystemTelemetryAnalyticsModal
+          open={historyModalOpen}
+          onClose={() => setHistoryModalOpen(false)}
+          computerId={selectedComp._id}
+          computerName={selectedComp.name}
+          bookings={selectedComp.bookings || []}
+        />
+      )}
     </Box>
   );
 }
