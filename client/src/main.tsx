@@ -114,6 +114,35 @@ function applyZoomCoordinatePatches() {
 
   patchHtmlProp('clientWidth');
   patchHtmlProp('clientHeight');
+
+  // 4. Patch MouseEvent / Touch clientX/Y and pageX/Y
+  //    Recharts uses mouse clientX/Y compared against container getBoundingClientRect.
+  //    Under CSS zoom, Chrome leaves events in visual-px coordinates, causing a mismatch
+  //    with our CSS-px patched getBoundingClientRect. We scale them here to CSS-px.
+  const patchEventProps = (proto: any) => {
+    const props = ['clientX', 'clientY', 'pageX', 'pageY'];
+    props.forEach(prop => {
+      const desc = Object.getOwnPropertyDescriptor(proto, prop);
+      if (desc && desc.get) {
+        const getter = desc.get;
+        try {
+          Object.defineProperty(proto, prop, {
+            get: function(this: any) {
+              return Math.round(getter.call(this) * factor);
+            },
+            configurable: true
+          });
+        } catch (e) {}
+      }
+    });
+  };
+
+  if (typeof MouseEvent !== 'undefined') {
+    patchEventProps(MouseEvent.prototype);
+  }
+  if (typeof Touch !== 'undefined') {
+    patchEventProps(Touch.prototype);
+  }
 }
 
 applyZoomCoordinatePatches();
