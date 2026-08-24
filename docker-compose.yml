@@ -34,6 +34,8 @@ services:
       - ./server/.env
     ports:
       - "5001:5000"
+    volumes:
+      - ./server/logs:/var/log/negceslab
     depends_on:
       mongo:
         condition: service_healthy
