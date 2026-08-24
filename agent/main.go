@@ -93,7 +93,13 @@ func main() {
 	ctxDone := make(chan struct{})
 	agentClient.StartWSMetricsStream(ctxDone, telemetryChan)
 
-	// Keep daemon running until OS signal is received
+	// If running as a Windows Service, hand over control to Service Control Manager
+	runInService(func() {
+		// Keep running while service is active
+		select {}
+	})
+
+	// Keep daemon running until OS signal is received (CLI mode)
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 

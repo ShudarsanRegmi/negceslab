@@ -22,11 +22,11 @@ type StaticInfo struct {
 	SystemID     string `json:"systemId,omitempty"`
 	Hostname     string `json:"hostname"`
 	OS           string `json:"os"`
-	OSVersion    string `json:"os_version"`
-	CPUModel     string `json:"cpu_model"`
-	TotalRAM     uint64 `json:"total_ram"`     // in Bytes
-	TotalStorage uint64 `json:"total_storage"` // in Bytes
-	GPUModel     string `json:"gpu_model"`
+	OSVersion    string `json:"osVersion"`
+	CPUModel     string `json:"cpuModel"`
+	TotalRAM     uint64 `json:"ram"`
+	TotalStorage uint64 `json:"storage"`
+	GPUModel     string `json:"gpu"`
 }
 
 type DynamicMetrics struct {
