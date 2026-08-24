@@ -8,6 +8,8 @@ const TemporaryRelease = require('../models/temporaryRelease');
 const TemporaryReleaseDetail = require('../models/temporaryReleaseDetail');
 const { verifyToken } = require('../middleware/auth');
 const policy = require('../../shared/policy');
+const getLogger = require('../utils/logger');
+const logger = getLogger('bookings');
 const { 
   sendBookingApprovedEmail, 
   sendBookingRejectedEmail, 
@@ -64,7 +66,7 @@ router.get('/current', verifyToken, async (req, res) => {
       minute: '2-digit'
     });
 
-    console.log('Fetching current bookings for:', { currentDate, currentTime });
+    logger.debug('Fetching current bookings for', { currentDate, currentTime });
 
     // Get all approved bookings that haven't expired yet
     const currentBookings = await Booking.find({
@@ -90,10 +92,10 @@ router.get('/current', verifyToken, async (req, res) => {
     .populate('user', 'name email')
     .sort({ startDate: 1, startTime: 1 });
 
-    console.log('Found current bookings:', currentBookings.length);
+    logger.debug('Found current bookings', { count: currentBookings.length });
     res.json(currentBookings);
   } catch (error) {
-    console.error('Error fetching current bookings:', error);
+    logger.error('Error fetching current bookings', { error: error.message });
     res.status(500).json({ message: 'Error fetching current bookings', error: error.message });
   }
 });
@@ -222,7 +224,7 @@ router.post('/', verifyToken, async (req, res) => {
       ]
     });
 
-    console.log('Found conflicting bookings:', conflictingBookings.length);
+    logger.debug('Found conflicting bookings', { count: conflictingBookings.length });
 
     // Generate all dates in the requested booking period
     const requestStart = new Date(startDate);
@@ -234,13 +236,13 @@ router.post('/', verifyToken, async (req, res) => {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    console.log('Requested dates:', requestDates);
+    logger.debug('Requested dates', { requestDates });
 
     // Filter out bookings that are covered by temporary releases
     const nonReleasedConflicts = [];
     
     for (const booking of conflictingBookings) {
-      console.log('Checking booking:', booking._id, 'dates:', booking.startDate, 'to', booking.endDate);
+      logger.debug('Checking booking releases', { bookingId: booking._id, startDate: booking.startDate, endDate: booking.endDate });
       
       // Check if this booking has temporary releases that cover the requested dates
       let isFullyCovered = false;
@@ -248,28 +250,28 @@ router.post('/', verifyToken, async (req, res) => {
       if (booking.temporaryRelease && booking.temporaryRelease.hasActiveReleases) {
         // Check if all requested dates are in the booking's released dates
         const releasedDates = booking.temporaryRelease.releasedDates || [];
-        console.log('Booking has released dates:', releasedDates);
+        logger.debug('Booking has released dates', { bookingId: booking._id, releasedDates });
         
         // Extract date strings from the release objects
         const releasedDateStrings = releasedDates.map(releaseItem => {
           // Handle both string format and object format
           return typeof releaseItem === 'string' ? releaseItem : releaseItem.date;
         });
-        console.log('Extracted released date strings:', releasedDateStrings);
+        logger.debug('Extracted released date strings', { bookingId: booking._id, releasedDateStrings });
         
         isFullyCovered = requestDates.every(date => releasedDateStrings.includes(date));
-        console.log('All requested dates covered by releases:', isFullyCovered);
+        logger.debug('All requested dates covered by releases', { bookingId: booking._id, isFullyCovered });
       }
       
       if (!isFullyCovered) {
-        console.log('Booking', booking._id, 'is not fully covered by releases, adding to conflicts');
+        logger.debug('Booking is not fully covered by releases, adding to conflicts', { bookingId: booking._id });
         nonReleasedConflicts.push(booking);
       } else {
-        console.log('Booking', booking._id, 'is fully covered by releases, excluding from conflicts');
+        logger.debug('Booking is fully covered by releases, excluding from conflicts', { bookingId: booking._id });
       }
     }
 
-    console.log('Non-released conflicts after filtering:', nonReleasedConflicts.length);
+    logger.debug('Non-released conflicts after filtering', { count: nonReleasedConflicts.length });
 
     // Filter out adjacent bookings (end time == start time is allowed)
     const overlaps = nonReleasedConflicts.filter(existing => {
@@ -287,10 +289,10 @@ router.post('/', verifyToken, async (req, res) => {
       return true;
     });
 
-    console.log('Final overlaps after time filtering:', overlaps.length);
+    logger.debug('Final overlaps after time filtering', { count: overlaps.length });
 
     if (overlaps.length > 0) {
-      console.log('Returning conflict response for overlapping bookings:', overlaps.map(b => b._id));
+      logger.warn('Returning conflict response for overlapping bookings', { overlaps: overlaps.map(b => b._id) });
       return res.status(400).json({
         message: 'Time slot conflict with existing booking',
         conflicts: overlaps
@@ -306,7 +308,7 @@ router.post('/', verifyToken, async (req, res) => {
       'temporaryRelease.releasedDates.date': { $in: requestDates }
     });
 
-    console.log('Found bookings with releases for pre-creation check:', bookingsWithReleases.length);
+    logger.debug('Found bookings with releases for pre-creation check', { count: bookingsWithReleases.length });
 
     // Check if any booking fully covers our requested dates
     const relevantBookingWithRelease = bookingsWithReleases.find(existingBooking => {
@@ -316,11 +318,11 @@ router.post('/', verifyToken, async (req, res) => {
         return typeof releaseItem === 'string' ? releaseItem : releaseItem.date;
       });
       const isFullyCovered = requestDates.every(date => releasedDateStrings.includes(date));
-      console.log('Pre-creation check - Booking', existingBooking._id, 'covers all dates:', isFullyCovered);
+      logger.debug('Pre-creation check release coverage', { bookingId: existingBooking._id, isFullyCovered });
       return isFullyCovered;
     });
 
-    console.log('Pre-creation check - Relevant booking with release:', relevantBookingWithRelease?._id);
+    logger.debug('Pre-creation check - Relevant booking with release', { bookingId: relevantBookingWithRelease?._id });
 
     // Parse dates and times
     const startDateObj = new Date(startDate + 'T00:00:00');
@@ -403,7 +405,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     // If this booking uses temporary release slots, mark them as booked
     if (relevantBookingWithRelease) {
-      console.log('Marking temporary release slots as booked for booking:', booking._id);
+      logger.info('Marking temporary release slots as booked', { bookingId: booking._id, originalBookingId: relevantBookingWithRelease._id });
       
       // Update the isBooked flag for the covered dates
       requestDates.forEach(requestDate => {
@@ -411,16 +413,16 @@ router.post('/', verifyToken, async (req, res) => {
         if (releaseItem) {
           releaseItem.isBooked = true;
           releaseItem.tempBookingId = booking._id;
-          console.log('Marked date', requestDate, 'as booked with booking ID:', booking._id);
+          logger.debug('Marked slot as booked', { date: requestDate, bookingId: booking._id });
         }
       });
       
       await relevantBookingWithRelease.save();
-      console.log('Updated original booking with temporary release booking info');
+      logger.info('Updated original booking with temporary release booking info', { originalBookingId: relevantBookingWithRelease._id });
     }
 
     const isTemporaryBooking = relevantBookingWithRelease !== undefined;
-    console.log('Is temporary booking:', isTemporaryBooking);
+    logger.debug('Booking type classification', { bookingId: booking._id, isTemporaryBooking });
 
     // Notify all admins about the new booking
     const userBookingId = booking._id.toString().slice(-6).toUpperCase();
@@ -618,9 +620,9 @@ router.put('/:id/status', verifyToken, async (req, res) => {
 
     // Send email notification
     try {
-      console.log('Looking for user with firebaseUid:', booking.userId);
+      logger.debug('Looking for user for email notification', { firebaseUid: booking.userId });
       const user = await User.findOne({ firebaseUid: booking.userId });
-      console.log('Found user:', user ? { name: user.name, email: user.email } : 'Not found');
+      logger.debug('User search result', { found: user !== null, email: user?.email });
       
       if (user && user.email) {
         const userName = user.name || 'User';
@@ -628,7 +630,7 @@ router.put('/:id/status', verifyToken, async (req, res) => {
         const startDate = new Date(booking.startDate).toLocaleDateString();
         const endDate = new Date(booking.endDate).toLocaleDateString();
         
-        console.log('Sending email to:', user.email);
+        logger.info('Sending booking status email', { email: user.email, status, computerName });
         
         if (status === 'approved') {
           await sendBookingApprovedEmail(
@@ -663,7 +665,7 @@ router.put('/:id/status', verifyToken, async (req, res) => {
           );
         }
       } else {
-        console.log('User not found or no email for firebaseUid:', booking.userId);
+        logger.warn('User not found or has no email address for booking notification', { firebaseUid: booking.userId });
       }
     } catch (emailError) {
       console.error('Error sending email notification:', emailError);
@@ -732,9 +734,9 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
     // Send email notification for cancellation
     try {
-      console.log('Looking for user with firebaseUid:', booking.userId);
+      logger.debug('Looking for user for cancellation email', { firebaseUid: booking.userId });
       const user = await User.findOne({ firebaseUid: booking.userId });
-      console.log('Found user for cancellation:', user ? { name: user.name, email: user.email } : 'Not found');
+      logger.debug('User search result for cancellation', { found: user !== null, email: user?.email });
       
       if (user && user.email) {
         const userName = user.name || 'User';
@@ -742,7 +744,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
         const startDate = new Date(booking.startDate).toLocaleDateString();
         const endDate = new Date(booking.endDate).toLocaleDateString();
         
-        console.log('Sending cancellation email to:', user.email);
+        logger.info('Sending cancellation email', { email: user.email, computerName });
         
         await sendBookingCancelledEmail(
           user.email, 
@@ -754,10 +756,10 @@ router.delete('/:id', verifyToken, async (req, res) => {
           booking.endTime
         );
       } else {
-        console.log('User not found or no email for cancellation, firebaseUid:', booking.userId);
+        logger.warn('User not found or has no email address for cancellation notification', { firebaseUid: booking.userId });
       }
     } catch (emailError) {
-      console.error('Error sending cancellation email:', emailError);
+      logger.error('Error sending cancellation email', { error: emailError.message });
       // Don't fail the request if email fails
     }
 
