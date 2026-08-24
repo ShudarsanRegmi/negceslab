@@ -4,6 +4,8 @@ const Computer = require("../models/computer");
 const Booking = require("../models/booking");
 const User = require("../models/user");
 const { verifyToken } = require("../middleware/auth");
+const getLogger = require("../utils/logger");
+const logger = getLogger("computers");
 
 // Get all computers (public access)
 router.get("/public", async (req, res) => {
@@ -47,7 +49,7 @@ router.get("/public/with-bookings", async (req, res) => {
       minute: "2-digit",
     });
 
-    console.log("Current date and time:", { today, currentTime });
+    logger.debug("Current date and time for active bookings filtering", { today, currentTime });
 
     // Process each computer to include only relevant bookings
     const computersWithActiveBookings = computers.map(computer => {
@@ -135,7 +137,7 @@ router.get("/with-bookings", verifyToken, async (req, res) => {
       minute: "2-digit",
     });
 
-    console.log("Current date and time:", { today, currentTime });
+    logger.debug("Current date and time for active bookings filtering", { today, currentTime });
 
     // Process each computer to include only relevant bookings
     const computersWithActiveBookings = computers.map(computer => {
