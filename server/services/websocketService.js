@@ -12,7 +12,9 @@ const initWebSocketServer = (server) => {
 
   // Handle upgrade requests
   server.on("upgrade", (request, socket, head) => {
-    const pathname = url.parse(request.url).pathname;
+    let pathname = url.parse(request.url).pathname;
+    // Normalize duplicate slashes (e.g., //ws/agent -> /ws/agent)
+    pathname = pathname.replace(/\/+/g, "/");
 
     if (pathname === "/ws/agent") {
       wss.handleUpgrade(request, socket, head, (wsConnection) => {

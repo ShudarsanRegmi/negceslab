@@ -300,7 +300,11 @@ func (c *Client) connectAndStream(ctxDone <-chan struct{}, telemetryChan <-chan 
 	}
 
 	c.mu.Lock()
-	wsUrl := fmt.Sprintf("%s/ws/agent", c.cfg.WSURL)
+	wsUrlBase := c.cfg.WSURL
+	if len(wsUrlBase) > 0 && wsUrlBase[len(wsUrlBase)-1] == '/' {
+		wsUrlBase = wsUrlBase[:len(wsUrlBase)-1]
+	}
+	wsUrl := fmt.Sprintf("%s/ws/agent", wsUrlBase)
 	fmt.Printf("Connecting to backend WebSocket: %s...\n", wsUrl)
 	conn, _, err := websocket.DefaultDialer.Dial(wsUrl, nil)
 	if err != nil {
