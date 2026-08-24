@@ -1,15 +1,15 @@
 {
   "credentials": {
-    "machine_id": "",
-    "auth_token": "1a084e8f8c7b1f7a06ae0ef50ab676d8a59d4004147453b86394f05d3a1200a8"
+    "machine_id": "6a65b6fb2b44f4d3a29dc43f",
+    "auth_token": "228b55c7f179857cb380c380bd769ea517d120b3d7bd0e60b328d2b5f292cac2"
   },
   "attendance": {
-    "student_name": "Shudarsan Regmi",
-    "student_email": "ch.sc.u4cys23055@ch.students.amrita.edu",
-    "agenda": "Testing the UI of negcslab",
-    "session_type": "Physical GUI",
-    "check_in_time": "2026-07-21T15:14:53.465615265+05:30",
-    "checked_in": true
+    "student_name": "",
+    "student_email": "",
+    "agenda": "",
+    "session_type": "",
+    "check_in_time": "2026-08-24T15:45:35.121930816+05:30",
+    "checked_in": false
   },
   "offline_metrics": []
 }
