@@ -1,4 +1,4 @@
-.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh prod-services setup-env build-backend up-backend down-backend logs-backend build-mongo up-mongo down-mongo logs-mongo build-backend-dev up-backend-dev down-backend-dev up-mongo-dev down-mongo-dev systemd-install systemd-enable systemd-start systemd-stop systemd-restart systemd-status systemd-logs systemd-logs-mongodb systemd-logs-backend systemd-update-backend systemd-uninstall
+.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh prod-services setup-env build-backend up-backend down-backend logs-backend build-mongo up-mongo down-mongo logs-mongo build-agent-linux build-agent-windows build-agent-all up-observability down-observability logs-observability systemd-install systemd-enable systemd-start systemd-stop systemd-restart systemd-status systemd-logs systemd-logs-mongodb systemd-logs-backend systemd-update-backend systemd-uninstall
 
 # Default target
 help:
@@ -19,6 +19,11 @@ help:
 	@echo "  up-mongo     - Start only MongoDB service"
 	@echo "  down-mongo   - Stop only MongoDB service"
 	@echo "  logs-mongo   - Show MongoDB logs"
+	@echo ""
+	@echo "Observability Stack:"
+	@echo "  up-observability   - Start Loki, Promtail, and Grafana"
+	@echo "  down-observability - Stop Loki, Promtail, and Grafana"
+	@echo "  logs-observability - Show Promtail logs"
 	@echo ""
 	@echo "Systemd Services:"
 	@echo "  systemd-install        - Install systemd services"
@@ -237,3 +242,19 @@ build-agent-windows:
 
 build-agent-all: build-agent-linux build-agent-windows
 	@echo "All NegcesLab Agent binaries successfully compiled!"
+
+# Observability commands
+up-observability:
+	@echo "Starting logging stack (Loki, Promtail, Grafana)..."
+	podman-compose -f docker-compose.yml up -d loki promtail grafana
+	@echo "Logging stack started!"
+
+down-observability:
+	@echo "Stopping logging stack..."
+	podman-compose -f docker-compose.yml stop loki promtail grafana
+	podman rm -f loki promtail grafana 2>/dev/null || true
+	@echo "Logging stack stopped!"
+
+logs-observability:
+	@echo "Showing Promtail logs..."
+	podman logs promtail
