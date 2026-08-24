@@ -55,7 +55,6 @@ import { computersAPI, temporaryReleaseAPI } from "../services/api";
 import { bookingsAPI } from "../services/api";
 import { format, isWithinInterval, parseISO, isSameDay, addDays, startOfMonth, endOfMonth } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
-import BookingUsageExplorer from "../components/BookingUsageExplorer";
 
 // Lab policy constants (keeping in sync with shared/policy.js)
 const LAB_OPEN_HOUR = 8;
@@ -618,9 +617,6 @@ const ComputerGrid: React.FC = () => {
                         Time: {booking.startTime} - {booking.endTime}
                       </Typography>
                     </Box>
-
-                    {/* Day-Wise Exploratory Attendance & Telemetry Chronograph */}
-                    <BookingUsageExplorer booking={booking as any} />
 
                     {/* Temporary Releases for this booking */}
                     {booking.temporaryReleases && booking.temporaryReleases.length > 0 && (
