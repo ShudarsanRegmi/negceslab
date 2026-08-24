@@ -65,6 +65,7 @@ import {
   EventAvailable as EventAvailableIcon,
   OpenInNew as OpenInNewIcon,
   AppRegistration as AppRegistrationIcon,
+  MarkEmailRead as MarkEmailReadIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
