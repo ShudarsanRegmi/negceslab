@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const admin = require("firebase-admin");
 const path = require("path");
+const getLogger = require("./utils/logger");
+const logger = getLogger("system");
 
 // Initialize Express app
 const app = express();
@@ -19,16 +21,16 @@ try {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
-  console.log("Firebase Admin initialized successfully");
+  logger.info("Firebase Admin initialized successfully");
 } catch (error) {
-  console.error("Error initializing Firebase Admin:", error.message);
-  console.log("Please ensure Firebase service account key is properly configured");
-  console.log(`Looking for service account at: ${process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "./config/serviceAccountKey.json"}`);
+  logger.error("Error initializing Firebase Admin", { error: error.message });
+  logger.info("Please ensure Firebase service account key is properly configured");
+  logger.info(`Looking for service account at: ${process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "./config/serviceAccountKey.json"}`);
 }
 
 // MongoDB Connection
 if (!process.env.MONGODB_URI) {
-  console.error("MONGODB_URI is not defined in .env file");
+  logger.fatal("MONGODB_URI is not defined in .env file");
   process.exit(1);
 }
 mongoose
@@ -37,13 +39,13 @@ mongoose
     useUnifiedTopology: true,
   })
   .then(() => {
-    console.log("Connected to MongoDB");
+    logger.info("Connected to MongoDB");
 
     // Initialize booking expiration service
     const { startExpirationService } = require("./services/bookingExpirationService");
     startExpirationService();
   })
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .catch((err) => logger.error("MongoDB connection error", { error: err.message }));
 
 // Import routes
 const authRoutes = require("./routes/auth");
@@ -114,14 +116,14 @@ app.get('/health', async (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  logger.error("Unhandled middleware error", { error: err.message, stack: err.stack });
   res.status(500).json({ message: "Something went wrong!" });
 });
 
 // Start server
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT}`);
 });
 
 // Initialize WebSocket telemetry for machine agents
@@ -131,19 +133,19 @@ initWebSocketServer(server);
 
 // Handle SIGTERM for Docker stop
 process.on("SIGTERM", async () => {
-  console.log("Received SIGTERM, shutting down gracefully...");
+  logger.info("Received SIGTERM, shutting down gracefully...");
 
   // 1. Stop accepting new requests
   server.close(async () => {
-    console.log("HTTP server closed");
+    logger.info("HTTP server closed");
 
     try {
       // 2. Close DB connections
       await mongoose.connection.close(false); // false = don't force
-      console.log("MongoDB connection closed");
+      logger.info("MongoDB connection closed");
 
     } catch (err) {
-      console.error("Error closing connections:", err);
+      logger.error("Error closing connections", { error: err.message });
     }
 
     // 3. Exit process
@@ -153,6 +155,6 @@ process.on("SIGTERM", async () => {
 
 // (Optional) Also listen for SIGINT (Ctrl+C in local dev)
 process.on("SIGINT", async () => {
-  console.log("Received SIGINT (Ctrl+C)");
+  logger.info("Received SIGINT (Ctrl+C)");
   process.emit("SIGTERM");
 });

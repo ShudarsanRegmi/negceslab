@@ -3,6 +3,8 @@ const url = require("url");
 const Computer = require("../models/computer");
 const Metric = require("../models/metric");
 const { writeMetricPoint } = require("./influxService");
+const getLogger = require("../utils/logger");
+const logger = getLogger("telemetry");
 
 // Map to track active websocket connections by computerId
 const activeConnections = new Map();
@@ -26,7 +28,7 @@ const initWebSocketServer = (server) => {
   });
 
   wss.on("connection", (socket, request) => {
-    console.log("New agent WebSocket connection initiated.");
+    logger.info("New agent WebSocket connection initiated");
     let authenticatedComputer = null;
 
     // Heartbeat mechanism to detect dead connections
@@ -91,7 +93,7 @@ const initWebSocketServer = (server) => {
 
           await computer.save();
 
-          console.log(`Agent authenticated for machine: ${computer.name} (${computer._id}) on OS: ${payload.os || 'Unknown'}`);
+          logger.info("Agent authenticated successfully", { computerName: computer.name, computerId: computer._id, os: payload.os || 'Unknown' });
           socket.send(JSON.stringify({ type: "auth_success", message: "Successfully authenticated" }));
           return;
         }
@@ -161,13 +163,13 @@ const initWebSocketServer = (server) => {
           }
         }
       } catch (err) {
-        console.error("WebSocket message error:", err);
+        logger.error("WebSocket message processing failed", { error: err.message });
       }
     });
 
     socket.on("close", async () => {
       if (authenticatedComputer) {
-        console.log(`Agent connection closed for machine: ${authenticatedComputer.name}`);
+        logger.info("Agent WebSocket connection closed", { computerName: authenticatedComputer.name, computerId: authenticatedComputer._id });
         activeConnections.delete(authenticatedComputer._id.toString());
 
         // Update online status in database
@@ -177,13 +179,13 @@ const initWebSocketServer = (server) => {
             lastSeen: new Date(),
           });
         } catch (err) {
-          console.error("Failed to mark computer offline:", err);
+          logger.error("Failed to mark computer offline in DB", { computerId: authenticatedComputer._id, error: err.message });
         }
       }
     });
 
     socket.on("error", (err) => {
-      console.error("Agent socket error:", err);
+      logger.error("Agent WebSocket connection error", { error: err.message });
     });
   });
 
@@ -212,11 +214,11 @@ const initWebSocketServer = (server) => {
         { isOnline: false }
       );
     } catch (err) {
-      console.error("Error in agent heartbeat sweeper:", err);
+      logger.error("Error in agent heartbeat sweeper", { error: err.message });
     }
   }, 15000); // Run every 15 seconds
 
-  console.log("WebSocket Agent server bound to gateway upgrade pipeline");
+  logger.info("WebSocket Agent server bound to gateway upgrade pipeline");
   return wss;
 };
 
