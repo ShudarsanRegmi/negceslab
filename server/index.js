@@ -58,6 +58,7 @@ const temporaryReleaseRoutes = require('./routes/temporaryReleases');
 const achievementRoutes = require('./routes/achievements');
 const superadminRoutes = require('./routes/superadmin');
 const agentRoutes = require("./routes/agent");
+const logRoutes = require("./routes/logs");
 const { setupSwagger } = require("./swagger");
 
 // Use routes
@@ -71,6 +72,7 @@ app.use('/api/temporary-releases', temporaryReleaseRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use("/api/agent", agentRoutes);
+app.use("/api/logs", logRoutes);
 
 // Setup Swagger UI (only in development/localhost, not in production)
 if (process.env.NODE_ENV !== "production") {

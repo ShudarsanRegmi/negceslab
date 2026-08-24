@@ -12,6 +12,10 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
+      minify: 'esbuild',
+    },
+    esbuild: {
+      pure: mode === 'production' ? ['console.log', 'console.info', 'console.debug'] : [],
     },
     resolve: {
       alias: {
