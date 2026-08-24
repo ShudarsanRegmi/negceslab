@@ -1080,7 +1080,7 @@ export default function HomePage() {
                     fontWeight={700}
                     sx={{ color: "#60a5fa", fontSize: "0.75rem" }}
                   >
-                    v3.1
+                    v3.2
                   </Typography>
                 </Box>
               </Box>
