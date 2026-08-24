@@ -128,9 +128,37 @@ func registerMachine(cfg *config.Config, c *client.Client, targetSystemID string
 	if targetSystemID != "" {
 		static.SystemID = targetSystemID
 		fmt.Printf("[INFO] Registering directly for Target System ID: %s\n", targetSystemID)
-	} else if cfg.MachineName != "" {
-		fmt.Printf("[INFO] Overriding local hostname '%s' with configured machine name '%s'\n", static.Hostname, cfg.MachineName)
-		static.Hostname = cfg.MachineName
+	} else {
+		// Fetch available systems from server
+		fmt.Println("Fetching list of pre-configured computers from server...")
+		systems, err := c.FetchAvailableSystems()
+		if err != nil {
+			fmt.Printf("Failed to retrieve systems list from server: %v\n", err)
+			os.Exit(1)
+		}
+
+		if len(systems) == 0 {
+			fmt.Println("Error: No pre-configured computers found in database. Please add computers via Admin Panel first.")
+			os.Exit(1)
+		}
+
+		fmt.Println("\nAvailable Systems in Negces Lab:")
+		for i, sys := range systems {
+			fmt.Printf("[%d] %s (ID: %s)\n", i+1, sys.Name, sys.ID)
+		}
+		fmt.Printf("Select target system for this machine (1-%d): ", len(systems))
+
+		var choice int
+		_, err = fmt.Scanf("%d\n", &choice)
+		if err != nil || choice < 1 || choice > len(systems) {
+			fmt.Println("Invalid selection. Aborting registration.")
+			os.Exit(1)
+		}
+
+		selectedSys := systems[choice-1]
+		static.SystemID = selectedSys.ID
+		static.Hostname = selectedSys.Name
+		fmt.Printf("[INFO] Mapping agent to system: %s (ID: %s)\n", selectedSys.Name, selectedSys.ID)
 	}
 
 	fmt.Printf("System specs compiled: \n - Hostname: %s\n - OS: %s\n - CPU: %s\n - RAM: %d GB\n - GPU: %s\n",

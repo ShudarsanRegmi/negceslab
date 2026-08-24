@@ -30,6 +30,30 @@ func NewClient(cfg *config.Config, store *storage.Storage) *Client {
 	}
 }
 
+type SystemInfo struct {
+	ID   string `json:"_id"`
+	Name string `json:"name"`
+}
+
+func (c *Client) FetchAvailableSystems() ([]SystemInfo, error) {
+	url := fmt.Sprintf("%s/api/computers/public", c.cfg.BackendURL)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch systems, status: %d", resp.StatusCode)
+	}
+
+	var systems []SystemInfo
+	if err := json.NewDecoder(resp.Body).Decode(&systems); err != nil {
+		return nil, err
+	}
+	return systems, nil
+}
+
 // RegisterMachine sends specs to backend, queues a confirmation request, and polls until administrator confirms
 func (c *Client) RegisterMachine(static *sysinfo.StaticInfo) error {
 	url := fmt.Sprintf("%s/api/agent/register", c.cfg.BackendURL)

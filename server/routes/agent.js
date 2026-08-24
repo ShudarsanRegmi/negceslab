@@ -49,25 +49,19 @@ router.post("/register", async (req, res) => {
 
     const { systemId, hostname, os, osVersion, cpuModel, ram, storage, gpu } = req.body;
 
-    if (!hostname && !systemId) {
-      return res.status(400).json({ message: "Either systemId or hostname is required for registration" });
+    if (!systemId || !mongoose.Types.ObjectId.isValid(systemId)) {
+      return res.status(400).json({ message: "A valid systemId is required for registration" });
     }
 
     // Check if there is already an active registration token cached on target computer
-    let existingComputer = null;
-    if (systemId && mongoose.Types.ObjectId.isValid(systemId)) {
-      existingComputer = await Computer.findById(systemId);
-    }
-    if (!existingComputer && hostname) {
-      existingComputer = await Computer.findOne({ name: new RegExp(`^${hostname}$`, "i") });
+    const existingComputer = await Computer.findById(systemId);
+    if (!existingComputer) {
+      return res.status(404).json({ message: "Target system not found in database" });
     }
 
-    // Check for existing request from this system or hostname
+    // Check for existing request from this system
     let pendingRequest = await RegistrationRequest.findOne({
-      $or: [
-        { systemId: systemId || null },
-        { hostname: hostname || "" }
-      ],
+      systemId: systemId,
       status: "pending"
     });
 
@@ -75,6 +69,7 @@ router.post("/register", async (req, res) => {
 
     if (pendingRequest) {
       // Update pending request specs
+      pendingRequest.hostname = existingComputer.name;
       pendingRequest.os = os || "Other";
       pendingRequest.osVersion = osVersion || "";
       pendingRequest.cpuModel = cpuModel || "";
@@ -85,8 +80,8 @@ router.post("/register", async (req, res) => {
       await pendingRequest.save();
     } else {
       pendingRequest = new RegistrationRequest({
-        systemId: systemId || null,
-        hostname: hostname || `System-${Date.now().toString().slice(-4)}`,
+        systemId: systemId,
+        hostname: existingComputer.name,
         os: os || "Other",
         osVersion: osVersion || "",
         cpuModel: cpuModel || "",
@@ -103,7 +98,7 @@ router.post("/register", async (req, res) => {
       status: "pending",
       requestId: pendingRequest._id,
       tempToken: tempAgentToken,
-      systemName: existingComputer ? existingComputer.name : (hostname || "New System"),
+      systemName: existingComputer.name,
       message: "Registration request submitted. Pending administrator confirmation in the Admin Dashboard."
     });
   } catch (error) {
