@@ -1,23 +1,23 @@
 const { InfluxDB, Point } = require('@influxdata/influxdb-client');
 
-// Configuration constants for InfluxDB v3 core connection
-const INFLUX_URL = process.env.INFLUX_URL || 'http://localhost:8181';
-const INFLUX_TOKEN = process.env.INFLUX_TOKEN || 'apiv3_dIIQmYe8p3-1dx_2tlVQtbs4foLG_WaLda-HWRqUvR1cypk4QcDfi3bOHaZ9Ud6ehp3drVSP_7caDA6sCa9iJA';
-const INFLUX_ORG = process.env.INFLUX_ORG || 'negceslab';
-const INFLUX_BUCKET = process.env.INFLUX_BUCKET || 'system_metrics';
+// Configuration constants for InfluxDB connection
+const INFLUXDB_URL = process.env.INFLUXDB_URL || 'http://localhost:8086';
+const INFLUXDB_TOKEN = process.env.INFLUXDB_TOKEN || '';
+const INFLUXDB_ORG = process.env.INFLUXDB_ORG || 'negceslab-org';
+const INFLUXDB_BUCKET = process.env.INFLUXDB_BUCKET || 'system_metrics';
 
 let writeApi = null;
 let influxDB = null;
 
 try {
-  influxDB = new InfluxDB({ url: INFLUX_URL, token: INFLUX_TOKEN });
+  influxDB = new InfluxDB({ url: INFLUXDB_URL, token: INFLUXDB_TOKEN });
   // Default write options: flush every 5s or when batch size hits 50 points
-  writeApi = influxDB.getWriteApi(INFLUX_ORG, INFLUX_BUCKET, 'ns', {
+  writeApi = influxDB.getWriteApi(INFLUXDB_ORG, INFLUXDB_BUCKET, 'ns', {
     batchSize: 50,
     flushInterval: 5000,
     maxRetries: 3,
   });
-  console.log(`[InfluxDB Service] Initialized connection pipeline to ${INFLUX_URL}`);
+  console.log(`[InfluxDB Service] Initialized connection pipeline to ${INFLUXDB_URL}`);
 } catch (err) {
   console.error("[InfluxDB Service] Initialization warning:", err.message);
 }
@@ -81,17 +81,17 @@ const queryMetrics = async (computerId, startDate, endDate) => {
     sql += ` ORDER BY time ASC`;
 
     const postData = JSON.stringify({
-      db: INFLUX_BUCKET,
+      db: INFLUXDB_BUCKET,
       q: sql
     });
 
     return new Promise((resolve) => {
       const req = http.request(
-        `${INFLUX_URL}/api/v3/query_sql`,
+        `${INFLUXDB_URL}/api/v3/query_sql`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${INFLUX_TOKEN}`,
+            'Authorization': `Bearer ${INFLUXDB_TOKEN}`,
             'Content-Type': 'application/json',
             'Content-Length': Buffer.byteLength(postData)
           },
