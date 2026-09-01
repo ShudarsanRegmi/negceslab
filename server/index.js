@@ -7,8 +7,24 @@ const path = require("path");
 const getLogger = require("./utils/logger");
 const logger = getLogger("system");
 
+const promBundle = require("express-prom-bundle");
+
 // Initialize Express app
 const app = express();
+
+// Prometheus Metrics Middleware (Exposes RED metrics at /metrics)
+const metricsMiddleware = promBundle({
+  includeMethod: true,
+  includePath: true,
+  includeStatusCode: true,
+  includeUp: true,
+  customLabels: { app: 'negceslab-backend' },
+  promClient: {
+    collectDefaultMetrics: {}
+  },
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+});
+app.use(metricsMiddleware);
 
 // Middleware
 app.use(cors());
