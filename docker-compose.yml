@@ -107,15 +107,15 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     restart: unless-stopped
 
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.2
-    container_name: cadvisor
+  podman_exporter:
+    image: quay.io/navidys/podman-exporter:latest
+    container_name: podman_exporter
+    environment:
+      - CONTAINER_HOST=unix:///run/user/1000/podman/podman.sock
     volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-      - /dev/disk/:/dev/disk:ro
+      - /run/user/1000/podman/podman.sock:/run/user/1000/podman/podman.sock
+    ports:
+      - "9882:9882"
     restart: unless-stopped
 
 volumes:
