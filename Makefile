@@ -245,14 +245,14 @@ build-agent-all: build-agent-linux build-agent-windows
 
 # Observability commands
 up-observability:
-	@echo "Starting logging & metrics stack (Loki, Promtail, Grafana, Prometheus, NodeExporter, PodmanExporter)..."
-	podman-compose -f docker-compose.yml up -d loki promtail grafana prometheus node_exporter podman_exporter
+	@echo "Starting logging & metrics stack (Loki, Promtail, Grafana, Prometheus, NodeExporter, PodmanExporter, MongoDBExporter)..."
+	podman-compose -f docker-compose.yml up -d loki promtail grafana prometheus node_exporter podman_exporter mongodb_exporter
 	@echo "Observability stack started!"
 
 down-observability:
 	@echo "Stopping observability stack..."
-	podman-compose -f docker-compose.yml stop loki promtail grafana prometheus node_exporter podman_exporter
-	podman rm -f loki promtail grafana prometheus node_exporter podman_exporter 2>/dev/null || true
+	podman-compose -f docker-compose.yml stop loki promtail grafana prometheus node_exporter podman_exporter mongodb_exporter
+	podman rm -f loki promtail grafana prometheus node_exporter podman_exporter mongodb_exporter 2>/dev/null || true
 	@echo "Observability stack stopped!"
 
 logs-observability:

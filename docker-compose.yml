@@ -118,6 +118,20 @@ services:
       - "9882:9882"
     restart: unless-stopped
 
+  mongodb_exporter:
+    image: docker.io/percona/mongodb_exporter:0.40.0
+    container_name: mongodb_exporter
+    environment:
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/admin?authSource=admin
+    env_file:
+      - ./server/.env
+    ports:
+      - "9216:9216"
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+
 volumes:
   mongo_data:
     driver: local
