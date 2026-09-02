@@ -63,24 +63,15 @@ func main() {
 		return
 	}
 
-	if *attendanceFlag {
+	if *attendanceFlag || (!*daemonFlag && !*registerFlag && *systemIDFlag == "" && !*checkoutFlag) {
 		promptAttendance(agentClient, store, *cliFlag)
 		return
 	}
 
-	// 3. Default daemon mode
-	// Ensure machine is registered
+	// 3. Daemon mode (Only when run with --daemon as background service)
 	creds := store.GetCredentials()
 	if creds.AuthToken == "" {
-		fmt.Println("Machine is not registered. Running auto-registration...")
-		registerMachine(cfg, agentClient, "")
-	}
-
-	// Double check registration status
-	creds = store.GetCredentials()
-	if creds.AuthToken == "" {
-		fmt.Println("Critical: Auto-registration failed. Aborting background service.")
-		os.Exit(1)
+		fmt.Println("Warning: Background service started on unregistered machine. Retrying credentials...")
 	}
 
 	fmt.Println("Starting NegcesLab Agent background service...")
