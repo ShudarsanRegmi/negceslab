@@ -17,7 +17,7 @@ import (
 
 // RunUnifiedGUIApp launches the single native desktop app with tabbed interface & background telemetry
 func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
-	myApp := app.NewWithID("com.negceslab.desktop")
+	myApp := app.New()
 	myWindow := myApp.NewWindow("NegcesLab Desktop Agent")
 
 	var buildTabContainer func() *container.AppTabs
