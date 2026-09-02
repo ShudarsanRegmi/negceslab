@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 
-	"negceslab-agent/client"
 	"negceslab-agent/storage"
 
 	"fyne.io/fyne/v2"
@@ -50,33 +49,22 @@ func (as *AttendanceServer) ShowNativeFynePortal() {
 		statusLabel.SetText("Submitting check-in request...")
 		submitBtn.Disable()
 
-		// Perform check-in via API client
-		req := &client.CheckInRequest{
-			StudentName:  name,
-			StudentEmail: email,
-			SessionType:  sessionType,
-			Agenda:       agenda,
-		}
-
-		resp, err := as.client.CheckIn(req)
+		// Perform check-in via client helper (handles REST call & local storage update)
+		err := as.client.AttendanceCheckInOut(name, email, agenda, sessionType, true)
 		if err != nil {
-			statusLabel.SetText(fmt.Sprintf("Check-In Failed: %v", err))
-			submitBtn.Enable()
-			return
+			// Fallback: update local storage directly if server is offline
+			_ = as.store.SaveAttendance(storage.AttendanceState{
+				StudentName:  name,
+				StudentEmail: email,
+				SessionType:  sessionType,
+				Agenda:       agenda,
+				CheckedIn:    true,
+			})
+			statusLabel.SetText(fmt.Sprintf("Saved Offline (Server Warning: %v)", err))
+		} else {
+			statusLabel.SetText("Check-In Successful! Closing window...")
 		}
 
-		// Update local storage state
-		_ = as.store.SetAttendance(&storage.AttendanceData{
-			StudentName:  name,
-			StudentEmail: email,
-			SessionType:  sessionType,
-			Agenda:       agenda,
-			CheckInTime:  resp.CheckInTime,
-			CheckedIn:    true,
-		})
-
-		statusLabel.SetText("Check-In Successful! Closing window...")
-		
 		// Close modal window
 		myWindow.Close()
 	})
@@ -92,7 +80,6 @@ func (as *AttendanceServer) ShowNativeFynePortal() {
 		sessionSelect,
 		widget.NewLabel("Work Agenda:"),
 		agendaEntry,
-		widget.NewSpacer(),
 		statusLabel,
 		submitBtn,
 	)

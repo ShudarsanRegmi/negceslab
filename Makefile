@@ -231,13 +231,13 @@ systemd-uninstall:
 build-agent-linux:
 	@echo "Compiling NegcesLab Agent for Linux..."
 	@mkdir -p ./agent/bin
-	cd agent && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/negceslab-agent-linux main.go
+	cd agent && CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/negceslab-agent-linux .
 	@echo "Linux binary built at ./agent/bin/negceslab-agent-linux"
 
 build-agent-windows:
 	@echo "Compiling NegcesLab Agent for Windows..."
 	@mkdir -p ./agent/bin
-	cd agent && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/negceslab-agent-windows.exe main.go
+	cd agent && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags mobile -ldflags="-s -w" -o ./bin/negceslab-agent-windows.exe .
 	@echo "Windows binary built at ./agent/bin/negceslab-agent-windows.exe"
 
 build-agent-all: build-agent-linux build-agent-windows
