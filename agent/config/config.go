@@ -20,8 +20,8 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		BackendURL:         "http://localhost:5000",
-		WSURL:              "ws://localhost:5000",
+		BackendURL:         "https://intranet.ch.amrita.edu/negcesapi",
+		WSURL:              "wss://intranet.ch.amrita.edu/negcesapi",
 		MonitorInterval:    10,
 		MetricsInterval:    60,
 		LabName:            "Negces Lab",

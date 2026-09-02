@@ -20,16 +20,23 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 	myApp := app.NewWithID("com.negceslab.desktop")
 	myWindow := myApp.NewWindow("NegcesLab Desktop")
 
-	refreshUI := func() {
+	forceReRegister := false
+
+	var refreshUI func()
+
+	refreshUI = func() {
 		creds := s.GetCredentials()
 		attendance := s.GetAttendance()
 
 		var mainContainer *fyne.Container
 
-		// ─── STATE 1: Machine Not Registered ─────────────────────────────────
-		if creds.AuthToken == "" {
-			title := widget.NewLabelWithStyle("Machine Registration Required", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-			desc := widget.NewLabel("This machine is not registered. Please enter the System ID and Admin Passcode.")
+		// ─── STATE 1: Machine Not Registered (or Re-registration Requested) ─
+		if creds.AuthToken == "" || forceReRegister {
+			title := widget.NewLabelWithStyle("Machine Registration Form", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+			desc := widget.NewLabel("Configure machine connection to NegcesLab Server.")
+
+			urlEntry := widget.NewEntry()
+			urlEntry.SetText(c.GetConfig().BackendURL)
 
 			sysIDEntry := widget.NewEntry()
 			sysIDEntry.SetPlaceHolder("MongoDB System ID (from Admin Panel)")
@@ -42,9 +49,14 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 			var regBtn *widget.Button
 			regBtn = widget.NewButton("Register Machine", func() {
 				if sysIDEntry.Text == "" || secretEntry.Text == "" {
-					statusLabel.SetText("Error: Please provide System ID and Passcode.")
+					statusLabel.SetText("Error: System ID and Secret are required.")
 					return
 				}
+
+				if urlEntry.Text != "" {
+					c.GetConfig().BackendURL = urlEntry.Text
+				}
+
 				statusLabel.SetText("Collecting hardware specs & registering...")
 				regBtn.Disable()
 
@@ -66,13 +78,24 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 				}
 
 				statusLabel.SetText("Machine Registered Successfully!")
+				forceReRegister = false
 				time.Sleep(1 * time.Second)
-				myWindow.Close()
+				refreshUI()
 			})
+
+			var cancelBtn *widget.Button
+			if creds.AuthToken != "" {
+				cancelBtn = widget.NewButton("Cancel Re-Registration", func() {
+					forceReRegister = false
+					refreshUI()
+				})
+			}
 
 			regForm := container.NewVBox(
 				title,
 				desc,
+				widget.NewLabel("Server API Endpoint URL:"),
+				urlEntry,
 				widget.NewLabel("Target System ID:"),
 				sysIDEntry,
 				widget.NewLabel("Registration Secret:"),
@@ -80,10 +103,15 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 				statusLabel,
 				regBtn,
 			)
+
+			if cancelBtn != nil {
+				regForm.Add(cancelBtn)
+			}
+
 			mainContainer = container.NewPadded(regForm)
 
 		} else {
-			// ─── STATE 2 & 3: Machine Registered ───────────────────────────────
+			// ─── STATE 2 & 3: Machine Registered (Registration Skipped by Default)
 			headerTitle := widget.NewLabelWithStyle("NegcesLab System Overview", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
 			systemStatus := widget.NewLabel(fmt.Sprintf("System ID: %s | Status: Registered & Monitoring", creds.MachineID))
@@ -102,6 +130,11 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 			agendaEntry.SetPlaceHolder("Briefly describe your work agenda...")
 
 			statusLabel := widget.NewLabel("")
+
+			reRegBtn := widget.NewButton("⚙️ Re-Register Machine (Optional)", func() {
+				forceReRegister = true
+				refreshUI()
+			})
 
 			if attendance.CheckedIn {
 				// ─── STATE 3: Active Session (Checked In) ──────────────────────
@@ -133,6 +166,7 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 				content := container.NewVBox(
 					headerTitle,
 					systemStatus,
+					reRegBtn,
 					widget.NewSeparator(),
 					widget.NewLabelWithStyle("Active Attendance Session (Inputs Locked)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 					widget.NewLabel("Student Name:"), nameEntry,
@@ -184,6 +218,7 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 				content := container.NewVBox(
 					headerTitle,
 					systemStatus,
+					reRegBtn,
 					widget.NewSeparator(),
 					widget.NewLabelWithStyle("User Attendance & Session Form", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 					widget.NewLabel("Student Name:"), nameEntry,
@@ -202,7 +237,7 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 	}
 
 	refreshUI()
-	myWindow.Resize(fyne.NewSize(460, 520))
+	myWindow.Resize(fyne.NewSize(460, 560))
 	myWindow.CenterOnScreen()
 	myWindow.ShowAndRun()
 }
