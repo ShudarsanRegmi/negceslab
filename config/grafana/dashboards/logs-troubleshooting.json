@@ -1,0 +1,130 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "title": "Log Volume by Level (Error / Warn / Info)",
+      "type": "barchart",
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (level) (count_over_time({job=\"negceslab\"} [$__interval]))",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "stacking": {
+          "group": "normal",
+          "mode": "normal"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 2,
+      "title": "Live Log Stream & Troubleshooting",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "{job=\"negceslab\", category=~\"$category\"} |= \"$search\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "showCommonLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending"
+      }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["logs", "troubleshooting", "loki"],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m"
+    ]
+  },
+  "timezone": "browser",
+  "title": "4. Logs & Troubleshooting",
+  "uid": "negceslab-logs-troubleshooting",
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".+"
+        },
+        "name": "category",
+        "label": "Category",
+        "type": "custom",
+        "query": "All : .+, auth : auth, telemetry : telemetry, bookings : bookings, system : system, frontend : frontend",
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "",
+          "value": ""
+        },
+        "name": "search",
+        "label": "Search Keyword",
+        "type": "textbox",
+        "query": ""
+      }
+    ]
+  }
+}
