@@ -237,7 +237,7 @@ build-agent-linux:
 build-agent-windows:
 	@echo "Compiling Unified NegcesLab Desktop App for Windows..."
 	@mkdir -p ./agent/bin/windows
-	cd agent && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags mobile -ldflags="-s -w" -o ./bin/windows/NegcesLab.exe .
+	cd agent && CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui" -o ./bin/windows/NegcesLab.exe .
 	@echo "Windows executable built at ./agent/bin/windows/NegcesLab.exe"
 
 build-agent-all: build-agent-linux build-agent-windows
