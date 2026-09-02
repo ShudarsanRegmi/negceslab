@@ -108,7 +108,7 @@ services:
     restart: unless-stopped
 
   podman_exporter:
-    image: ghcr.io/containers/podman-exporter:latest
+    image: docker.io/containers/podman-exporter:latest
     container_name: podman_exporter
     environment:
       - CONTAINER_HOST=unix:///run/user/1003/podman/podman.sock
