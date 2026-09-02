@@ -121,6 +121,10 @@ services:
   mongodb_exporter:
     image: docker.io/percona/mongodb_exporter:0.40.0
     container_name: mongodb_exporter
+    command:
+      - '--collect-all'
+    environment:
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/admin?authSource=admin
     env_file:
       - ./server/.env
     ports:
