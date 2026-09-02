@@ -8,7 +8,6 @@ import (
 	"negceslab-agent/client"
 	"negceslab-agent/storage"
 	"negceslab-agent/sysinfo"
-	"negceslab-agent/ui"
 )
 
 type Scheduler struct {
@@ -96,14 +95,5 @@ func (s *Scheduler) attendanceNaggingLoop() {
 }
 
 func (s *Scheduler) nagIfNeeded() {
-	attendance := s.store.GetAttendance()
-	if !attendance.CheckedIn {
-		fmt.Println("[WARNING] User has not marked check-in attendance. Launching native desktop window portal...")
-		
-		// Spawn native GUI in a new thread so we don't block scheduler operations
-		go func() {
-			srv := ui.NewAttendanceServer(s.client, s.store)
-			srv.ShowNativeFynePortal()
-		}()
-	}
+	// Native GUI app handles attendance window natively; no background popups needed.
 }
