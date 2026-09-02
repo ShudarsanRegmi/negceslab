@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -48,7 +50,7 @@ func main() {
 
 	// 2. Process immediate CLI commands
 	if *registerFlag || *systemIDFlag != "" {
-		registerMachine(cfg, agentClient, *systemIDFlag)
+		registerMachine(cfg, agentClient, store, *systemIDFlag)
 		return
 	}
 
@@ -114,7 +116,27 @@ func main() {
 	fmt.Println("NegcesLab Agent cleanly terminated.")
 }
 
-func registerMachine(cfg *config.Config, c *client.Client, targetSystemID string) {
+func registerMachine(cfg *config.Config, c *client.Client, s *storage.Storage, targetSystemID string) {
+	creds := s.GetCredentials()
+	if creds.AuthToken != "" {
+		fmt.Printf("\n[NOTICE] This machine is ALREADY registered with System ID: '%s'\n", creds.MachineID)
+		fmt.Print("Do you want to re-register this machine? [y/N]: ")
+		reader := bufio.NewReader(os.Stdin)
+		ans, _ := reader.ReadString('\n')
+		ans = strings.TrimSpace(strings.ToLower(ans))
+		if ans != "y" && ans != "yes" {
+			fmt.Println("Registration skipped. Continuing with existing machine credentials...")
+			return
+		}
+	}
+
+	if cfg.RegistrationSecret == "" {
+		fmt.Print("Enter Registration Secret / Token (from Admin Panel): ")
+		reader := bufio.NewReader(os.Stdin)
+		sec, _ := reader.ReadString('\n')
+		cfg.RegistrationSecret = strings.TrimSpace(sec)
+	}
+
 	fmt.Println("Gathering static system inventory details...")
 	static, err := sysinfo.CollectStaticInfo()
 	if err != nil {
