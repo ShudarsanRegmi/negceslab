@@ -15,106 +15,28 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// ShowUnifiedNegcesLabApp opens the unified native desktop application window
-func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
+// RunUnifiedGUIApp launches the single native desktop app with tabbed interface & background telemetry
+func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 	myApp := app.NewWithID("com.negceslab.desktop")
-	myWindow := myApp.NewWindow("NegcesLab Desktop")
+	myWindow := myApp.NewWindow("NegcesLab Desktop Agent")
 
-	forceReRegister := false
+	var buildTabContainer func() *container.AppTabs
 
-	var refreshUI func()
-
-	refreshUI = func() {
+	buildTabContainer = func() *container.AppTabs {
 		creds := s.GetCredentials()
 		attendance := s.GetAttendance()
 
-		var mainContainer *fyne.Container
+		// ─── TAB 1: ATTENDANCE & SESSION CHECK-IN ─────────────────────────────
+		var tab1Content fyne.CanvasObject
 
-		// ─── STATE 1: Machine Not Registered (or Re-registration Requested) ─
-		if creds.AuthToken == "" || forceReRegister {
-			title := widget.NewLabelWithStyle("Machine Registration Form", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-			desc := widget.NewLabel("Configure machine connection to NegcesLab Server.")
-
-			urlEntry := widget.NewEntry()
-			urlEntry.SetText(c.GetConfig().BackendURL)
-
-			sysIDEntry := widget.NewEntry()
-			sysIDEntry.SetPlaceHolder("MongoDB System ID (from Admin Panel)")
-
-			secretEntry := widget.NewPasswordEntry()
-			secretEntry.SetPlaceHolder("Admin Passcode / Registration Secret")
-
-			statusLabel := widget.NewLabel("")
-
-			var regBtn *widget.Button
-			regBtn = widget.NewButton("Register Machine", func() {
-				if sysIDEntry.Text == "" || secretEntry.Text == "" {
-					statusLabel.SetText("Error: System ID and Secret are required.")
-					return
-				}
-
-				if urlEntry.Text != "" {
-					c.GetConfig().BackendURL = urlEntry.Text
-				}
-
-				statusLabel.SetText("Collecting hardware specs & registering...")
-				regBtn.Disable()
-
-				static, err := sysinfo.CollectStaticInfo()
-				if err != nil {
-					statusLabel.SetText(fmt.Sprintf("Hardware Spec Error: %v", err))
-					regBtn.Enable()
-					return
-				}
-
-				static.SystemID = sysIDEntry.Text
-				c.GetConfig().RegistrationSecret = secretEntry.Text
-
-				err = c.RegisterMachine(static)
-				if err != nil {
-					statusLabel.SetText(fmt.Sprintf("Registration Failed: %v", err))
-					regBtn.Enable()
-					return
-				}
-
-				statusLabel.SetText("Machine Registered Successfully!")
-				forceReRegister = false
-				time.Sleep(1 * time.Second)
-				refreshUI()
-			})
-
-			var cancelBtn *widget.Button
-			if creds.AuthToken != "" {
-				cancelBtn = widget.NewButton("Cancel Re-Registration", func() {
-					forceReRegister = false
-					refreshUI()
-				})
-			}
-
-			regForm := container.NewVBox(
-				title,
-				desc,
-				widget.NewLabel("Server API Endpoint URL:"),
-				urlEntry,
-				widget.NewLabel("Target System ID:"),
-				sysIDEntry,
-				widget.NewLabel("Registration Secret:"),
-				secretEntry,
-				statusLabel,
-				regBtn,
+		if creds.AuthToken == "" {
+			tab1Content = container.NewVBox(
+				widget.NewLabelWithStyle("Machine Unregistered", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+				widget.NewLabel("Please select the '⚙️ System Registration' tab to register this computer with the NegcesLab server."),
 			)
-
-			if cancelBtn != nil {
-				regForm.Add(cancelBtn)
-			}
-
-			mainContainer = container.NewPadded(regForm)
-
 		} else {
-			// ─── STATE 2 & 3: Machine Registered (Registration Skipped by Default)
-			headerTitle := widget.NewLabelWithStyle("NegcesLab System Overview", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-
-			systemStatus := widget.NewLabel(fmt.Sprintf("System ID: %s | Status: Registered & Monitoring", creds.MachineID))
+			headerTitle := widget.NewLabelWithStyle("NegcesLab Attendance Check-In", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+			systemStatus := widget.NewLabel(fmt.Sprintf("Registered System ID: %s | Telemetry: Streaming", creds.MachineID))
 			systemStatus.TextStyle = fyne.TextStyle{Italic: true}
 
 			nameEntry := widget.NewEntry()
@@ -131,13 +53,7 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 
 			statusLabel := widget.NewLabel("")
 
-			reRegBtn := widget.NewButton("⚙️ Re-Register Machine (Optional)", func() {
-				forceReRegister = true
-				refreshUI()
-			})
-
 			if attendance.CheckedIn {
-				// ─── STATE 3: Active Session (Checked In) ──────────────────────
 				nameEntry.SetText(attendance.StudentName)
 				nameEntry.Disable()
 
@@ -158,17 +74,16 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 					if err != nil {
 						_ = s.SaveAttendance(storage.AttendanceState{CheckedIn: false})
 					}
-					statusLabel.SetText("Session Ended. Thank you!")
+					statusLabel.SetText("Session Ended.")
 					time.Sleep(1 * time.Second)
-					myWindow.Close()
+					myWindow.SetContent(container.NewPadded(buildTabContainer()))
 				})
 
-				content := container.NewVBox(
+				tab1Content = container.NewVBox(
 					headerTitle,
 					systemStatus,
-					reRegBtn,
 					widget.NewSeparator(),
-					widget.NewLabelWithStyle("Active Attendance Session (Inputs Locked)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+					widget.NewLabelWithStyle("Active Session (Inputs Locked)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 					widget.NewLabel("Student Name:"), nameEntry,
 					widget.NewLabel("Email / Roll No:"), emailEntry,
 					widget.NewLabel("Session Type:"), sessionSelect,
@@ -177,10 +92,8 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 					statusLabel,
 					checkoutBtn,
 				)
-				mainContainer = container.NewPadded(content)
 
 			} else {
-				// ─── STATE 2: Unchecked Session (Form Enabled) ─────────────────
 				var submitBtn *widget.Button
 				submitBtn = widget.NewButton("Submit Attendance Check-In", func() {
 					name := nameEntry.Text
@@ -212,13 +125,12 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 					}
 
 					time.Sleep(1 * time.Second)
-					myWindow.Close()
+					myWindow.SetContent(container.NewPadded(buildTabContainer()))
 				})
 
-				content := container.NewVBox(
+				tab1Content = container.NewVBox(
 					headerTitle,
 					systemStatus,
-					reRegBtn,
 					widget.NewSeparator(),
 					widget.NewLabelWithStyle("User Attendance & Session Form", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 					widget.NewLabel("Student Name:"), nameEntry,
@@ -229,15 +141,92 @@ func ShowUnifiedNegcesLabApp(c *client.Client, s *storage.Storage) {
 					statusLabel,
 					submitBtn,
 				)
-				mainContainer = container.NewPadded(content)
 			}
 		}
 
-		myWindow.SetContent(mainContainer)
+		// ─── TAB 2: SYSTEM REGISTRATION ───────────────────────────────────────
+		regTitle := widget.NewLabelWithStyle("System Registration & Settings", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+
+		urlEntry := widget.NewEntry()
+		urlEntry.SetText(c.GetConfig().BackendURL)
+
+		sysIDEntry := widget.NewEntry()
+		if creds.MachineID != "" {
+			sysIDEntry.SetText(creds.MachineID)
+		}
+		sysIDEntry.SetPlaceHolder("MongoDB System ID (from Admin Panel)")
+
+		secretEntry := widget.NewPasswordEntry()
+		secretEntry.SetPlaceHolder("Admin Passcode / Registration Secret")
+
+		regStatusLabel := widget.NewLabel("")
+
+		var regBtn *widget.Button
+		regBtn = widget.NewButton("Save & Register Machine", func() {
+			if sysIDEntry.Text == "" || secretEntry.Text == "" {
+				regStatusLabel.SetText("Error: System ID and Passcode are required.")
+				return
+			}
+
+			if urlEntry.Text != "" {
+				c.GetConfig().BackendURL = urlEntry.Text
+			}
+
+			regStatusLabel.SetText("Collecting hardware specs & registering...")
+			regBtn.Disable()
+
+			static, err := sysinfo.CollectStaticInfo()
+			if err != nil {
+				regStatusLabel.SetText(fmt.Sprintf("Hardware Spec Error: %v", err))
+				regBtn.Enable()
+				return
+			}
+
+			static.SystemID = sysIDEntry.Text
+			c.GetConfig().RegistrationSecret = secretEntry.Text
+
+			err = c.RegisterMachine(static)
+			if err != nil {
+				regStatusLabel.SetText(fmt.Sprintf("Registration Failed: %v", err))
+				regBtn.Enable()
+				return
+			}
+
+			regStatusLabel.SetText("Machine Registered Successfully!")
+			time.Sleep(1 * time.Second)
+			myWindow.SetContent(container.NewPadded(buildTabContainer()))
+		})
+
+		tab2Content := container.NewVBox(
+			regTitle,
+			widget.NewLabel("Server API Endpoint URL:"),
+			urlEntry,
+			widget.NewLabel("Target System ID:"),
+			sysIDEntry,
+			widget.NewLabel("Registration Secret:"),
+			secretEntry,
+			regStatusLabel,
+			regBtn,
+		)
+
+		// Create Tabs
+		tab1 := container.NewTabItem("📝 Attendance & Session", tab1Content)
+		tab2 := container.NewTabItem("⚙️ System Registration", tab2Content)
+
+		tabs := container.NewAppTabs(tab1, tab2)
+
+		// Select Tab 2 if unregistered, otherwise Tab 1
+		if creds.AuthToken == "" {
+			tabs.Select(tab2)
+		} else {
+			tabs.Select(tab1)
+		}
+
+		return tabs
 	}
 
-	refreshUI()
-	myWindow.Resize(fyne.NewSize(460, 560))
+	myWindow.SetContent(container.NewPadded(buildTabContainer()))
+	myWindow.Resize(fyne.NewSize(480, 580))
 	myWindow.CenterOnScreen()
 	myWindow.ShowAndRun()
 }
