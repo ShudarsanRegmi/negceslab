@@ -6,6 +6,7 @@ const Computer = require("../models/computer");
 const Metric = require("../models/metric");
 const Booking = require("../models/booking");
 const { writeMetricPoint, writeMetricPointsBatch, queryMetrics } = require("../services/influxService");
+const logger = require("../utils/logger");
 
 // Middleware to verify the agent's secure token
 const verifyAgentToken = async (req, res, next) => {
@@ -213,6 +214,15 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
   try {
     const { studentName, studentEmail, agenda, sessionType, action } = req.body;
     const computer = req.computer;
+
+    logger.info("Agent Attendance Event Received", {
+      computerName: computer.name,
+      computerId: computer._id.toString(),
+      action,
+      studentName,
+      studentEmail,
+      sessionType
+    });
 
     const now = new Date();
     const today = now.toISOString().split("T")[0];
