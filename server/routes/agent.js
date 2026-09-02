@@ -6,7 +6,7 @@ const Computer = require("../models/computer");
 const Metric = require("../models/metric");
 const Booking = require("../models/booking");
 const { writeMetricPoint, writeMetricPointsBatch, queryMetrics } = require("../services/influxService");
-const logger = require("../utils/logger");
+const logger = require("../utils/logger")("agent");
 
 // Middleware to verify the agent's secure token
 const verifyAgentToken = async (req, res, next) => {
