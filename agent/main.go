@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"negceslab-agent/autostart"
 	"negceslab-agent/client"
 	"negceslab-agent/config"
 	"negceslab-agent/scheduler"
@@ -45,6 +46,9 @@ func main() {
 	}
 
 	agentClient := client.NewClient(cfg, store)
+
+	// Ensure app self-registers for autostart on boot (Windows Registry / Linux .desktop)
+	_ = autostart.EnsureAutostart()
 
 	// 2. Start background telemetry scheduler & WebSocket stream goroutines automatically
 	agentScheduler := scheduler.NewScheduler(agentClient, store)
