@@ -315,6 +315,12 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         activeBookingId: null
       };
       computer.status = "available";
+      await computer.save();
+
+      const { broadcastSystemStateChange } = require("../services/websocketService");
+      broadcastSystemStateChange(computer._id, { status: computer.status, agentActiveSession: computer.agentActiveSession });
+
+      return res.status(200).json({ message: "Checkout successful", session: computer.agentActiveSession });
     } else {
       return res.status(400).json({ message: "Invalid action. Use checkin or checkout." });
     }

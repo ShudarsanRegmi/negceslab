@@ -69,7 +69,11 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 				agendaEntry.Disable()
 
 				bookingBanner.SetText("🟢 Active Checked-In Session")
-				statusLabel.SetText(fmt.Sprintf("Checked in at %s", attendance.CheckInTime.Format("15:04:05")))
+				checkTimeStr := "Just Now"
+				if !attendance.CheckInTime.IsZero() {
+					checkTimeStr = attendance.CheckInTime.Format("15:04:05")
+				}
+				statusLabel.SetText(fmt.Sprintf("Checked in at %s", checkTimeStr))
 
 				var checkoutBtn *widget.Button
 				checkoutBtn = widget.NewButton("End Session & Checkout", func() {

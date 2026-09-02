@@ -222,6 +222,18 @@ const initWebSocketServer = (server) => {
   return wss;
 };
 
+const broadcastSystemStateChange = (computerId, data) => {
+  try {
+    const socket = activeConnections.get(computerId.toString());
+    if (socket && socket.readyState === ws.OPEN) {
+      socket.send(JSON.stringify({ type: "state_update", data }));
+    }
+  } catch (err) {
+    logger.error("Failed to broadcast state update to computer", { computerId, error: err.message });
+  }
+};
+
 module.exports = {
   initWebSocketServer,
+  broadcastSystemStateChange,
 };
