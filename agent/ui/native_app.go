@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"time"
 
 	"negceslab-agent/client"
 	"negceslab-agent/storage"
@@ -295,5 +296,24 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 	renderUI()
 	myWindow.Resize(fyne.NewSize(480, 580))
 	myWindow.CenterOnScreen()
+
+	// Periodic Nag Routine: If user is not checked in, bring window to front every 30 minutes
+	go func() {
+		ticker := time.NewTicker(30 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			creds := s.GetCredentials()
+			attendance := s.GetAttendance()
+
+			// Only nag if the computer is registered but user has not marked attendance
+			if creds.AuthToken != "" && !attendance.CheckedIn {
+				fmt.Println("[NAG] User has not marked attendance. Bringing NegcesLab window to front...")
+				myWindow.RequestFocus()
+				myWindow.Show()
+			}
+		}
+	}()
+
 	myWindow.ShowAndRun()
 }
