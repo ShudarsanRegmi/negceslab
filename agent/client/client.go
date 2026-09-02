@@ -30,6 +30,10 @@ func NewClient(cfg *config.Config, store *storage.Storage) *Client {
 	}
 }
 
+func (c *Client) GetConfig() *config.Config {
+	return c.cfg
+}
+
 type SystemInfo struct {
 	ID   string `json:"_id"`
 	Name string `json:"name"`

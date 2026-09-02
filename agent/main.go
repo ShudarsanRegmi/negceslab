@@ -184,7 +184,6 @@ func promptAttendance(c *client.Client, s *storage.Storage, useCli bool) {
 		srv := ui.NewAttendanceServer(c, s)
 		srv.StartCLIPrompt()
 	} else {
-		srv := ui.NewAttendanceServer(c, s)
-		srv.StartGUIPortal()
+		ui.ShowUnifiedNegcesLabApp(c, s)
 	}
 }
