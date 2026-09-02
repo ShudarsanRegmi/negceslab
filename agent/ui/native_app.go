@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"time"
 
 	"negceslab-agent/client"
 	"negceslab-agent/storage"
@@ -20,9 +19,9 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("NegcesLab Desktop Agent")
 
-	var buildTabContainer func() *container.AppTabs
+	var renderUI func()
 
-	buildTabContainer = func() *container.AppTabs {
+	renderUI = func() {
 		creds := s.GetCredentials()
 		attendance := s.GetAttendance()
 
@@ -36,7 +35,7 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			)
 		} else {
 			headerTitle := widget.NewLabelWithStyle("NegcesLab Attendance Check-In", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-			systemStatus := widget.NewLabel(fmt.Sprintf("Registered System ID: %s | Telemetry: Streaming", creds.MachineID))
+			systemStatus := widget.NewLabel(fmt.Sprintf("Registered System ID: %s | Status: ONLINE", creds.MachineID))
 			systemStatus.TextStyle = fyne.TextStyle{Italic: true}
 
 			nameEntry := widget.NewEntry()
@@ -68,15 +67,17 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 
 				statusLabel.SetText(fmt.Sprintf("Active Session (Checked in at %s)", attendance.CheckInTime.Format("15:04:05")))
 
-				checkoutBtn := widget.NewButton("End Session & Checkout", func() {
+				var checkoutBtn *widget.Button
+				checkoutBtn = widget.NewButton("End Session & Checkout", func() {
 					statusLabel.SetText("Processing checkout...")
-					err := c.AttendanceCheckInOut(attendance.StudentName, attendance.StudentEmail, attendance.Agenda, attendance.SessionType, false)
-					if err != nil {
-						_ = s.SaveAttendance(storage.AttendanceState{CheckedIn: false})
-					}
-					statusLabel.SetText("Session Ended.")
-					time.Sleep(1 * time.Second)
-					myWindow.SetContent(container.NewPadded(buildTabContainer()))
+					checkoutBtn.Disable()
+					go func() {
+						err := c.AttendanceCheckInOut(attendance.StudentName, attendance.StudentEmail, attendance.Agenda, attendance.SessionType, false)
+						if err != nil {
+							_ = s.SaveAttendance(storage.AttendanceState{CheckedIn: false})
+						}
+						renderUI()
+					}()
 				})
 
 				tab1Content = container.NewVBox(
@@ -109,23 +110,20 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 					statusLabel.SetText("Submitting check-in...")
 					submitBtn.Disable()
 
-					err := c.AttendanceCheckInOut(name, email, agenda, sessionType, true)
-					if err != nil {
-						_ = s.SaveAttendance(storage.AttendanceState{
-							StudentName:  name,
-							StudentEmail: email,
-							SessionType:  sessionType,
-							Agenda:       agenda,
-							CheckedIn:    true,
-							CheckInTime:  time.Now(),
-						})
-						statusLabel.SetText(fmt.Sprintf("Saved Offline: %v", err))
-					} else {
-						statusLabel.SetText("Check-In Successful!")
-					}
-
-					time.Sleep(1 * time.Second)
-					myWindow.SetContent(container.NewPadded(buildTabContainer()))
+					go func() {
+						err := c.AttendanceCheckInOut(name, email, agenda, sessionType, true)
+						if err != nil {
+							_ = s.SaveAttendance(storage.AttendanceState{
+								StudentName:  name,
+								StudentEmail: email,
+								SessionType:  sessionType,
+								Agenda:       agenda,
+								CheckedIn:    true,
+								CheckInTime:  s.GetAttendance().CheckInTime,
+							})
+						}
+						renderUI()
+					}()
 				})
 
 				tab1Content = container.NewVBox(
@@ -175,26 +173,26 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			regStatusLabel.SetText("Collecting hardware specs & registering...")
 			regBtn.Disable()
 
-			static, err := sysinfo.CollectStaticInfo()
-			if err != nil {
-				regStatusLabel.SetText(fmt.Sprintf("Hardware Spec Error: %v", err))
-				regBtn.Enable()
-				return
-			}
+			go func() {
+				static, err := sysinfo.CollectStaticInfo()
+				if err != nil {
+					regStatusLabel.SetText(fmt.Sprintf("Hardware Spec Error: %v", err))
+					regBtn.Enable()
+					return
+				}
 
-			static.SystemID = sysIDEntry.Text
-			c.GetConfig().RegistrationSecret = secretEntry.Text
+				static.SystemID = sysIDEntry.Text
+				c.GetConfig().RegistrationSecret = secretEntry.Text
 
-			err = c.RegisterMachine(static)
-			if err != nil {
-				regStatusLabel.SetText(fmt.Sprintf("Registration Failed: %v", err))
-				regBtn.Enable()
-				return
-			}
+				err = c.RegisterMachine(static)
+				if err != nil {
+					regStatusLabel.SetText(fmt.Sprintf("Registration Failed: %v", err))
+					regBtn.Enable()
+					return
+				}
 
-			regStatusLabel.SetText("Machine Registered Successfully!")
-			time.Sleep(1 * time.Second)
-			myWindow.SetContent(container.NewPadded(buildTabContainer()))
+				renderUI()
+			}()
 		})
 
 		tab2Content := container.NewVBox(
@@ -215,17 +213,16 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 
 		tabs := container.NewAppTabs(tab1, tab2)
 
-		// Select Tab 2 if unregistered, otherwise Tab 1
 		if creds.AuthToken == "" {
 			tabs.Select(tab2)
 		} else {
 			tabs.Select(tab1)
 		}
 
-		return tabs
+		myWindow.SetContent(container.NewPadded(tabs))
 	}
 
-	myWindow.SetContent(container.NewPadded(buildTabContainer()))
+	renderUI()
 	myWindow.Resize(fyne.NewSize(480, 580))
 	myWindow.CenterOnScreen()
 	myWindow.ShowAndRun()
