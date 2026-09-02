@@ -110,6 +110,8 @@ services:
   podman_exporter:
     image: quay.io/navidys/prometheus-podman-exporter:latest
     container_name: podman_exporter
+    command:
+      - '--collector.enable-all'
     environment:
       - CONTAINER_HOST=unix:///run/user/1003/podman/podman.sock
     volumes:
