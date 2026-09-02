@@ -228,20 +228,25 @@ systemd-uninstall:
 
 # ─── NegcesLab Go Agent Build Targets ──────────────────────────────────────────
 
-build-agent-linux:
-	@echo "Compiling NegcesLab Agent for Linux..."
+build-agent-core-linux:
+	@echo "Compiling Core NegcesLab Agent for Linux..."
 	@mkdir -p ./agent/bin
 	cd agent && CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/negceslab-agent-linux .
-	@echo "Linux binary built at ./agent/bin/negceslab-agent-linux"
 
-build-agent-windows:
-	@echo "Compiling NegcesLab Agent for Windows..."
+build-agent-core-windows:
+	@echo "Compiling Core NegcesLab Agent for Windows..."
 	@mkdir -p ./agent/bin
 	cd agent && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags mobile -ldflags="-s -w" -o ./bin/negceslab-agent-windows.exe .
-	@echo "Windows binary built at ./agent/bin/negceslab-agent-windows.exe"
 
-build-agent-all: build-agent-linux build-agent-windows
-	@echo "All NegcesLab Agent binaries successfully compiled!"
+build-agent-installers-windows: build-agent-core-windows
+	@echo "Compiling Windows Dev Self-Extracting Installer..."
+	cd agent && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags windows_installer -ldflags="-s -w" -o ./bin/negceslab-agent-installer-windows.exe installer_windows.go
+	@echo "Compiling Windows Prod Self-Extracting Installer..."
+	cd agent && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags windows_installer -ldflags="-s -w" -o ./bin/negceslab-agent-installer-windows-prod.exe installer_windows_prod.go
+	@echo "Windows Dev & Prod Installers built at ./agent/bin/"
+
+build-agent-all: build-agent-core-linux build-agent-installers-windows
+	@echo "All NegcesLab Agent core binaries & self-extracting installers compiled successfully!"
 
 # Observability commands
 up-observability:
