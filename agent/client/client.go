@@ -175,6 +175,49 @@ func (c *Client) RegisterMachine(static *sysinfo.StaticInfo) error {
 	}
 }
 
+type ActiveBookingDetails struct {
+	BookingFound bool   `json:"bookingFound"`
+	StudentName  string `json:"studentName"`
+	StudentEmail string `json:"studentEmail"`
+	Agenda       string `json:"agenda"`
+	StartTime    string `json:"startTime"`
+	EndTime      string `json:"endTime"`
+}
+
+// FetchCurrentBooking checks if there is an active approved reservation slot for this computer today
+func (c *Client) FetchCurrentBooking() (*ActiveBookingDetails, error) {
+	creds := c.store.GetCredentials()
+	if creds.AuthToken == "" {
+		return &ActiveBookingDetails{BookingFound: false}, nil
+	}
+
+	url := fmt.Sprintf("%s/api/agent/current-booking", c.cfg.BackendURL)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", creds.AuthToken))
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return &ActiveBookingDetails{BookingFound: false}, nil
+	}
+
+	var details ActiveBookingDetails
+	if err := json.NewDecoder(resp.Body).Decode(&details); err != nil {
+		return nil, err
+	}
+
+	return &details, nil
+}
+
 // AttendanceCheckInOut submits attendance events via REST
 func (c *Client) AttendanceCheckInOut(studentName, studentEmail, agenda, sessionType string, isCheckIn bool) error {
 	creds := c.store.GetCredentials()
@@ -216,6 +259,12 @@ func (c *Client) AttendanceCheckInOut(studentName, studentEmail, agenda, session
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		var errResp struct {
+			Message string `json:"message"`
+		}
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil && errResp.Message != "" {
+			return fmt.Errorf("%s", errResp.Message)
+		}
 		return fmt.Errorf("attendance API rejected request, code: %d", resp.StatusCode)
 	}
 

@@ -38,17 +38,20 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			systemStatus := widget.NewLabel(fmt.Sprintf("Registered System ID: %s | Status: ONLINE", creds.MachineID))
 			systemStatus.TextStyle = fyne.TextStyle{Italic: true}
 
+			bookingBanner := widget.NewLabel("Checking active reservations...")
+			bookingBanner.TextStyle = fyne.TextStyle{Bold: true}
+
 			nameEntry := widget.NewEntry()
 			nameEntry.SetPlaceHolder("Full Name")
 
 			emailEntry := widget.NewEntry()
 			emailEntry.SetPlaceHolder("Email or Roll Number")
 
-			sessionSelect := widget.NewSelect([]string{"Non-Booked Walk-In Usage", "Lab Work", "Research", "Class", "Project"}, nil)
+			sessionSelect := widget.NewSelect([]string{"Scheduled Lab Booking", "Non-Booked Walk-In Usage", "Lab Work", "Research", "Class", "Project"}, nil)
 			sessionSelect.SetSelected("Non-Booked Walk-In Usage")
 
 			agendaEntry := widget.NewMultiLineEntry()
-			agendaEntry.SetPlaceHolder("Briefly describe your work agenda...")
+			agendaEntry.SetPlaceHolder("What are you doing today? (Brief work agenda)")
 
 			statusLabel := widget.NewLabel("")
 
@@ -65,7 +68,8 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 				agendaEntry.SetText(attendance.Agenda)
 				agendaEntry.Disable()
 
-				statusLabel.SetText(fmt.Sprintf("Active Session (Checked in at %s)", attendance.CheckInTime.Format("15:04:05")))
+				bookingBanner.SetText("🟢 Active Checked-In Session")
+				statusLabel.SetText(fmt.Sprintf("Checked in at %s", attendance.CheckInTime.Format("15:04:05")))
 
 				var checkoutBtn *widget.Button
 				checkoutBtn = widget.NewButton("End Session & Checkout", func() {
@@ -83,12 +87,13 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 				tab1Content = container.NewVBox(
 					headerTitle,
 					systemStatus,
+					bookingBanner,
 					widget.NewSeparator(),
 					widget.NewLabelWithStyle("Active Session (Inputs Locked)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 					widget.NewLabel("Student Name:"), nameEntry,
 					widget.NewLabel("Email / Roll No:"), emailEntry,
 					widget.NewLabel("Session Type:"), sessionSelect,
-					widget.NewLabel("Work Agenda:"), agendaEntry,
+					widget.NewLabel("What you are doing today:"), agendaEntry,
 					layout.NewSpacer(),
 					statusLabel,
 					checkoutBtn,
@@ -103,7 +108,7 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 					agenda := agendaEntry.Text
 
 					if name == "" || email == "" || agenda == "" {
-						statusLabel.SetText("Error: All fields are required.")
+						statusLabel.SetText("Error: All fields (Name, Email, Agenda) are required.")
 						return
 					}
 
@@ -126,15 +131,48 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 					}()
 				})
 
+				// Asynchronously fetch current active booking from backend
+				go func() {
+					bk, err := c.FetchCurrentBooking()
+					if err == nil && bk != nil && bk.BookingFound {
+						bookingBanner.SetText(fmt.Sprintf("🟢 Active Reservation Found (%s - %s)", bk.StartTime, bk.EndTime))
+						
+						if bk.StudentName != "" {
+							nameEntry.SetText(bk.StudentName)
+							nameEntry.Disable()
+						}
+						if bk.StudentEmail != "" {
+							emailEntry.SetText(bk.StudentEmail)
+							emailEntry.Disable()
+						}
+						if bk.Agenda != "" && agendaEntry.Text == "" {
+							agendaEntry.SetText(bk.Agenda)
+						}
+						sessionSelect.SetSelected("Scheduled Lab Booking")
+						statusLabel.SetText("Booking auto-detected! Enter what you are doing today and submit.")
+					} else {
+						bookingBanner.SetText("ℹ️ No Active Booking Found (Walk-In Mode)")
+						sessionSelect.SetSelected("Non-Booked Walk-In Usage")
+						statusLabel.SetText("Fill in your details and work agenda to check in.")
+					}
+					bookingBanner.Refresh()
+					nameEntry.Refresh()
+					emailEntry.Refresh()
+					agendaEntry.Refresh()
+					sessionSelect.Refresh()
+					statusLabel.Refresh()
+				}()
+
 				tab1Content = container.NewVBox(
 					headerTitle,
 					systemStatus,
+					bookingBanner,
 					widget.NewSeparator(),
 					widget.NewLabelWithStyle("User Attendance & Session Form", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 					widget.NewLabel("Student Name:"), nameEntry,
 					widget.NewLabel("Email / Roll No:"), emailEntry,
 					widget.NewLabel("Session Type:"), sessionSelect,
-					widget.NewLabel("Work Agenda:"), agendaEntry,
+					widget.NewLabel("What are you doing today?"), agendaEntry,
 					layout.NewSpacer(),
 					statusLabel,
 					submitBtn,
@@ -147,27 +185,24 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 
 		urlEntry := widget.NewEntry()
 		urlEntry.SetText(c.GetConfig().BackendURL)
+		urlEntry.Disable() // Locked per user directive
 
-		sysIDEntry := widget.NewEntry()
-		if creds.MachineID != "" {
-			sysIDEntry.SetText(creds.MachineID)
-		}
-		sysIDEntry.SetPlaceHolder("MongoDB System ID (from Admin Panel)")
+		sysSelect := widget.NewSelect([]string{"Fetching lab systems..."}, nil)
+		sysMap := make(map[string]string)
 
 		secretEntry := widget.NewPasswordEntry()
 		secretEntry.SetPlaceHolder("Admin Passcode / Registration Secret")
 
-		regStatusLabel := widget.NewLabel("")
+		regStatusLabel := widget.NewLabel("Loading lab systems list...")
 
 		var regBtn *widget.Button
 		regBtn = widget.NewButton("Save & Register Machine", func() {
-			if sysIDEntry.Text == "" || secretEntry.Text == "" {
-				regStatusLabel.SetText("Error: System ID and Passcode are required.")
-				return
-			}
+			selectedLabel := sysSelect.Selected
+			selectedID := sysMap[selectedLabel]
 
-			if urlEntry.Text != "" {
-				c.GetConfig().BackendURL = urlEntry.Text
+			if selectedID == "" || secretEntry.Text == "" {
+				regStatusLabel.SetText("Error: System Selection and Passcode are required.")
+				return
 			}
 
 			regStatusLabel.SetText("Collecting hardware specs & registering...")
@@ -181,7 +216,7 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 					return
 				}
 
-				static.SystemID = sysIDEntry.Text
+				static.SystemID = selectedID
 				c.GetConfig().RegistrationSecret = secretEntry.Text
 
 				err = c.RegisterMachine(static)
@@ -194,13 +229,44 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 				renderUI()
 			}()
 		})
+		regBtn.Disable()
+
+		go func() {
+			systems, err := c.FetchAvailableSystems()
+			if err != nil {
+				regStatusLabel.SetText(fmt.Sprintf("Error fetching systems: %v", err))
+				sysSelect.Options = []string{"Failed to load systems"}
+				sysSelect.Refresh()
+				return
+			}
+
+			if len(systems) == 0 {
+				regStatusLabel.SetText("No pre-configured computers found in database.")
+				sysSelect.Options = []string{"No systems available"}
+				sysSelect.Refresh()
+				return
+			}
+
+			var options []string
+			for _, sys := range systems {
+				label := fmt.Sprintf("%s (ID: %s)", sys.Name, sys.ID)
+				options = append(options, label)
+				sysMap[label] = sys.ID
+			}
+
+			sysSelect.Options = options
+			sysSelect.SetSelected(options[0])
+			sysSelect.Refresh()
+			regStatusLabel.SetText("Select target system and enter Registration Secret.")
+			regBtn.Enable()
+		}()
 
 		tab2Content := container.NewVBox(
 			regTitle,
-			widget.NewLabel("Server API Endpoint URL:"),
+			widget.NewLabel("Server API Endpoint (Locked):"),
 			urlEntry,
-			widget.NewLabel("Target System ID:"),
-			sysIDEntry,
+			widget.NewLabel("Select Lab Computer:"),
+			sysSelect,
 			widget.NewLabel("Registration Secret:"),
 			secretEntry,
 			regStatusLabel,

@@ -73,7 +73,10 @@ func (s *Storage) load() error {
 
 	data, err := ioutil.ReadFile(s.filePath)
 	if err != nil {
-		return err
+		s.db = AgentDB{
+			OfflineMetrics: []MetricRecord{},
+		}
+		return s.saveUnlocked()
 	}
 
 	if err := json.Unmarshal(data, &s.db); err != nil {

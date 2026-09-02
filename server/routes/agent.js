@@ -276,6 +276,8 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         });
         await activeBooking.save();
       }
+      await computer.save();
+      return res.status(200).json({ message: "Check-in successful", session: computer.agentActiveSession });
     } else if (action === "checkout") {
       // Enforce: Cannot check out if not checked in
       if (!computer.agentActiveSession?.checkedIn) {

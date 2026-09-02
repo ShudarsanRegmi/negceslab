@@ -162,6 +162,7 @@ func queryGPUModel() string {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, cmdName, "--query-gpu=name", "--format=csv,noheader")
+	hideWindow(cmd)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -169,6 +170,7 @@ func queryGPUModel() string {
 		// Fallback to checking normal nvidia-smi in PATH on Windows
 		if runtime.GOOS == "windows" {
 			cmd = exec.CommandContext(ctx, "nvidia-smi", "--query-gpu=name", "--format=csv,noheader")
+			hideWindow(cmd)
 			out.Reset()
 			cmd.Stdout = &out
 			if cmd.Run() == nil {
@@ -191,12 +193,14 @@ func queryGPUMetrics() (util float64, memUsed uint64, memTotal uint64, temp floa
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, cmdName, "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu", "--format=csv,noheader,nounits")
+	hideWindow(cmd)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
 		if runtime.GOOS == "windows" {
 			cmd = exec.CommandContext(ctx, "nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu", "--format=csv,noheader,nounits")
+			hideWindow(cmd)
 			out.Reset()
 			cmd.Stdout = &out
 			if cmd.Run() != nil {
@@ -240,7 +244,8 @@ func readCPUTemperature() float64 {
 		// Call PowerShell WMI queries for CPU temp (requires admin)
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "powershell", "-Command", "Get-WmiObject -Namespace root/WMI -Class MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature")
+		cmd := exec.CommandContext(ctx, "powershell", "-WindowStyle", "Hidden", "-Command", "Get-WmiObject -Namespace root/WMI -Class MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature")
+		hideWindow(cmd)
 		var out bytes.Buffer
 		cmd.Stdout = &out
 		if cmd.Run() == nil {
