@@ -61,10 +61,10 @@ func LoadConfig() (*Config, error) {
 
 	// Validate / clean values
 	if cfg.BackendURL == "" {
-		cfg.BackendURL = "http://localhost:5000"
+		cfg.BackendURL = "https://intranet.ch.amrita.edu/negcesapi"
 	}
 	if cfg.WSURL == "" {
-		cfg.WSURL = "ws://localhost:5000"
+		cfg.WSURL = "wss://intranet.ch.amrita.edu/negcesapi"
 	}
 	if cfg.MonitorInterval <= 0 {
 		cfg.MonitorInterval = 10
