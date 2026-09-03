@@ -152,28 +152,58 @@ const BookingForm: React.FC = (): ReactElement => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  // Check if user has a valid Amrita email
-  const isAmritaEmail = (email: string | null | undefined): boolean => {
+  const [policy, setPolicy] = useState({
+    labOpenHour: LAB_OPEN_HOUR,
+    labOpenMinute: LAB_OPEN_MINUTE,
+    labCloseHour: LAB_CLOSE_HOUR,
+    labCloseMinute: LAB_CLOSE_MINUTE,
+    maxBookingDays: MAX_BOOKING_DAYS,
+    minBookingHours: MIN_BOOKING_HOURS,
+    coolDownPeriodDays: 3,
+    maxBookingAheadDays: MAX_BOOKING_AHEAD_DAYS,
+    closedDays: CLOSED_DAYS,
+  });
+
+  useEffect(() => {
+    policyAPI.getPolicy().then((res) => {
+      if (res.data) {
+        setPolicy({
+          labOpenHour: res.data.labOpenHour ?? res.data.LAB_OPEN_HOUR ?? LAB_OPEN_HOUR,
+          labOpenMinute: res.data.labOpenMinute ?? res.data.LAB_OPEN_MINUTE ?? LAB_OPEN_MINUTE,
+          labCloseHour: res.data.labCloseHour ?? res.data.LAB_CLOSE_HOUR ?? LAB_CLOSE_HOUR,
+          labCloseMinute: res.data.labCloseMinute ?? res.data.LAB_CLOSE_MINUTE ?? LAB_CLOSE_MINUTE,
+          maxBookingDays: res.data.maxBookingDays ?? res.data.MAX_BOOKING_DAYS ?? MAX_BOOKING_DAYS,
+          minBookingHours: res.data.minBookingHours ?? res.data.MIN_BOOKING_HOURS ?? MIN_BOOKING_HOURS,
+          coolDownPeriodDays: res.data.coolDownPeriodDays ?? res.data.COOL_DOWN_PERIOD_DAYS ?? 3,
+          maxBookingAheadDays: res.data.maxBookingAheadDays ?? res.data.MAX_BOOKING_AHEAD_DAYS ?? MAX_BOOKING_AHEAD_DAYS,
+          closedDays: Array.isArray(res.data.closedDays ?? res.data.CLOSED_DAYS) ? (res.data.closedDays ?? res.data.CLOSED_DAYS) : CLOSED_DAYS,
+        });
+      }
+    }).catch(err => console.error("Could not fetch dynamic policy in BookingForm:", err));
+  }, []);
+
+  const isAmritaEmail = (email: string | null | undefined) => {
     if (!email) return false;
-    return email.endsWith('@amrita.edu') || 
-           email.endsWith('@ch.amrita.edu') || 
+    return email.endsWith('@amrita.edu') ||
+           email.endsWith('@cb.amrita.edu') ||
+           email.endsWith('@ch.amrita.edu') ||
            email.endsWith('@students.amrita.edu') ||
            email.endsWith('@ch.students.amrita.edu');
   };
 
   const hasValidAmritaEmail = isAmritaEmail(currentUser?.email);
 
-  // Function to disable Sundays
+  // Function to disable closed days
   const shouldDisableDate = (date: Date) => {
-    return getDay(date) === 0; // 0 = Sunday
+    return policy.closedDays.includes(getDay(date));
   };
 
   // Helper: check if time is within lab hours
   const isWithinLabHours = (time: Date | null, isStart: boolean) => {
     if (!time) return false;
     const minutes = time.getHours() * 60 + time.getMinutes();
-    const min = LAB_OPEN_HOUR * 60 + LAB_OPEN_MINUTE;
-    const max = LAB_CLOSE_HOUR * 60 + LAB_CLOSE_MINUTE;
+    const min = policy.labOpenHour * 60 + policy.labOpenMinute;
+    const max = policy.labCloseHour * 60 + policy.labCloseMinute;
     if (isStart) return minutes >= min && minutes < max;
     return minutes > min && minutes <= max;
   };
@@ -186,7 +216,7 @@ const BookingForm: React.FC = (): ReactElement => {
     const endD = new Date(end);
     endD.setHours(0,0,0,0);
     while (d <= endD) {
-      if (CLOSED_DAYS.includes(d.getDay())) return true;
+      if (policy.closedDays.includes(d.getDay())) return true;
       d.setDate(d.getDate() + 1);
     }
     return false;
@@ -200,8 +230,8 @@ const BookingForm: React.FC = (): ReactElement => {
     }
     const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
     const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
-    const min = LAB_OPEN_HOUR * 60 + LAB_OPEN_MINUTE;
-    const max = LAB_CLOSE_HOUR * 60 + LAB_CLOSE_MINUTE;
+    const min = policy.labOpenHour * 60 + policy.labOpenMinute;
+    const max = policy.labCloseHour * 60 + policy.labCloseMinute;
     const today = new Date();
     const isToday = startDate &&
       startDate.getFullYear() === today.getFullYear() &&
@@ -215,11 +245,11 @@ const BookingForm: React.FC = (): ReactElement => {
       }
     }
     if (startMinutes < min) {
-      setTimeValidationError(`Start time must be at or after ${LAB_OPEN_HOUR}:${LAB_OPEN_MINUTE.toString().padStart(2, '0')}.`);
+      setTimeValidationError(`Start time must be at or after ${policy.labOpenHour}:${policy.labOpenMinute.toString().padStart(2, '0')}.`);
       return;
     }
     if (endMinutes > max) {
-      setTimeValidationError(`End time must be at or before ${LAB_CLOSE_HOUR}:${LAB_CLOSE_MINUTE.toString().padStart(2, '0')}.`);
+      setTimeValidationError(`End time must be at or before ${policy.labCloseHour}:${policy.labCloseMinute.toString().padStart(2, '0')}.`);
       return;
     }
     if (endMinutes <= startMinutes) {
@@ -228,13 +258,13 @@ const BookingForm: React.FC = (): ReactElement => {
     }
     // Minimum booking duration for same-day bookings
     if (startDate && endDate && startDate.getTime() === endDate.getTime()) {
-      if (endMinutes - startMinutes < MIN_BOOKING_HOURS * 60) {
-        setTimeValidationError(`Minimum booking duration is ${MIN_BOOKING_HOURS} hour(s) for same-day bookings.`);
+      if (endMinutes - startMinutes < policy.minBookingHours * 60) {
+        setTimeValidationError(`Minimum booking duration is ${policy.minBookingHours} hour(s) for same-day bookings.`);
         return;
       }
     }
     setTimeValidationError(null);
-  }, [startTime, endTime, startDate, endDate]);
+  }, [startTime, endTime, startDate, endDate, policy]);
 
   // Prevent negative dataset size
   useEffect(() => {
@@ -253,13 +283,13 @@ const BookingForm: React.FC = (): ReactElement => {
     // If full day is checked, set times automatically
     if (fullDay) {
       const start = new Date();
-      start.setHours(LAB_OPEN_HOUR, LAB_OPEN_MINUTE, 0, 0);
+      start.setHours(policy.labOpenHour, policy.labOpenMinute, 0, 0);
       const end = new Date();
-      end.setHours(LAB_CLOSE_HOUR, LAB_CLOSE_MINUTE, 0, 0);
+      end.setHours(policy.labCloseHour, policy.labCloseMinute, 0, 0);
       setStartTime(start);
       setEndTime(end);
     }
-  }, [fullDay, startDate, endDate]);
+  }, [fullDay, startDate, endDate, policy]);
 
   useEffect(() => {
     if (selectedComputer && startDate && endDate) {
@@ -735,17 +765,17 @@ const BookingForm: React.FC = (): ReactElement => {
       return;
     }
 
-    // Check if duration exceeds 7 days
-    const durationInDays = differenceInDays(endDate, startDate) + 1; // +1 to include both start and end dates
-    if (durationInDays > MAX_BOOKING_DAYS) {
-      setError(`Booking duration cannot exceed ${MAX_BOOKING_DAYS} days`);
+    // Check if duration exceeds policy max booking days
+    const durationInDays = differenceInDays(endDate, startDate) + 1;
+    if (durationInDays > policy.maxBookingDays) {
+      setError(`Booking duration cannot exceed ${policy.maxBookingDays} days`);
       return;
     }
 
-    // Check if start date is more than MAX_BOOKING_AHEAD_DAYS ahead
-    const maxBookingDate = addDays(startOfDay(new Date()), MAX_BOOKING_AHEAD_DAYS);
+    // Check if start date is more than policy.maxBookingAheadDays ahead
+    const maxBookingDate = addDays(startOfDay(new Date()), policy.maxBookingAheadDays);
     if (startDate > maxBookingDate) {
-      setError(`Bookings can only be made up to ${MAX_BOOKING_AHEAD_DAYS} days in advance.`);
+      setError(`Bookings can only be made up to ${policy.maxBookingAheadDays} days in advance.`);
       return;
     }
 
@@ -1295,7 +1325,7 @@ const BookingForm: React.FC = (): ReactElement => {
             {/* Booking Guidelines */}
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
-                <strong>Lab bookings are allowed only between {LAB_OPEN_HOUR}:{LAB_OPEN_MINUTE.toString().padStart(2, '0')} and {LAB_CLOSE_HOUR}:{LAB_CLOSE_MINUTE.toString().padStart(2, '0')}.</strong> Please select your desired time range within these hours.
+                <strong>Lab bookings are allowed only between {policy.labOpenHour}:{policy.labOpenMinute.toString().padStart(2, '0')} and {policy.labCloseHour}:{policy.labCloseMinute.toString().padStart(2, '0')}.</strong> Please select your desired time range within these hours.
               </Typography>
             </Alert>
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -1303,15 +1333,14 @@ const BookingForm: React.FC = (): ReactElement => {
                 <strong>Booking Guidelines:</strong>
               </Typography>
               <Typography variant="body2" component="div" sx={{ mt: 1 }}>
-                • Lab is closed on Sundays • Maximum booking duration: {MAX_BOOKING_DAYS} days •
-                Minimum booking duration: {MIN_BOOKING_HOURS} hour • Bookings are subject to admin
-                approval
+                • Lab closed days: {policy.closedDays.map(d => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]).join(', ') || 'None'} • Maximum duration: {policy.maxBookingDays} days •
+                Minimum duration: {policy.minBookingHours} hour • Cool-down period: {policy.coolDownPeriodDays} day(s)
               </Typography>
             </Alert>
 
             {rangeIncludesClosedDay(startDate, endDate) && (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                Remember: Lab will be closed on Sundays within your selected range.
+                Remember: Lab will be closed on designated closed days within your selected range.
               </Alert>
             )}
 
@@ -1327,7 +1356,7 @@ const BookingForm: React.FC = (): ReactElement => {
                 value={startDate}
                 onChange={(newValue) => setStartDate(newValue)}
                 minDate={startOfDay(new Date())}
-                maxDate={addDays(new Date(), MAX_BOOKING_AHEAD_DAYS)}
+                maxDate={addDays(new Date(), policy.maxBookingAheadDays)}
                 slotProps={{
                   textField: {
                     fullWidth: true,
@@ -1342,7 +1371,7 @@ const BookingForm: React.FC = (): ReactElement => {
                 value={endDate}
                 onChange={(newValue) => setEndDate(newValue)}
                 minDate={startDate || startOfDay(new Date())}
-                maxDate={startDate ? addDays(startDate, MAX_BOOKING_DAYS - 1) : addDays(new Date(), MAX_BOOKING_AHEAD_DAYS)}
+                maxDate={startDate ? addDays(startDate, policy.maxBookingDays - 1) : addDays(new Date(), policy.maxBookingAheadDays)}
                 slotProps={{
                   textField: {
                     fullWidth: true,

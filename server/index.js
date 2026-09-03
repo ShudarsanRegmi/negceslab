@@ -78,42 +78,19 @@ const logRoutes = require("./routes/logs");
 const policyRoutes = require("./routes/policy");
 const { setupSwagger } = require("./swagger");
 
-// Use routes (supports both /api/prefix and direct /prefix for NGINX/Apache proxy flexibility)
+// Use routes
 app.use("/api/auth", authRoutes);
-app.use("/auth", authRoutes);
-
 app.use("/api/computers", computerRoutes);
-app.use("/computers", computerRoutes);
-
 app.use("/api/bookings", bookingRoutes);
-app.use("/bookings", bookingRoutes);
-
 app.use("/api/notifications", notificationRoutes);
-app.use("/notifications", notificationRoutes);
-
 app.use('/api/feedback', feedbackRoutes);
-app.use('/feedback', feedbackRoutes);
-
 app.use('/api/system-details', systemDetailsRoutes);
-app.use('/system-details', systemDetailsRoutes);
-
 app.use('/api/temporary-releases', temporaryReleaseRoutes);
-app.use('/temporary-releases', temporaryReleaseRoutes);
-
 app.use('/api/achievements', achievementRoutes);
-app.use('/achievements', achievementRoutes);
-
 app.use('/api/superadmin', superadminRoutes);
-app.use('/superadmin', superadminRoutes);
-
 app.use("/api/agent", agentRoutes);
-app.use("/agent", agentRoutes);
-
 app.use("/api/logs", logRoutes);
-app.use("/logs", logRoutes);
-
 app.use("/api/policy", policyRoutes);
-app.use("/policy", policyRoutes);
 
 // Setup Swagger UI (only in development/localhost, not in production)
 if (process.env.NODE_ENV !== "production") {

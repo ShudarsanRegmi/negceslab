@@ -11,15 +11,10 @@ const verifyToken = async (req, res, next) => {
 
     const decodedToken = await admin.auth().verifyIdToken(token);
 
-    // Get user role from MongoDB (auto-create user document if missing to avoid 404 auth failures)
-    let userDoc = await User.findOne({ firebaseUid: decodedToken.uid });
+    // Get user role from MongoDB
+    const userDoc = await User.findOne({ firebaseUid: decodedToken.uid });
     if (!userDoc) {
-      userDoc = await User.create({
-        firebaseUid: decodedToken.uid,
-        name: decodedToken.name || decodedToken.email?.split("@")[0] || "User",
-        email: decodedToken.email,
-        role: "user"
-      });
+      return res.status(401).json({ message: "User profile not registered in database" });
     }
 
     // Combine Firebase user data with MongoDB user data

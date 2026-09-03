@@ -52,8 +52,7 @@ import {
   ExitToApp as TempReleaseIcon,
   Event as EventIcon,
 } from "@mui/icons-material";
-import { computersAPI, temporaryReleaseAPI } from "../services/api";
-import { bookingsAPI } from "../services/api";
+import { computersAPI, temporaryReleaseAPI, bookingsAPI, policyAPI } from "../services/api";
 import { format, isWithinInterval, parseISO, isSameDay, addDays, startOfMonth, endOfMonth } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -216,6 +215,30 @@ const ComputerGrid: React.FC = () => {
   const [calendarValue, setCalendarValue] = useState<Date | null>(new Date());
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  const [policy, setPolicy] = useState({
+    labOpenHour: 8,
+    labOpenMinute: 30,
+    labCloseHour: 17,
+    labCloseMinute: 30,
+    closedDays: [0],
+    maxBookingAheadDays: 30,
+  });
+
+  useEffect(() => {
+    policyAPI.getPolicy().then((res) => {
+      if (res.data) {
+        setPolicy({
+          labOpenHour: res.data.labOpenHour ?? res.data.LAB_OPEN_HOUR ?? 8,
+          labOpenMinute: res.data.labOpenMinute ?? res.data.LAB_OPEN_MINUTE ?? 30,
+          labCloseHour: res.data.labCloseHour ?? res.data.LAB_CLOSE_HOUR ?? 17,
+          labCloseMinute: res.data.labCloseMinute ?? res.data.LAB_CLOSE_MINUTE ?? 30,
+          closedDays: Array.isArray(res.data.closedDays ?? res.data.CLOSED_DAYS) ? (res.data.closedDays ?? res.data.CLOSED_DAYS) : [0],
+          maxBookingAheadDays: res.data.maxBookingAheadDays ?? res.data.MAX_BOOKING_AHEAD_DAYS ?? 30,
+        });
+      }
+    }).catch(err => console.error("Failed to load policy in ComputerGrid:", err));
+  }, []);
 
   useEffect(() => {
     fetchComputers(true);
@@ -383,12 +406,12 @@ const ComputerGrid: React.FC = () => {
 
   // Helper function to check if date is a closed day
   const isClosedDay = (date: Date): boolean => {
-    return CLOSED_DAYS.includes(date.getDay());
+    return policy.closedDays.includes(date.getDay());
   };
 
   // Calculate lab operating hours in minutes
-  const labOpenMinutes = LAB_OPEN_HOUR * 60 + LAB_OPEN_MINUTE;
-  const labCloseMinutes = LAB_CLOSE_HOUR * 60 + LAB_CLOSE_MINUTE;
+  const labOpenMinutes = policy.labOpenHour * 60 + policy.labOpenMinute;
+  const labCloseMinutes = policy.labCloseHour * 60 + policy.labCloseMinute;
   const totalLabMinutes = labCloseMinutes - labOpenMinutes;
 
   // Calculate availability status for a specific date
@@ -969,7 +992,7 @@ const ComputerGrid: React.FC = () => {
                             Fully Available
                           </Typography>
                           <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Lab hours: {LAB_OPEN_HOUR}:{LAB_OPEN_MINUTE.toString().padStart(2, '0')} - {LAB_CLOSE_HOUR}:{LAB_CLOSE_MINUTE.toString().padStart(2, '0')}
+                            Lab hours: {policy.labOpenHour}:{policy.labOpenMinute.toString().padStart(2, '0')} - {policy.labCloseHour}:{policy.labCloseMinute.toString().padStart(2, '0')}
                           </Typography>
                           <Button
                             variant="contained"
