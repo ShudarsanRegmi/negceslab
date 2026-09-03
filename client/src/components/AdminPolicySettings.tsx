@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
-  Card,
-  CardContent,
   Grid,
   TextField,
   Button,
@@ -16,6 +14,7 @@ import {
   Paper,
   Chip,
   Stack,
+  Tooltip,
 } from "@mui/material";
 import {
   Policy as PolicyIcon,
@@ -25,6 +24,8 @@ import {
   CalendarMonth as CalendarIcon,
   Edit as EditIcon,
   Cancel as CancelIcon,
+  Shield as ShieldIcon,
+  Speed as SpeedIcon,
 } from "@mui/icons-material";
 import { policyAPI } from "../services/api";
 
@@ -45,7 +46,10 @@ interface PolicyData {
   labCloseMinute: number;
   maxBookingDays: number;
   minBookingHours: number;
-  coolDownPeriodDays: number;
+  shortTierMaxDays: number;
+  mediumTierMaxDays: number;
+  mediumTierCoolDownDays: number;
+  longTierCoolDownDays: number;
   maxBookingAheadDays: number;
   closedDays: number[];
 }
@@ -57,7 +61,10 @@ const defaultPolicy: PolicyData = {
   labCloseMinute: 30,
   maxBookingDays: 15,
   minBookingHours: 1,
-  coolDownPeriodDays: 3,
+  shortTierMaxDays: 5,
+  mediumTierMaxDays: 10,
+  mediumTierCoolDownDays: 5,
+  longTierCoolDownDays: 10,
   maxBookingAheadDays: 30,
   closedDays: [0],
 };
@@ -91,7 +98,10 @@ export const AdminPolicySettings: React.FC = () => {
           labCloseMinute: res.data.labCloseMinute ?? 30,
           maxBookingDays: res.data.maxBookingDays ?? 15,
           minBookingHours: res.data.minBookingHours ?? 1,
-          coolDownPeriodDays: res.data.coolDownPeriodDays ?? 3,
+          shortTierMaxDays: res.data.shortTierMaxDays ?? 5,
+          mediumTierMaxDays: res.data.mediumTierMaxDays ?? 10,
+          mediumTierCoolDownDays: res.data.mediumTierCoolDownDays ?? 5,
+          longTierCoolDownDays: res.data.longTierCoolDownDays ?? 10,
           maxBookingAheadDays: res.data.maxBookingAheadDays ?? 30,
           closedDays: Array.isArray(res.data.closedDays) ? res.data.closedDays : [0],
         };
@@ -140,9 +150,22 @@ export const AdminPolicySettings: React.FC = () => {
       setSaving(true);
       setError(null);
       setSuccess(null);
+
+      // Validate tier order
+      if (formData.shortTierMaxDays >= formData.mediumTierMaxDays) {
+        setError(`Short tier max (${formData.shortTierMaxDays}d) must be strictly less than Medium tier max (${formData.mediumTierMaxDays}d).`);
+        setSaving(false);
+        return;
+      }
+      if (formData.mediumTierMaxDays >= formData.maxBookingDays) {
+        setError(`Medium tier max (${formData.mediumTierMaxDays}d) must be strictly less than Max booking duration (${formData.maxBookingDays}d).`);
+        setSaving(false);
+        return;
+      }
+
       await policyAPI.updatePolicy(formData);
       setSavedData(formData);
-      setSuccess("Lab booking policy updated successfully!");
+      setSuccess("Tiered lab booking policy updated successfully! RAM cache refreshed.");
       setEditing(false);
     } catch (err: any) {
       console.error("Failed to save policy:", err);
@@ -160,18 +183,23 @@ export const AdminPolicySettings: React.FC = () => {
     );
   }
 
+  const activeData = editing ? formData : savedData;
+  const shortRangeStr = `1 to ${activeData.shortTierMaxDays} days`;
+  const mediumRangeStr = `${activeData.shortTierMaxDays + 1} to ${activeData.mediumTierMaxDays} days`;
+  const longRangeStr = `${activeData.mediumTierMaxDays + 1} to ${activeData.maxBookingDays} days`;
+
   return (
-    <Box component={editing ? "form" : "div"} onSubmit={editing ? handleSubmit : undefined} sx={{ maxWidth: 1000, mx: "auto", p: 2 }}>
+    <Box component={editing ? "form" : "div"} onSubmit={editing ? handleSubmit : undefined} sx={{ maxWidth: 1050, mx: "auto", p: 2 }}>
       {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <PolicyIcon color="primary" sx={{ fontSize: 32 }} />
           <Box>
             <Typography variant="h5" fontWeight="bold">
-              Lab Booking Policy
+              Tiered Cool-Down &amp; Lab Booking Policy
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Configure lab operating hours, booking rules, and cool-down periods.
+              Configure dynamic duration-based cool-down tiers, operating hours, and booking constraints.
             </Typography>
           </Box>
         </Box>
@@ -212,69 +240,158 @@ export const AdminPolicySettings: React.FC = () => {
       {success && <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>{success}</Alert>}
 
       <Grid container spacing={3}>
-        {/* Cool-Down & Duration Policy */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={2} sx={{ p: 3, height: "100%", borderRadius: 2 }}>
+        {/* Tiered Cool-Down Policy Card */}
+        <Grid item xs={12}>
+          <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2, color: "primary.main" }}>
               <TimerIcon />
               <Typography variant="h6" fontWeight="bold">
-                Cool-Down &amp; Booking Limits
+                Tiered Booking Cool-Down Policy (3-Tier Scaling)
               </Typography>
             </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+              Cool-down periods dynamically scale with booking duration. Shorter bookings incur zero penalty, while longer reservations require mandatory waiting windows before making any new booking.
+            </Typography>
             <Divider sx={{ mb: 3 }} />
 
-            {editing ? (
-              <>
-                <TextField
-                  fullWidth
-                  label="Cool-Down Period (Days)"
-                  name="coolDownPeriodDays"
-                  type="number"
-                  value={formData.coolDownPeriodDays}
-                  onChange={handleTextChange}
-                  helperText="Mandatory waiting period after a booking ends before the user can book again."
-                  sx={{ mb: 3 }}
-                  inputProps={{ min: 0, max: 90 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Maximum Booking Duration (Days)"
-                  name="maxBookingDays"
-                  type="number"
-                  value={formData.maxBookingDays}
-                  onChange={handleTextChange}
-                  helperText="Maximum consecutive days allowed per booking request."
-                  sx={{ mb: 3 }}
-                  inputProps={{ min: 1, max: 90 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Advance Booking Window (Days)"
-                  name="maxBookingAheadDays"
-                  type="number"
-                  value={formData.maxBookingAheadDays}
-                  onChange={handleTextChange}
-                  helperText="How far in advance users can place bookings."
-                  inputProps={{ min: 1, max: 365 }}
-                />
-              </>
-            ) : (
-              <Stack spacing={2.5}>
-                <PolicyRow label="Cool-Down Period" value={`${savedData.coolDownPeriodDays} days`} desc="Wait time after booking ends before re-booking." />
-                <PolicyRow label="Max Booking Duration" value={`${savedData.maxBookingDays} days`} desc="Maximum consecutive days per booking." />
-                <PolicyRow label="Advance Booking Window" value={`${savedData.maxBookingAheadDays} days`} desc="How far ahead users can book." />
-              </Stack>
-            )}
+            <Grid container spacing={2.5}>
+              {/* Tier 1: Short Duration */}
+              <Grid item xs={12} md={4}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, bgcolor: "action.hover", height: "100%" }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                    <Chip label="Tier 1: Short Duration" color="success" size="small" sx={{ fontWeight: 600 }} />
+                    <Chip label="0 Days Cool-Down" variant="outlined" color="success" size="small" />
+                  </Stack>
+                  <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                    Range: {shortRangeStr}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                    Quick usage bookings. No cool-down period is enforced.
+                  </Typography>
+
+                  {editing ? (
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Short Tier Upper Max (Days)"
+                      name="shortTierMaxDays"
+                      type="number"
+                      value={formData.shortTierMaxDays}
+                      onChange={handleTextChange}
+                      inputProps={{ min: 1, max: formData.mediumTierMaxDays - 1 }}
+                      helperText={`Bookings ≤ ${formData.shortTierMaxDays}d get 0 cool-down days.`}
+                    />
+                  ) : (
+                    <Box sx={{ p: 1.5, bgcolor: "background.paper", borderRadius: 1, border: "1px dashed rgba(0,0,0,0.12)" }}>
+                      <Typography variant="body2" color="text.secondary">Cool-Down Period:</Typography>
+                      <Typography variant="h6" fontWeight={700} color="success.main">0 Days (None)</Typography>
+                    </Box>
+                  )}
+                </Paper>
+              </Grid>
+
+              {/* Tier 2: Medium Duration */}
+              <Grid item xs={12} md={4}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, bgcolor: "action.hover", height: "100%" }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                    <Chip label="Tier 2: Medium Duration" color="warning" size="small" sx={{ fontWeight: 600 }} />
+                    <Chip label={`${activeData.mediumTierCoolDownDays} Days Cool-Down`} variant="outlined" color="warning" size="small" />
+                  </Stack>
+                  <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                    Range: {mediumRangeStr}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                    Standard reservations. Mandates a medium waiting period.
+                  </Typography>
+
+                  {editing ? (
+                    <Stack spacing={1.5}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Medium Tier Upper Max (Days)"
+                        name="mediumTierMaxDays"
+                        type="number"
+                        value={formData.mediumTierMaxDays}
+                        onChange={handleTextChange}
+                        inputProps={{ min: formData.shortTierMaxDays + 1, max: formData.maxBookingDays - 1 }}
+                      />
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Medium Cool-Down (Days)"
+                        name="mediumTierCoolDownDays"
+                        type="number"
+                        value={formData.mediumTierCoolDownDays}
+                        onChange={handleTextChange}
+                        inputProps={{ min: 1, max: 30 }}
+                      />
+                    </Stack>
+                  ) : (
+                    <Box sx={{ p: 1.5, bgcolor: "background.paper", borderRadius: 1, border: "1px dashed rgba(0,0,0,0.12)" }}>
+                      <Typography variant="body2" color="text.secondary">Cool-Down Period:</Typography>
+                      <Typography variant="h6" fontWeight={700} color="warning.main">{savedData.mediumTierCoolDownDays} Days</Typography>
+                    </Box>
+                  )}
+                </Paper>
+              </Grid>
+
+              {/* Tier 3: Long Duration */}
+              <Grid item xs={12} md={4}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, bgcolor: "action.hover", height: "100%" }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                    <Chip label="Tier 3: Long Duration" color="error" size="small" sx={{ fontWeight: 600 }} />
+                    <Chip label={`${activeData.longTierCoolDownDays} Days Cool-Down`} variant="outlined" color="error" size="small" />
+                  </Stack>
+                  <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                    Range: {longRangeStr}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                    Extended intensive bookings. Mandates longest cool-down period.
+                  </Typography>
+
+                  {editing ? (
+                    <Stack spacing={1.5}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Max Allowed Booking (Days)"
+                        name="maxBookingDays"
+                        type="number"
+                        value={formData.maxBookingDays}
+                        onChange={handleTextChange}
+                        inputProps={{ min: formData.mediumTierMaxDays + 1, max: 180 }}
+                      />
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Long Cool-Down (Days)"
+                        name="longTierCoolDownDays"
+                        type="number"
+                        value={formData.longTierCoolDownDays}
+                        onChange={handleTextChange}
+                        inputProps={{ min: formData.mediumTierCoolDownDays, max: 90 }}
+                      />
+                    </Stack>
+                  ) : (
+                    <Box sx={{ p: 1.5, bgcolor: "background.paper", borderRadius: 1, border: "1px dashed rgba(0,0,0,0.12)" }}>
+                      <Typography variant="body2" color="text.secondary">Cool-Down Period:</Typography>
+                      <Typography variant="h6" fontWeight={700} color="error.main">{savedData.longTierCoolDownDays} Days</Typography>
+                    </Box>
+                  )}
+                </Paper>
+              </Grid>
+            </Grid>
           </Paper>
         </Grid>
 
-        {/* Operating Hours */}
+        {/* Operating Hours & Rules */}
         <Grid item xs={12} md={6}>
           <Paper elevation={2} sx={{ p: 3, height: "100%", borderRadius: 2 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2, color: "primary.main" }}>
               <AccessTimeIcon />
               <Typography variant="h6" fontWeight="bold">
-                Operating Hours &amp; Slot Limits
+                Operating Hours &amp; Booking Window
               </Typography>
             </Box>
             <Divider sx={{ mb: 3 }} />
@@ -299,6 +416,17 @@ export const AdminPolicySettings: React.FC = () => {
                 </Grid>
                 <TextField
                   fullWidth
+                  label="Advance Booking Window (Days)"
+                  name="maxBookingAheadDays"
+                  type="number"
+                  value={formData.maxBookingAheadDays}
+                  onChange={handleTextChange}
+                  helperText="How far in advance users can place bookings."
+                  inputProps={{ min: 1, max: 365 }}
+                  sx={{ mb: 3 }}
+                />
+                <TextField
+                  fullWidth
                   label="Minimum Same-Day Booking (Hours)"
                   name="minBookingHours"
                   type="number"
@@ -310,29 +438,18 @@ export const AdminPolicySettings: React.FC = () => {
               </>
             ) : (
               <Stack spacing={2.5}>
-                <PolicyRow
-                  label="Lab Opens"
-                  value={`${pad(savedData.labOpenHour)}:${pad(savedData.labOpenMinute)}`}
-                  desc="Daily lab opening time (24-hour format)."
-                />
-                <PolicyRow
-                  label="Lab Closes"
-                  value={`${pad(savedData.labCloseHour)}:${pad(savedData.labCloseMinute)}`}
-                  desc="Daily lab closing time (24-hour format)."
-                />
-                <PolicyRow
-                  label="Min Same-Day Duration"
-                  value={`${savedData.minBookingHours} hour${savedData.minBookingHours !== 1 ? "s" : ""}`}
-                  desc="Minimum hours required for same-day bookings."
-                />
+                <PolicyRow label="Lab Opens" value={`${pad(savedData.labOpenHour)}:${pad(savedData.labOpenMinute)}`} desc="Daily lab opening time (24-hour format)." />
+                <PolicyRow label="Lab Closes" value={`${pad(savedData.labCloseHour)}:${pad(savedData.labCloseMinute)}`} desc="Daily lab closing time (24-hour format)." />
+                <PolicyRow label="Advance Window" value={`${savedData.maxBookingAheadDays} days`} desc="How far ahead users can book." />
+                <PolicyRow label="Min Same-Day Duration" value={`${savedData.minBookingHours} hour${savedData.minBookingHours !== 1 ? "s" : ""}`} desc="Minimum hours required for same-day bookings." />
               </Stack>
             )}
           </Paper>
         </Grid>
 
-        {/* Closed Days */}
-        <Grid item xs={12}>
-          <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+        {/* Closed Days Policy */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={2} sx={{ p: 3, height: "100%", borderRadius: 2 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2, color: "primary.main" }}>
               <CalendarIcon />
               <Typography variant="h6" fontWeight="bold">
@@ -361,7 +478,7 @@ export const AdminPolicySettings: React.FC = () => {
                 ))}
               </FormGroup>
             ) : (
-              <Stack direction="row" flexWrap="wrap" gap={1}>
+              <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 2 }}>
                 {DAYS_OF_WEEK.map((day) => (
                   <Chip
                     key={day.value}
@@ -372,9 +489,6 @@ export const AdminPolicySettings: React.FC = () => {
                     sx={{ fontWeight: savedData.closedDays.includes(day.value) ? 600 : 400 }}
                   />
                 ))}
-                {savedData.closedDays.length === 0 && (
-                  <Typography variant="body2" color="text.secondary">No closed days configured.</Typography>
-                )}
               </Stack>
             )}
           </Paper>
@@ -384,7 +498,6 @@ export const AdminPolicySettings: React.FC = () => {
   );
 };
 
-// Helper: read-only row for view mode
 const PolicyRow: React.FC<{ label: string; value: string; desc: string }> = ({ label, value, desc }) => (
   <Box>
     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", mb: 0.25 }}>

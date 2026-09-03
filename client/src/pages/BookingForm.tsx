@@ -164,6 +164,19 @@ const BookingForm: React.FC = (): ReactElement => {
     closedDays: CLOSED_DAYS,
   });
 
+  const [coolDownStatus, setCoolDownStatus] = useState<{
+    active: boolean;
+    coolDownDays: number;
+    tierName?: string;
+    eligibleDate?: string | null;
+    message?: string | null;
+  }>({
+    active: false,
+    coolDownDays: 0,
+    eligibleDate: null,
+    message: null,
+  });
+
   useEffect(() => {
     policyAPI.getPolicy().then((res) => {
       if (res.data) {
@@ -180,6 +193,12 @@ const BookingForm: React.FC = (): ReactElement => {
         });
       }
     }).catch(err => console.error("Could not fetch dynamic policy in BookingForm:", err));
+
+    bookingsAPI.getCoolDownStatus().then((res) => {
+      if (res.data) {
+        setCoolDownStatus(res.data);
+      }
+    }).catch(err => console.error("Could not fetch cool-down status in BookingForm:", err));
   }, []);
 
   const isAmritaEmail = (email: string | null | undefined) => {
@@ -659,6 +678,12 @@ const BookingForm: React.FC = (): ReactElement => {
   };
 
   const handleNext = () => {
+    // Check active cool-down period
+    if (coolDownStatus.active) {
+      setError(coolDownStatus.message || `Cool-down active: Your account is in a mandatory cool-down period until ${coolDownStatus.eligibleDate}. Booking requests cannot be submitted to any system until then.`);
+      return;
+    }
+
     // Check email validity first
     if (!hasValidAmritaEmail) {
       setError("Please sign in with a valid Amrita email address to proceed with bookings.");
@@ -715,6 +740,11 @@ const BookingForm: React.FC = (): ReactElement => {
   };
 
   const handleSubmit = async () => {
+    if (coolDownStatus.active) {
+      setError(coolDownStatus.message || `Cool-down active: Your account is in a mandatory cool-down period until ${coolDownStatus.eligibleDate}. Booking requests cannot be submitted to any system until then.`);
+      return;
+    }
+
     // Check email validity first
     if (!hasValidAmritaEmail) {
       setError("Booking requests are only allowed for users with valid Amrita email addresses.");
@@ -1934,6 +1964,13 @@ const BookingForm: React.FC = (): ReactElement => {
       {timeSlotError && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setTimeSlotError(null)}>
           {timeSlotError}
+        </Alert>
+      )}
+
+      {coolDownStatus.active && (
+        <Alert severity="warning" icon={<TimerIcon />} sx={{ mb: 3 }}>
+          <AlertTitle sx={{ fontWeight: "bold" }}>Cool-Down Period Active ({coolDownStatus.tierName || 'Tiered Policy'})</AlertTitle>
+          {coolDownStatus.message || `You currently have an active cool-down period. Next allowed booking date is ${coolDownStatus.eligibleDate}.`}
         </Alert>
       )}
 

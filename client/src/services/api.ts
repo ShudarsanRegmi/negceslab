@@ -77,6 +77,8 @@ export const computersAPI = {
 export const bookingsAPI = {
   getUserBookings: () => 
     api.get('/bookings'),
+  getCoolDownStatus: () =>
+    api.get('/bookings/cooldown-status'),
   createBooking: (data: { 
     computerId: string; 
     startDate: string; 
