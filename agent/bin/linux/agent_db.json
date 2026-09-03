@@ -1,0 +1,15 @@
+{
+  "credentials": {
+    "machine_id": "691fe637c53cad8661a2a987",
+    "auth_token": "9c9ed4ca422382acb8916e63950d2cdb14aead7e8637e10accf3cc8a8336f23b"
+  },
+  "attendance": {
+    "student_name": "Shudarsan Regmi",
+    "student_email": "CH.SC.U4CYS23055",
+    "agenda": "A very very long message.A very very long message.A very very long message.A very very long message.A very very long message.A very very long message.A very very long message.A very very long message.A very very long message.",
+    "session_type": "Non-Booked Walk-In Usage",
+    "check_in_time": "2026-09-03T03:53:23.878526962+05:30",
+    "checked_in": false
+  },
+  "offline_metrics": []
+}

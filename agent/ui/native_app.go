@@ -48,7 +48,7 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			emailEntry := widget.NewEntry()
 			emailEntry.SetPlaceHolder("Email or Roll Number")
 
-			sessionSelect := widget.NewSelect([]string{"Scheduled Lab Booking", "Non-Booked Walk-In Usage", "Lab Work", "Research", "Class", "Project"}, nil)
+			sessionSelect := widget.NewSelect([]string{"Scheduled Lab Booking", "Non-Booked Walk-In Usage"}, nil)
 			sessionSelect.SetSelected("Non-Booked Walk-In Usage")
 
 			agendaEntry := widget.NewMultiLineEntry()

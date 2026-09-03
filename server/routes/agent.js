@@ -476,15 +476,12 @@ router.get("/current-booking", verifyAgentToken, async (req, res) => {
       return false;
     });
 
-    // Fallback: if no active booking matches current time, use first approved booking for today
-    let selectedBooking = activeBooking;
-    if (!selectedBooking && bookings.length > 0) {
-      selectedBooking = bookings[0]; // simple fallback to first booking
-    }
-
-    if (!selectedBooking) {
+    // Only accept strictly active booking for the current time window
+    if (!activeBooking) {
       return res.status(200).json({ bookingFound: false });
     }
+
+    const selectedBooking = activeBooking;
 
     res.status(200).json({
       bookingFound: true,

@@ -1,0 +1,10 @@
+{
+  "backend_url": "https://intranet.ch.amrita.edu/negcesapi",
+  "ws_url": "wss://intranet.ch.amrita.edu/negcesapi",
+  "monitor_interval": 10,
+  "metrics_interval": 60,
+  "lab_name": "Negces Lab",
+  "department": "CSE",
+  "machine_name": "",
+  "registration_secret": ""
+}
