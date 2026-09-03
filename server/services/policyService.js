@@ -1,5 +1,25 @@
 const Policy = require("../models/policy");
-const defaultPolicy = require("../../shared/policy");
+
+const defaultPolicy = {
+  labOpenHour: 8,
+  labOpenMinute: 30,
+  labCloseHour: 17,
+  labCloseMinute: 30,
+  maxBookingDays: 15,
+  minBookingHours: 1,
+  coolDownPeriodDays: 3,
+  maxBookingAheadDays: 30,
+  closedDays: [0],
+  LAB_OPEN_HOUR: 8,
+  LAB_OPEN_MINUTE: 30,
+  LAB_CLOSE_HOUR: 17,
+  LAB_CLOSE_MINUTE: 30,
+  MAX_BOOKING_DAYS: 15,
+  MIN_BOOKING_HOURS: 1,
+  COOL_DOWN_PERIOD_DAYS: 3,
+  MAX_BOOKING_AHEAD_DAYS: 30,
+  CLOSED_DAYS: [0],
+};
 
 let cachedPolicy = null;
 
