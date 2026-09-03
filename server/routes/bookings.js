@@ -100,6 +100,63 @@ router.get('/current', verifyToken, async (req, res) => {
   }
 });
 
+// Get active cool-down status for current user
+router.get('/cooldown-status', verifyToken, async (req, res) => {
+  try {
+    const policy = await getPolicy();
+    const { calculateCoolDownDays } = require('../services/policyService');
+
+    const prevBookings = await Booking.find({
+      userId: req.user.firebaseUid,
+      status: { $in: ['approved', 'completed'] }
+    }).sort({ endDate: -1 });
+
+    if (prevBookings.length === 0) {
+      return res.json({ active: false, coolDownDays: 0, eligibleDate: null, message: null });
+    }
+
+    const latestPrev = prevBookings[0];
+    const prevStartObj = new Date(latestPrev.startDate + 'T00:00:00');
+    const prevEndObj = new Date(latestPrev.endDate + 'T00:00:00');
+    const prevDurationDays = Math.max(1, Math.ceil((prevEndObj - prevStartObj) / (1000 * 60 * 60 * 24)) + 1);
+
+    const { coolDownDays, tierName } = calculateCoolDownDays(prevDurationDays, policy);
+
+    if (coolDownDays === 0) {
+      return res.json({ active: false, coolDownDays: 0, eligibleDate: null, message: null });
+    }
+
+    const prevEndDateObj = new Date(latestPrev.endDate + 'T00:00:00');
+    const coolDownExpiryObj = new Date(prevEndDateObj);
+    coolDownExpiryObj.setDate(coolDownExpiryObj.getDate() + coolDownDays);
+
+    const todayDateOnly = new Date();
+    todayDateOnly.setHours(0, 0, 0, 0);
+
+    const isCoolDownActive = todayDateOnly <= coolDownExpiryObj;
+
+    const eligibleDateObj = new Date(coolDownExpiryObj);
+    eligibleDateObj.setDate(eligibleDateObj.getDate() + 1);
+    const eligibleDateStr = eligibleDateObj.toISOString().split('T')[0];
+
+    return res.json({
+      active: isCoolDownActive,
+      coolDownDays,
+      tierName,
+      lastBookingEndDate: latestPrev.endDate,
+      lastBookingDurationDays: prevDurationDays,
+      coolDownExpiryDate: coolDownExpiryObj.toISOString().split('T')[0],
+      eligibleDate: eligibleDateStr,
+      message: isCoolDownActive
+        ? `Cool-down active (${tierName}): You must wait ${coolDownDays} day(s) after your ${prevDurationDays}-day booking ended on ${latestPrev.endDate}. Next allowed booking date is ${eligibleDateStr}.`
+        : null
+    });
+  } catch (error) {
+    logger.error('Error fetching cooldown status', { error: error.message });
+    res.status(500).json({ message: 'Error checking cool-down status', error: error.message });
+  }
+});
+
 // Create a new booking
 router.post('/', verifyToken, async (req, res) => {
   try {
@@ -325,102 +382,6 @@ router.post('/', verifyToken, async (req, res) => {
     logger.debug('Pre-creation check - Relevant booking with release', { bookingId: relevantBookingWithRelease?._id });
 
     // Fetch dynamic lab policy (in-memory RAM cache)
-    const policy = await getPolicy();
-
-// Get active cool-down status for current user
-router.get('/cooldown-status', verifyToken, async (req, res) => {
-  try {
-    const policy = await getPolicy();
-    const { calculateCoolDownDays } = require('../services/policyService');
-
-    const prevBookings = await Booking.find({
-      userId: req.user.firebaseUid,
-      status: { $in: ['approved', 'completed'] }
-    }).sort({ endDate: -1 });
-
-    if (prevBookings.length === 0) {
-      return res.json({ active: false, coolDownDays: 0, eligibleDate: null, message: null });
-    }
-
-    const latestPrev = prevBookings[0];
-    const prevStartObj = new Date(latestPrev.startDate + 'T00:00:00');
-    const prevEndObj = new Date(latestPrev.endDate + 'T00:00:00');
-    const prevDurationDays = Math.max(1, Math.ceil((prevEndObj - prevStartObj) / (1000 * 60 * 60 * 24)) + 1);
-
-    const { coolDownDays, tierName } = calculateCoolDownDays(prevDurationDays, policy);
-
-    if (coolDownDays === 0) {
-      return res.json({ active: false, coolDownDays: 0, eligibleDate: null, message: null });
-    }
-
-    const prevEndDateObj = new Date(latestPrev.endDate + 'T00:00:00');
-    const coolDownExpiryObj = new Date(prevEndDateObj);
-    coolDownExpiryObj.setDate(coolDownExpiryObj.getDate() + coolDownDays);
-
-    const todayDateOnly = new Date();
-    todayDateOnly.setHours(0, 0, 0, 0);
-
-    const isCoolDownActive = todayDateOnly <= coolDownExpiryObj;
-
-    const eligibleDateObj = new Date(coolDownExpiryObj);
-    eligibleDateObj.setDate(eligibleDateObj.getDate() + 1);
-    const eligibleDateStr = eligibleDateObj.toISOString().split('T')[0];
-
-    return res.json({
-      active: isCoolDownActive,
-      coolDownDays,
-      tierName,
-      lastBookingEndDate: latestPrev.endDate,
-      lastBookingDurationDays: prevDurationDays,
-      coolDownExpiryDate: coolDownExpiryObj.toISOString().split('T')[0],
-      eligibleDate: eligibleDateStr,
-      message: isCoolDownActive
-        ? `Cool-down active (${tierName}): You must wait ${coolDownDays} day(s) after your ${prevDurationDays}-day booking ended on ${latestPrev.endDate}. Next allowed booking date is ${eligibleDateStr}.`
-        : null
-    });
-  } catch (error) {
-    logger.error('Error fetching cooldown status', { error: error.message });
-    res.status(500).json({ message: 'Error checking cool-down status', error: error.message });
-  }
-});
-
-// Create a new booking
-router.post('/', verifyToken, async (req, res) => {
-  try {
-    const {
-      computerId,
-      startDate,
-      endDate,
-      startTime,
-      endTime,
-      reason,
-      requiresGPU,
-      gpuMemoryRequired,
-      problemStatement,
-      datasetType,
-      datasetSize,
-      datasetLink,
-      bottleneckExplanation
-    } = req.body;
-
-    // Basic validation
-    if (!computerId || !startDate || !endDate || !startTime || !endTime || !reason) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    // Format validation (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
-      return res.status(400).json({ message: 'Invalid date format (must be YYYY-MM-DD)' });
-    }
-
-    // Calendar check
-    const startParsed = new Date(startDate + 'T00:00:00');
-    const endParsed = new Date(endDate + 'T00:00:00');
-    if (isNaN(startParsed.getTime()) || isNaN(endParsed.getTime())) {
-      return res.status(400).json({ message: 'Invalid start or end date' });
-    }
-
     const policy = await getPolicy();
 
     // Parse dates and times
