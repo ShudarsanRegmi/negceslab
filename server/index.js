@@ -78,25 +78,47 @@ const logRoutes = require("./routes/logs");
 const policyRoutes = require("./routes/policy");
 const { setupSwagger } = require("./swagger");
 
-// Use routes
+// Use routes (supports both /api/prefix and direct /prefix for NGINX/Apache proxy flexibility)
 app.use("/api/auth", authRoutes);
+app.use("/auth", authRoutes);
+
 app.use("/api/computers", computerRoutes);
+app.use("/computers", computerRoutes);
+
 app.use("/api/bookings", bookingRoutes);
+app.use("/bookings", bookingRoutes);
+
 app.use("/api/notifications", notificationRoutes);
+app.use("/notifications", notificationRoutes);
+
 app.use('/api/feedback', feedbackRoutes);
+app.use('/feedback', feedbackRoutes);
+
 app.use('/api/system-details', systemDetailsRoutes);
+app.use('/system-details', systemDetailsRoutes);
+
 app.use('/api/temporary-releases', temporaryReleaseRoutes);
+app.use('/temporary-releases', temporaryReleaseRoutes);
+
 app.use('/api/achievements', achievementRoutes);
+app.use('/achievements', achievementRoutes);
+
 app.use('/api/superadmin', superadminRoutes);
+app.use('/superadmin', superadminRoutes);
+
 app.use("/api/agent", agentRoutes);
+app.use("/agent", agentRoutes);
+
 app.use("/api/logs", logRoutes);
+app.use("/logs", logRoutes);
+
 app.use("/api/policy", policyRoutes);
+app.use("/policy", policyRoutes);
 
 // Setup Swagger UI (only in development/localhost, not in production)
 if (process.env.NODE_ENV !== "production") {
   setupSwagger(app);
 }
-
 
 app.get('/', (req, res)=>{
 	res.status(200).json({'msg': "Welcome to Negces Lab Server API", 'Version': "3.0.3", "lastUpdatedOn": "Saturday 04 July 2026 06:41:14 PM IST"});
@@ -105,10 +127,7 @@ app.get('/', (req, res)=>{
 // Health endpoint
 app.get('/health', async (req, res) => {
 	try {
-		// Check database connection
 		const dbStatus = mongoose.connection.readyState;
-		
-		// Basic health info - production safe
 		const healthInfo = {
 			status: 'healthy',
 			timestamp: new Date().toISOString(),
@@ -118,7 +137,6 @@ app.get('/health', async (req, res) => {
 			}
 		};
 
-		// If database is not connected, return 503 status
 		if (dbStatus !== 1) {
 			healthInfo.status = 'unhealthy';
 			return res.status(503).json(healthInfo);
@@ -132,6 +150,12 @@ app.get('/health', async (req, res) => {
 			version: "3.0.1"
 		});
 	}
+});
+
+// 404 Fallback route logger
+app.use((req, res) => {
+  logger.warn(`404 Route Not Found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ message: `Route ${req.originalUrl} not found` });
 });
 
 // Error handling middleware
