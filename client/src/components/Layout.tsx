@@ -66,6 +66,7 @@ import {
   OpenInNew as OpenInNewIcon,
   AppRegistration as AppRegistrationIcon,
   MarkEmailRead as MarkEmailReadIcon,
+  Policy as PolicyIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -291,14 +292,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       path: "/admin/agent-registration",
       roles: ["admin"],
     },
-    // {
-    //   text: "User Management",
+    {
+      text: "Policy & Settings",
+      icon: <PolicyIcon />,
+      path: "/admin/policy",
+      roles: ["admin"],
+    },
+    // {\n    //   text: "User Management",
     //   icon: <ManageAccountsIcon />,
     //   path: "/admin/users",
     //   roles: ["admin"],
-    // },
+    // }
 
-    
   ];
 
   const getPageTitle = () => {
