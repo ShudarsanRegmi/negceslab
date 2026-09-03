@@ -57,18 +57,6 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			statusLabel := widget.NewLabel("")
 
 			if attendance.CheckedIn {
-				nameEntry.SetText(attendance.StudentName)
-				nameEntry.Disable()
-
-				emailEntry.SetText(attendance.StudentEmail)
-				emailEntry.Disable()
-
-				sessionSelect.SetSelected(attendance.SessionType)
-				sessionSelect.Disable()
-
-				agendaEntry.SetText(attendance.Agenda)
-				agendaEntry.Disable()
-
 				bookingBanner.SetText("🟢 Active Checked-In Session")
 				checkTimeStr := "Just Now"
 				if !attendance.CheckInTime.IsZero() {
@@ -89,16 +77,21 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 					}()
 				})
 
+				nameLabel := widget.NewLabelWithStyle(attendance.StudentName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+				emailLabel := widget.NewLabelWithStyle(attendance.StudentEmail, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+				sessionLabel := widget.NewLabelWithStyle(attendance.SessionType, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+				agendaLabel := widget.NewLabelWithStyle(attendance.Agenda, fyne.TextAlignLeading, fyne.TextStyle{Italic: true})
+
 				tab1Content = container.NewVBox(
 					headerTitle,
 					systemStatus,
 					bookingBanner,
 					widget.NewSeparator(),
 					widget.NewLabelWithStyle("Active Session (Inputs Locked)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-					widget.NewLabel("Student Name:"), nameEntry,
-					widget.NewLabel("Email / Roll No:"), emailEntry,
-					widget.NewLabel("Session Type:"), sessionSelect,
-					widget.NewLabel("What you are doing today:"), agendaEntry,
+					widget.NewLabel("Student Name:"), nameLabel,
+					widget.NewLabel("Email / Roll No:"), emailLabel,
+					widget.NewLabel("Session Type:"), sessionLabel,
+					widget.NewLabel("What you are doing today:"), agendaLabel,
 					layout.NewSpacer(),
 					statusLabel,
 					checkoutBtn,
@@ -129,7 +122,7 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 								SessionType:  sessionType,
 								Agenda:       agenda,
 								CheckedIn:    true,
-								CheckInTime:  s.GetAttendance().CheckInTime,
+								CheckInTime:  time.Now(),
 							})
 						}
 						renderUI()
@@ -150,9 +143,8 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 							emailEntry.SetText(bk.StudentEmail)
 							emailEntry.Disable()
 						}
-						if bk.Agenda != "" && agendaEntry.Text == "" {
-							agendaEntry.SetText(bk.Agenda)
-						}
+						// Keep "What are you doing today?" (Agenda) EMPTY as requested
+						agendaEntry.SetText("")
 						sessionSelect.SetSelected("Scheduled Lab Booking")
 						statusLabel.SetText("Booking auto-detected! Enter what you are doing today and submit.")
 					} else {
@@ -188,9 +180,7 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 		// ─── TAB 2: SYSTEM REGISTRATION ───────────────────────────────────────
 		regTitle := widget.NewLabelWithStyle("System Registration & Settings", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
-		urlEntry := widget.NewEntry()
-		urlEntry.SetText(c.GetConfig().BackendURL)
-		urlEntry.Disable() // Locked per user directive
+		urlLabel := widget.NewLabelWithStyle(c.GetConfig().BackendURL, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 
 		sysSelect := widget.NewSelect([]string{"Fetching lab systems..."}, nil)
 		sysMap := make(map[string]string)
@@ -269,7 +259,7 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 		tab2Content := container.NewVBox(
 			regTitle,
 			widget.NewLabel("Server API Endpoint (Locked):"),
-			urlEntry,
+			urlLabel,
 			widget.NewLabel("Select Lab Computer:"),
 			sysSelect,
 			widget.NewLabel("Registration Secret:"),
