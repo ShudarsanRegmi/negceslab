@@ -241,6 +241,10 @@ const ComputerGrid: React.FC = () => {
       });
       
       setComputers(sortedComputers);
+      setSelectedComputer((prev) => {
+        if (!prev) return null;
+        return sortedComputers.find((c: Computer) => c._id === prev._id) || prev;
+      });
       setBookings(bookingsRes.data);
 
       console.log('=== COMPUTERS WITH BOOKINGS DEBUG ===');
@@ -723,83 +727,95 @@ const ComputerGrid: React.FC = () => {
 
     // Style calendar days based on availability
     useEffect(() => {
+      let isStyling = false;
+
       const styleCalendarDays = () => {
-        const days = document.querySelectorAll('.MuiPickersDay-root');
-        days.forEach((dayElement: any) => {
-          try {
-            const dayText = dayElement.textContent;
-            if (dayText && selectedComputer) {
-              // Use currentViewMonth to get the correct year and month
-              const year = currentViewMonth.getFullYear();
-              const month = currentViewMonth.getMonth();
-              const day = parseInt(dayText);
-              const date = new Date(year, month, day);
-              
-              // Skip styling for disabled dates
-              if (shouldDisableDate(date)) {
-                return; // Skip disabled dates
-              }
-              
-              // Calculate availability for this date
-              const availability = calculateDateAvailability(date, selectedComputer);
-              
-              // Remove existing classes
-              dayElement.classList.remove('fully-available', 'partially-available', 'fully-booked', 'closed-day');
-              
-              // Add appropriate class
-              switch (availability.status) {
-                case 'fully_available':
-                  dayElement.classList.add('fully-available');
-                  break;
-                case 'partially_available':
-                  dayElement.classList.add('partially-available');
-                  break;
-                case 'fully_booked':
-                  dayElement.classList.add('fully-booked');
-                  break;
-                case 'closed':
-                  dayElement.classList.add('closed-day');
-                  break;
-              }
-              
-              // Add temp release indicator
-              if (availability.tempReleaseSlots.length > 0) {
-                let indicator = dayElement.querySelector('.temp-release-indicator');
-                if (!indicator) {
-                  indicator = document.createElement('div');
-                  indicator.className = 'temp-release-indicator';
-                  indicator.style.cssText = `
-                    position: absolute;
-                    top: 2px;
-                    right: 2px;
-                    width: 6px;
-                    height: 6px;
-                    background-color: #9c27b0;
-                    border-radius: 50%;
-                    z-index: 1;
-                  `;
-                  dayElement.appendChild(indicator);
+        if (isStyling) return;
+        isStyling = true;
+
+        try {
+          const days = document.querySelectorAll('.MuiPickersDay-root');
+          days.forEach((dayElement: any) => {
+            try {
+              const dayText = dayElement.textContent;
+              if (dayText && selectedComputer) {
+                // Use currentViewMonth to get the correct year and month
+                const year = currentViewMonth.getFullYear();
+                const month = currentViewMonth.getMonth();
+                const day = parseInt(dayText);
+                const date = new Date(year, month, day);
+                
+                // Skip styling for disabled dates
+                if (shouldDisableDate(date)) {
+                  return; // Skip disabled dates
                 }
-              } else {
-                // Remove temp release indicator if it exists but no temp releases
-                const existingIndicator = dayElement.querySelector('.temp-release-indicator');
-                if (existingIndicator) {
-                  existingIndicator.remove();
+                
+                // Calculate availability for this date
+                const availability = calculateDateAvailability(date, selectedComputer);
+                
+                // Check if class is already correct to avoid unnecessary DOM mutations
+                const targetClass = availability.status.replace('_', '-');
+                if (!dayElement.classList.contains(targetClass)) {
+                  dayElement.classList.remove('fully-available', 'partially-available', 'fully-booked', 'closed-day');
+                  switch (availability.status) {
+                    case 'fully_available':
+                      dayElement.classList.add('fully-available');
+                      break;
+                    case 'partially_available':
+                      dayElement.classList.add('partially-available');
+                      break;
+                    case 'fully_booked':
+                      dayElement.classList.add('fully-booked');
+                      break;
+                    case 'closed':
+                      dayElement.classList.add('closed-day');
+                      break;
+                  }
+                }
+                
+                // Add temp release indicator
+                if (availability.tempReleaseSlots.length > 0) {
+                  let indicator = dayElement.querySelector('.temp-release-indicator');
+                  if (!indicator) {
+                    indicator = document.createElement('div');
+                    indicator.className = 'temp-release-indicator';
+                    indicator.style.cssText = `
+                      position: absolute;
+                      top: 2px;
+                      right: 2px;
+                      width: 6px;
+                      height: 6px;
+                      background-color: #9c27b0;
+                      border-radius: 50%;
+                      z-index: 1;
+                    `;
+                    dayElement.appendChild(indicator);
+                  }
+                } else {
+                  // Remove temp release indicator if it exists but no temp releases
+                  const existingIndicator = dayElement.querySelector('.temp-release-indicator');
+                  if (existingIndicator) {
+                    existingIndicator.remove();
+                  }
                 }
               }
+            } catch (error) {
+              // Ignore errors for invalid dates
             }
-          } catch (error) {
-            // Ignore errors for invalid dates
-          }
-        });
+          });
+        } finally {
+          isStyling = false;
+        }
       };
       
       // Initial styling with a small delay to ensure DOM is ready
       const initialTimeout = setTimeout(styleCalendarDays, 100);
       
-      // Create observer for DOM changes - without debouncing for immediate response
+      // Create observer for DOM changes - only trigger if not currently styling
       const observer = new MutationObserver(() => {
-        setTimeout(styleCalendarDays, 10);
+        if (!isStyling) {
+          styleCalendarDays();
+        }
       });
       
       const calendarElement = document.querySelector('.MuiDateCalendar-root');
