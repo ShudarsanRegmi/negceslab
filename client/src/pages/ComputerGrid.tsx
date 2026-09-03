@@ -33,7 +33,8 @@ import {
   Divider,
   LinearProgress,
 } from "@mui/material";
-import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
+import { DateCalendar, LocalizationProvider, PickersDay } from "@mui/x-date-pickers";
+import { PickersDayProps } from "@mui/x-date-pickers/PickersDay";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import {
   Computer as ComputerIcon,
@@ -725,112 +726,83 @@ const ComputerGrid: React.FC = () => {
              date > maxBookingDate;
     };
 
-    // Style calendar days based on availability
-    useEffect(() => {
-      let isStyling = false;
+    // Custom day renderer for MUI DateCalendar rendering availability natively in React
+    const ServerDay = (props: PickersDayProps<Date> & { selectedComputer?: Computer | null }) => {
+      const { day, selectedComputer, ...other } = props;
 
-      const styleCalendarDays = () => {
-        if (isStyling) return;
-        isStyling = true;
+      let statusBg = undefined;
+      let statusBorder = undefined;
+      let hasTempRelease = false;
 
-        try {
-          const days = document.querySelectorAll('.MuiPickersDay-root');
-          days.forEach((dayElement: any) => {
-            try {
-              const dayText = dayElement.textContent;
-              if (dayText && selectedComputer) {
-                // Use currentViewMonth to get the correct year and month
-                const year = currentViewMonth.getFullYear();
-                const month = currentViewMonth.getMonth();
-                const day = parseInt(dayText);
-                const date = new Date(year, month, day);
-                
-                // Skip styling for disabled dates
-                if (shouldDisableDate(date)) {
-                  return; // Skip disabled dates
-                }
-                
-                // Calculate availability for this date
-                const availability = calculateDateAvailability(date, selectedComputer);
-                
-                // Check if class is already correct to avoid unnecessary DOM mutations
-                const targetClass = availability.status.replace('_', '-');
-                if (!dayElement.classList.contains(targetClass)) {
-                  dayElement.classList.remove('fully-available', 'partially-available', 'fully-booked', 'closed-day');
-                  switch (availability.status) {
-                    case 'fully_available':
-                      dayElement.classList.add('fully-available');
-                      break;
-                    case 'partially_available':
-                      dayElement.classList.add('partially-available');
-                      break;
-                    case 'fully_booked':
-                      dayElement.classList.add('fully-booked');
-                      break;
-                    case 'closed':
-                      dayElement.classList.add('closed-day');
-                      break;
-                  }
-                }
-                
-                // Add temp release indicator
-                if (availability.tempReleaseSlots.length > 0) {
-                  let indicator = dayElement.querySelector('.temp-release-indicator');
-                  if (!indicator) {
-                    indicator = document.createElement('div');
-                    indicator.className = 'temp-release-indicator';
-                    indicator.style.cssText = `
-                      position: absolute;
-                      top: 2px;
-                      right: 2px;
-                      width: 6px;
-                      height: 6px;
-                      background-color: #9c27b0;
-                      border-radius: 50%;
-                      z-index: 1;
-                    `;
-                    dayElement.appendChild(indicator);
-                  }
-                } else {
-                  // Remove temp release indicator if it exists but no temp releases
-                  const existingIndicator = dayElement.querySelector('.temp-release-indicator');
-                  if (existingIndicator) {
-                    existingIndicator.remove();
-                  }
-                }
-              }
-            } catch (error) {
-              // Ignore errors for invalid dates
-            }
-          });
-        } finally {
-          isStyling = false;
+      if (selectedComputer && day) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dateCheck = new Date(day);
+        dateCheck.setHours(0, 0, 0, 0);
+
+        const maxBookingDate = new Date(today);
+        maxBookingDate.setDate(today.getDate() + MAX_BOOKING_AHEAD_DAYS);
+
+        const isPast = dateCheck < today;
+        const isClosed = CLOSED_DAYS.includes(dateCheck.getDay());
+        const isBeyond = dateCheck > maxBookingDate;
+
+        if (!isPast && !isClosed && !isBeyond) {
+          const availability = calculateDateAvailability(day, selectedComputer);
+          switch (availability.status) {
+            case "fully_available":
+              statusBg = "rgba(76, 175, 80, 0.18)";
+              statusBorder = "1px solid rgba(76, 175, 80, 0.4)";
+              break;
+            case "partially_available":
+              statusBg = "rgba(255, 193, 7, 0.18)";
+              statusBorder = "1px solid rgba(255, 193, 7, 0.4)";
+              break;
+            case "fully_booked":
+              statusBg = "rgba(244, 67, 54, 0.18)";
+              statusBorder = "1px solid rgba(244, 67, 54, 0.4)";
+              break;
+            case "closed":
+              statusBg = "rgba(158, 158, 158, 0.1)";
+              statusBorder = "1px solid rgba(158, 158, 158, 0.2)";
+              break;
+          }
+          hasTempRelease = availability.tempReleaseSlots.length > 0;
         }
-      };
-      
-      // Initial styling with a small delay to ensure DOM is ready
-      const initialTimeout = setTimeout(styleCalendarDays, 100);
-      
-      // Create observer for DOM changes - only trigger if not currently styling
-      const observer = new MutationObserver(() => {
-        if (!isStyling) {
-          styleCalendarDays();
-        }
-      });
-      
-      const calendarElement = document.querySelector('.MuiDateCalendar-root');
-      if (calendarElement) {
-        observer.observe(calendarElement, { 
-          childList: true, 
-          subtree: true
-        });
       }
-      
-      return () => {
-        clearTimeout(initialTimeout);
-        observer.disconnect();
-      };
-    }, [selectedComputer, currentViewMonth]); // Depend on currentViewMonth instead of selectedDate
+
+      return (
+        <Box sx={{ position: "relative" }}>
+          <PickersDay
+            {...other}
+            day={day}
+            sx={{
+              backgroundColor: statusBg,
+              border: statusBorder,
+              "&:hover": {
+                backgroundColor: statusBg,
+                filter: "brightness(0.9)",
+              },
+            }}
+          />
+          {hasTempRelease && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 2,
+                right: 2,
+                width: 6,
+                height: 6,
+                backgroundColor: "#9c27b0",
+                borderRadius: "50%",
+                zIndex: 2,
+                pointerEvents: "none",
+              }}
+            />
+          )}
+        </Box>
+      );
+    };
 
     return (
       <Dialog
@@ -862,54 +834,13 @@ const ComputerGrid: React.FC = () => {
                     setCurrentViewMonth(year);
                   }}
                   shouldDisableDate={shouldDisableDate}
-                  sx={{
-                    '& .MuiPickersDay-root': {
-                      position: 'relative',
-                    },
-                    '& .MuiPickersDay-today': {
-                      border: '2px solid',
-                      borderColor: 'primary.main',
-                    },
-                    // Custom styles for different availability states
-                    '& .fully-available': {
-                      backgroundColor: 'rgba(76, 175, 80, 0.15)',
-                      border: '1px solid rgba(76, 175, 80, 0.3)',
-                      '&:hover': {
-                        backgroundColor: 'rgba(76, 175, 80, 0.25)',
-                      }
-                    },
-                    '& .partially-available': {
-                      backgroundColor: 'rgba(255, 193, 7, 0.15)',
-                      border: '1px solid rgba(255, 193, 7, 0.3)',
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 193, 7, 0.25)',
-                      }
-                    },
-                    '& .fully-booked': {
-                      backgroundColor: 'rgba(244, 67, 54, 0.15)',
-                      border: '1px solid rgba(244, 67, 54, 0.3)',
-                      '&:hover': {
-                        backgroundColor: 'rgba(244, 67, 54, 0.25)',
-                      }
-                    },
-                    '& .closed-day': {
-                      backgroundColor: 'rgba(158, 158, 158, 0.1)',
-                      border: '1px solid rgba(158, 158, 158, 0.2)',
-                      color: 'text.disabled',
-                      '&:hover': {
-                        backgroundColor: 'rgba(158, 158, 158, 0.2)',
-                      }
-                    }
+                  slots={{
+                    day: ServerDay
                   }}
                   slotProps={{
                     day: {
-                      sx: (theme) => ({
-                        '&.Mui-selected': {
-                          backgroundColor: `${theme.palette.primary.main} !important`,
-                          color: 'white',
-                        }
-                      })
-                    }
+                      selectedComputer
+                    } as any
                   }}
                 />
               </LocalizationProvider>
