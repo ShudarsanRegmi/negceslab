@@ -7,7 +7,7 @@ const Notification = require('../models/notification');
 const TemporaryRelease = require('../models/temporaryRelease');
 const TemporaryReleaseDetail = require('../models/temporaryReleaseDetail');
 const { verifyToken } = require('../middleware/auth');
-const policy = require('../../shared/policy');
+const { getPolicy } = require('../services/policyService');
 const getLogger = require('../utils/logger');
 const logger = getLogger('bookings');
 const { 
@@ -324,9 +324,38 @@ router.post('/', verifyToken, async (req, res) => {
 
     logger.debug('Pre-creation check - Relevant booking with release', { bookingId: relevantBookingWithRelease?._id });
 
+    // Fetch dynamic lab policy (in-memory RAM cache)
+    const policy = await getPolicy();
+
     // Parse dates and times
     const startDateObj = new Date(startDate + 'T00:00:00');
     const endDateObj = new Date(endDate + 'T00:00:00');
+
+    // 0. Cool-Down Period Validation
+    const coolDownDays = policy.coolDownPeriodDays ?? policy.COOL_DOWN_PERIOD_DAYS ?? 0;
+    if (coolDownDays > 0) {
+      const prevBookings = await Booking.find({
+        userId: req.user.firebaseUid,
+        status: { $in: ['approved', 'completed'] }
+      }).sort({ endDate: -1 });
+
+      if (prevBookings.length > 0) {
+        const latestPrev = prevBookings[0];
+        const prevEndDateObj = new Date(latestPrev.endDate + 'T00:00:00');
+        const coolDownExpiryObj = new Date(prevEndDateObj);
+        coolDownExpiryObj.setDate(coolDownExpiryObj.getDate() + coolDownDays);
+
+        if (startDateObj <= coolDownExpiryObj) {
+          const eligibleDateObj = new Date(coolDownExpiryObj);
+          eligibleDateObj.setDate(eligibleDateObj.getDate() + 1);
+          const eligibleDateStr = eligibleDateObj.toISOString().split('T')[0];
+          return res.status(400).json({
+            message: `Cool-down policy active: You must wait ${coolDownDays} day(s) after your previous booking (ended ${latestPrev.endDate}). You can book again starting ${eligibleDateStr}.`
+          });
+        }
+      }
+    }
+
     // Prevent booking in the past (date)
     const todayDateOnly = new Date();
     todayDateOnly.setHours(0, 0, 0, 0);
@@ -334,10 +363,11 @@ router.post('/', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'Cannot book for a past date.' });
     }
     // Prevent booking too far in the future
+    const maxBookingAheadDays = policy.maxBookingAheadDays ?? policy.MAX_BOOKING_AHEAD_DAYS;
     const maxBookingDate = new Date(todayDateOnly);
-    maxBookingDate.setDate(maxBookingDate.getDate() + policy.MAX_BOOKING_AHEAD_DAYS);
+    maxBookingDate.setDate(maxBookingDate.getDate() + maxBookingAheadDays);
     if (startDateObj > maxBookingDate) {
-      return res.status(400).json({ message: `Bookings can only be made up to ${policy.MAX_BOOKING_AHEAD_DAYS} days in advance.` });
+      return res.status(400).json({ message: `Bookings can only be made up to ${maxBookingAheadDays} days in advance.` });
     }
     // 1. End date must be after or equal to start date
     if (endDateObj < startDateObj) {

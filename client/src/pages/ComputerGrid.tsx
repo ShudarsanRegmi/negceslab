@@ -34,7 +34,7 @@ import {
   LinearProgress,
 } from "@mui/material";
 import { DateCalendar, LocalizationProvider, PickersDay } from "@mui/x-date-pickers";
-import { PickersDayProps } from "@mui/x-date-pickers/PickersDay";
+import type { PickersDayProps } from "@mui/x-date-pickers/PickersDay";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import {
   Computer as ComputerIcon,

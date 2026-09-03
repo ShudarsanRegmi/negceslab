@@ -42,7 +42,7 @@ import {
   parseISO,
   set,
 } from "date-fns";
-import { computersAPI, bookingsAPI, temporaryReleaseAPI } from "../services/api";
+import { computersAPI, bookingsAPI, temporaryReleaseAPI, policyAPI } from "../services/api";
 import Warning from "@mui/icons-material/Warning";
 import Info from "@mui/icons-material/Info";
 import { alpha } from "@mui/material/styles";

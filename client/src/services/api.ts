@@ -248,4 +248,10 @@ export const agentRegistrationAPI = {
     api.post(`/computers/admin/registration-requests/${requestId}/action`, { action }),
 };
 
+// Policy API endpoints
+export const policyAPI = {
+  getPolicy: () => api.get('/policy'),
+  updatePolicy: (data: any) => api.put('/policy', data),
+};
+
 export default api;

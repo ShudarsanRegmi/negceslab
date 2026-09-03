@@ -71,6 +71,7 @@ import { computersAPI, bookingsAPI, temporaryReleaseAPI, agentRegistrationAPI } 
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
 import AdminAnalytics from "../components/AdminAnalytics";
 import BookingUsageExplorer from "../components/BookingUsageExplorer";
+import AdminPolicySettings from "../components/AdminPolicySettings";
 
 interface Computer {
   _id: string;
@@ -710,6 +711,7 @@ const AdminDashboard: React.FC = () => {
         <Tab label="All Bookings" />
         <Tab label="Analytics" />
         <Tab label="Notifications" />
+        <Tab label="Policy & Settings" />
       </Tabs>
 
       {/* Overview Tab */}
@@ -2080,6 +2082,10 @@ const AdminDashboard: React.FC = () => {
           onViewDetails={handleViewDetails}
         />
       )}
+
+      {/* Policy & Settings Tab */}
+      {activeTab === 6 && <AdminPolicySettings />}
+
       {/* Add Computer Dialog */}
       <Dialog
         open={computerDialogOpen}
