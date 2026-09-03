@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getPolicy, updatePolicy } = require("../services/policyService");
-const { verifyToken, verifyAdmin } = require("../middleware/auth");
+const { verifyToken, isAdmin } = require("../middleware/auth");
 
 // Public route: Get current policy settings
 router.get("/", async (req, res) => {
@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
 });
 
 // Admin-only route: Update policy settings
-router.put("/", verifyToken, verifyAdmin, async (req, res) => {
+router.put("/", verifyToken, isAdmin, async (req, res) => {
   try {
     const updatedPolicy = await updatePolicy(req.body, req.user._id);
     res.json({ message: "Lab policy updated successfully", policy: updatedPolicy });
