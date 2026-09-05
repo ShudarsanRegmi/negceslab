@@ -90,6 +90,8 @@ interface TemporaryRelease {
   location: string;
 }
 
+import { useLocation } from "react-router-dom";
+
 const steps = [
   "Select Computer",
   "Choose Dates & Times",
@@ -112,11 +114,18 @@ const datasetSizeUnits = ["MB", "GB", "TB"];
 
 const BookingForm: React.FC = (): ReactElement => {
   const { currentUser } = useAuth();
+  const location = useLocation();
+  const locationState = location.state as { computerId?: string; date?: string } | null;
+
   const [activeStep, setActiveStep] = useState(0);
   const [computers, setComputers] = useState<Computer[]>([]);
-  const [selectedComputer, setSelectedComputer] = useState<string>("");
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [selectedComputer, setSelectedComputer] = useState<string>(locationState?.computerId || "");
+  const [startDate, setStartDate] = useState<Date | null>(
+    locationState?.date ? new Date(locationState.date) : null
+  );
+  const [endDate, setEndDate] = useState<Date | null>(
+    locationState?.date ? new Date(locationState.date) : null
+  );
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [reason, setReason] = useState("");

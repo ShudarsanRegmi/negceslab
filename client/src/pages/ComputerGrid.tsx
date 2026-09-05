@@ -269,7 +269,13 @@ const ComputerGrid: React.FC = () => {
       setComputers(sortedComputers);
       setSelectedComputer((prev) => {
         if (!prev) return null;
-        return sortedComputers.find((c: Computer) => c._id === prev._id) || prev;
+        const found = sortedComputers.find((c: Computer) => c._id === prev._id);
+        if (!found) return null;
+        // Avoid mutating reference if serialized structure is unchanged to prevent dialog re-render flicker
+        if (JSON.stringify(found) === JSON.stringify(prev)) {
+          return prev;
+        }
+        return found;
       });
       setBookings(bookingsRes.data);
 
@@ -591,527 +597,6 @@ const ComputerGrid: React.FC = () => {
         temporaryReleases: temporaryReleases.length > 0 ? temporaryReleases : booking.temporaryReleases
       };
     });
-  };
-
-  const BookingsDialog = () => {
-    if (!selectedComputer) return null;
-
-    const visibleBookings = (selectedComputer.bookings || []).filter(
-      (b) => b.status === "approved" || b.status === "pending"
-    );
-
-    // Enrich bookings with temporary release data
-    const enrichedBookings = enrichBookingsWithTempReleases(visibleBookings, selectedComputer._id);
-
-    return (
-      <Dialog
-        open={showBookingsDialog}
-        onClose={() => setShowBookingsDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="h6">
-              Schedule for {selectedComputer.name}
-            </Typography>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Chip
-                label={`${enrichedBookings.filter(b => b.status === 'approved').length} Approved`}
-                color="success"
-                variant="outlined"
-                size="small"
-              />
-              <Chip
-                label={`${enrichedBookings.filter(b => b.status === 'pending').length} Pending`}
-                color="warning"
-                variant="outlined"
-                size="small"
-              />
-              <Chip
-                label={`${enrichedBookings.reduce((acc, booking) => acc + (booking.temporaryReleases?.length || 0), 0)} Temp Release${enrichedBookings.reduce((acc, booking) => acc + (booking.temporaryReleases?.length || 0), 0) !== 1 ? 's' : ''}`}
-                color="secondary"
-                variant="outlined"
-                size="small"
-              />
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {enrichedBookings.length > 0 ? (
-            <Box sx={{ mt: 1 }}>
-              {enrichedBookings.map((booking) => {
-                const displayName = userRole === 'admin' 
-                  ? (booking.user?.name || booking.userId?.name || "Unknown User")
-                  : "Anonymous";
-
-                return (
-                  <Card key={booking._id} sx={{ mb: 2, border: "1px solid", borderColor: booking.status === "pending" ? "warning.main" : "divider" }}>
-                    <CardContent>
-                      {/* Booking Header */}
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justify: "space-between",
-                          alignItems: "center",
-                          mb: 1.5,
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="h6" fontWeight="bold">
-                            {displayName}
-                          </Typography>
-                          {booking.status === "pending" && (
-                            <Chip label="Pending Approval" color="warning" size="small" variant="filled" sx={{ fontWeight: 600 }} />
-                          )}
-                        </Box>
-                        <Chip
-                          label={booking.status.toUpperCase()}
-                          color={getStatusColor(booking.status)}
-                          size="small"
-                          variant={booking.status === "approved" ? "filled" : "outlined"}
-                        />
-                      </Box>
-
-                      {/* Booking Details */}
-                      <Box sx={{ mb: 1 }}>
-                        <Typography variant="body2" color="text.primary" fontWeight={600}>
-                          Dates: {format(new Date(booking.startDate), "MMM d, yyyy")} – {format(new Date(booking.endDate), "MMM d, yyyy")}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Time Slot: {booking.startTime} – {booking.endTime}
-                        </Typography>
-                      </Box>
-
-                    {/* Temporary Releases for this booking */}
-                    {booking.temporaryReleases && booking.temporaryReleases.length > 0 && (
-                      <>
-                        <Divider sx={{ my: 2 }} />
-                        <Box>
-                          <Typography variant="subtitle2" sx={{ mb: 1, color: "secondary.main" }}>
-                            Released Dates:
-                          </Typography>
-                          
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {booking.temporaryReleases
-                              ?.flatMap(release => release.releasedDates)
-                              .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
-                              .map((dateStr, index) => {
-                                const totalDates = booking.temporaryReleases?.flatMap(release => release.releasedDates) || [];
-                                return (
-                                  <Typography key={index} variant="body2" color="secondary">
-                                    {format(new Date(dateStr), "MMM d")}
-                                    {index < totalDates.length - 1 && ", "}
-                                  </Typography>
-                                );
-                              })
-                            }
-                          </Box>
-                        </Box>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </Box>
-          ) : (
-            <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
-              <Typography variant="body1">No active bookings</Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => {
-              setShowBookingsDialog(false);
-              handleCalendarView(selectedComputer);
-            }}
-            startIcon={<CalendarIcon />}
-            variant="outlined"
-          >
-            Calendar View
-          </Button>
-          <Button onClick={() => setShowBookingsDialog(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    );
-  };
-
-  // Calendar Dialog Component
-  const CalendarDialog = () => {
-    if (!selectedComputer) return null;
-
-    const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-    const [selectedDateAvailability, setSelectedDateAvailability] = useState<DateAvailability | null>(null);
-    const [currentViewMonth, setCurrentViewMonth] = useState<Date>(new Date());
-
-    // Initialize with today's date when dialog opens
-    useEffect(() => {
-      if (selectedComputer && !selectedDate) {
-        const today = new Date();
-        setSelectedDate(today);
-        setCurrentViewMonth(today);
-        const availability = calculateDateAvailability(today, selectedComputer);
-        setSelectedDateAvailability(availability);
-      }
-    }, [selectedComputer]);
-
-    // Update availability whenever selected date changes
-    useEffect(() => {
-      if (selectedDate && selectedComputer) {
-        const availability = calculateDateAvailability(selectedDate, selectedComputer);
-        setSelectedDateAvailability(availability);
-      }
-    }, [selectedDate, selectedComputer]);
-
-    const handleDateClick = (date: Date) => {
-      setSelectedDate(date);
-      const availability = calculateDateAvailability(date, selectedComputer);
-      setSelectedDateAvailability(availability);
-    };
-
-    // Function to check if a date should be disabled
-    const shouldDisableDate = (date: Date) => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      date.setHours(0, 0, 0, 0);
-      
-      // Calculate max booking date
-      const maxBookingDate = new Date(today);
-      maxBookingDate.setDate(today.getDate() + MAX_BOOKING_AHEAD_DAYS);
-      
-      // Disable past dates, Sundays, and dates beyond booking limit
-      return date < today || 
-             CLOSED_DAYS.includes(date.getDay()) || 
-             date > maxBookingDate;
-    };
-
-    // Custom day renderer for MUI DateCalendar rendering availability natively in React
-    const ServerDay = (props: PickersDayProps<Date> & { selectedComputer?: Computer | null }) => {
-      const { day, selectedComputer, ...other } = props;
-
-      let statusBg = undefined;
-      let statusBorder = undefined;
-      let hasTempRelease = false;
-
-      if (selectedComputer && day) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const dateCheck = new Date(day);
-        dateCheck.setHours(0, 0, 0, 0);
-
-        const maxBookingDate = new Date(today);
-        maxBookingDate.setDate(today.getDate() + MAX_BOOKING_AHEAD_DAYS);
-
-        const isPast = dateCheck < today;
-        const isClosed = CLOSED_DAYS.includes(dateCheck.getDay());
-        const isBeyond = dateCheck > maxBookingDate;
-
-        if (!isPast && !isClosed && !isBeyond) {
-          const availability = calculateDateAvailability(day, selectedComputer);
-          switch (availability.status) {
-            case "fully_available":
-              statusBg = "rgba(76, 175, 80, 0.18)";
-              statusBorder = "1px solid rgba(76, 175, 80, 0.4)";
-              break;
-            case "partially_available":
-              statusBg = "rgba(255, 193, 7, 0.18)";
-              statusBorder = "1px solid rgba(255, 193, 7, 0.4)";
-              break;
-            case "fully_booked":
-              statusBg = "rgba(244, 67, 54, 0.18)";
-              statusBorder = "1px solid rgba(244, 67, 54, 0.4)";
-              break;
-            case "closed":
-              statusBg = "rgba(158, 158, 158, 0.1)";
-              statusBorder = "1px solid rgba(158, 158, 158, 0.2)";
-              break;
-          }
-          hasTempRelease = availability.tempReleaseSlots.length > 0;
-        }
-      }
-
-      return (
-        <Box sx={{ position: "relative" }}>
-          <PickersDay
-            {...other}
-            day={day}
-            sx={{
-              backgroundColor: statusBg,
-              border: statusBorder,
-              "&:hover": {
-                backgroundColor: statusBg,
-                filter: "brightness(0.9)",
-              },
-            }}
-          />
-          {hasTempRelease && (
-            <Box
-              sx={{
-                position: "absolute",
-                top: 2,
-                right: 2,
-                width: 6,
-                height: 6,
-                backgroundColor: "#9c27b0",
-                borderRadius: "50%",
-                zIndex: 2,
-                pointerEvents: "none",
-              }}
-            />
-          )}
-        </Box>
-      );
-    };
-
-    return (
-      <Dialog
-        open={showCalendarDialog}
-        onClose={() => setShowCalendarDialog(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <CalendarIcon />
-            Availability Calendar - {selectedComputer.name}
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
-            {/* Calendar */}
-            <Box sx={{ flex: 1 }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DateCalendar
-                  value={selectedDate}
-                  onChange={(newValue) => {
-                    if (newValue) handleDateClick(newValue);
-                  }}
-                  onMonthChange={(month) => {
-                    setCurrentViewMonth(month);
-                  }}
-                  onYearChange={(year) => {
-                    setCurrentViewMonth(year);
-                  }}
-                  shouldDisableDate={shouldDisableDate}
-                  slots={{
-                    day: ServerDay
-                  }}
-                  slotProps={{
-                    day: {
-                      selectedComputer
-                    } as any
-                  }}
-                />
-              </LocalizationProvider>
-              
-              {/* Legend */}
-              <Box sx={{ mt: 2, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                <Typography variant="subtitle2" gutterBottom>Legend:</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 12, height: 12, backgroundColor: 'rgba(76, 175, 80, 0.6)', borderRadius: '50%' }} />
-                    <Typography variant="caption">Fully Available</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 12, height: 12, backgroundColor: 'rgba(255, 193, 7, 0.6)', borderRadius: '50%' }} />
-                    <Typography variant="caption">Partially Available</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 12, height: 12, backgroundColor: 'rgba(244, 67, 54, 0.6)', borderRadius: '50%' }} />
-                    <Typography variant="caption">Fully Booked</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 12, height: 12, backgroundColor: 'rgba(158, 158, 158, 0.6)', borderRadius: '50%' }} />
-                    <Typography variant="caption">Closed</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 12, height: 12, backgroundColor: 'rgba(156, 39, 176, 0.6)', borderRadius: '50%' }} />
-                    <Typography variant="caption">Temp Release</Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Selected Date Details */}
-            <Box sx={{ flex: 1, minWidth: 300 }}>
-              {selectedDate && selectedDateAvailability ? (
-                <Box>
-                  <Typography variant="h6" gutterBottom>
-                    {format(selectedDate, "MMMM d, yyyy")}
-                  </Typography>
-                  
-                  {/* Status Chip */}
-                  <Box sx={{ mb: 2 }}>
-                    <Chip
-                      label={selectedDateAvailability.status.replace('_', ' ').toUpperCase()}
-                      color={
-                        selectedDateAvailability.status === 'fully_available' ? 'success' :
-                        selectedDateAvailability.status === 'partially_available' ? 'warning' :
-                        selectedDateAvailability.status === 'fully_booked' ? 'error' : 'default'
-                      }
-                      variant="outlined"
-                    />
-                  </Box>
-
-                  {selectedDateAvailability.status === 'closed' ? (
-                    <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
-                      <Typography variant="body1">Lab is closed on this day</Typography>
-                    </Box>
-                  ) : (
-                    <Box>
-                      {/* Booked Slots */}
-                      {selectedDateAvailability.bookedSlots.length > 0 && (
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle1" gutterBottom color="error">
-                            Approved Booked Slots ({selectedDateAvailability.bookedSlots.length})
-                          </Typography>
-                          {selectedDateAvailability.bookedSlots.map((slot, index) => (
-                            <Card key={index} sx={{ mb: 1, p: 2, backgroundColor: 'rgba(244, 67, 54, 0.05)' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <BookIcon color="error" fontSize="small" />
-                                <Typography variant="body2" fontWeight="bold">
-                                  {slot.startTime} - {slot.endTime}
-                                </Typography>
-                              </Box>
-                              <Typography variant="body2" color="text.secondary">
-                                User: {userRole === 'admin' ? (slot.booking.user?.name || slot.booking.userId?.name || "Unknown") : "Anonymous"}
-                              </Typography>
-                            </Card>
-                          ))}
-                        </Box>
-                      )}
-
-                      {/* Pending Slots */}
-                      {selectedDateAvailability.pendingSlots.length > 0 && (
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle1" gutterBottom color="warning.main" fontWeight={700}>
-                            Pending Requests ({selectedDateAvailability.pendingSlots.length})
-                          </Typography>
-                          {selectedDateAvailability.pendingSlots.map((slot, index) => (
-                            <Card key={index} sx={{ mb: 1, p: 2, backgroundColor: 'rgba(255, 152, 0, 0.08)', border: '1px dashed #ffa726' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <BookIcon color="warning" fontSize="small" />
-                                  <Typography variant="body2" fontWeight="bold">
-                                    {slot.startTime} - {slot.endTime}
-                                  </Typography>
-                                </Box>
-                                <Chip label="Pending Approval" color="warning" size="small" variant="outlined" />
-                              </Box>
-                              <Typography variant="body2" color="text.secondary">
-                                User: {userRole === 'admin' ? (slot.booking.user?.name || slot.booking.userId?.name || "Unknown") : "Anonymous"}
-                              </Typography>
-                            </Card>
-                          ))}
-                        </Box>
-                      )}
-
-                      {/* Temporary Release Slots */}
-                      {selectedDateAvailability.tempReleaseSlots.length > 0 && (
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle1" gutterBottom color="secondary">
-                            Available (Temporary Release) ({selectedDateAvailability.tempReleaseSlots.length})
-                          </Typography>
-                          {selectedDateAvailability.tempReleaseSlots.map((slot, index) => (
-                            <Card key={index} sx={{ mb: 1, p: 2, backgroundColor: 'rgba(156, 39, 176, 0.05)' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <TempReleaseIcon color="secondary" fontSize="small" />
-                                <Typography variant="body2" fontWeight="bold">
-                                  {slot.startTime} - {slot.endTime}
-                                </Typography>
-                                <Chip
-                                  label="Available"
-                                  color="secondary"
-                                  size="small"
-                                />
-                              </Box>
-                              <Typography variant="body2" color="text.secondary">
-                                Released: {slot.release.reason}
-                              </Typography>
-                            </Card>
-                          ))}
-                          <Button
-                            variant="contained"
-                            color="secondary"
-                            startIcon={<BookIcon />}
-                            fullWidth
-                            onClick={() => navigate("/book")}
-                            sx={{ mt: 1 }}
-                          >
-                            Book This Slot
-                          </Button>
-                        </Box>
-                      )}
-
-                      {/* Fully Available */}
-                      {selectedDateAvailability.status === 'fully_available' && (
-                        <Box sx={{ py: 4, textAlign: "center" }}>
-                          <CheckIcon sx={{ fontSize: 48, mb: 2, color: 'success.main' }} />
-                          <Typography variant="body1" gutterBottom>
-                            Fully Available
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Lab hours: {policy.labOpenHour}:{policy.labOpenMinute.toString().padStart(2, '0')} - {policy.labCloseHour}:{policy.labCloseMinute.toString().padStart(2, '0')}
-                          </Typography>
-                          <Button
-                            variant="contained"
-                            startIcon={<BookIcon />}
-                            onClick={() => navigate("/book")}
-                            sx={{ mt: 2 }}
-                          >
-                            Book Computer
-                          </Button>
-                        </Box>
-                      )}
-
-                      {/* Partially Available */}
-                      {selectedDateAvailability.status === 'partially_available' && selectedDateAvailability.tempReleaseSlots.length === 0 && (
-                        <Box sx={{ textAlign: "center", py: 2 }}>
-                          <Typography variant="body1" gutterBottom>
-                            Some slots are still available
-                          </Typography>
-                          <Button
-                            variant="outlined"
-                            startIcon={<BookIcon />}
-                            onClick={() => navigate("/book")}
-                          >
-                            Check Available Slots
-                          </Button>
-                        </Box>
-                      )}
-
-                      {/* Fully Booked */}
-                      {selectedDateAvailability.status === 'fully_booked' && (
-                        <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
-                          <CancelIcon sx={{ fontSize: 48, mb: 2, color: 'error.main' }} />
-                          <Typography variant="body1">
-                            Fully Booked
-                          </Typography>
-                          <Typography variant="body2">
-                            No available slots on this date
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  )}
-                </Box>
-              ) : (
-                <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
-                  <Typography variant="body1">
-                    Click on a date to view details
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowCalendarDialog(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    );
   };
 
 
@@ -1564,8 +1049,27 @@ const ComputerGrid: React.FC = () => {
         </Box>
       </Paper>
 
-      <BookingsDialog />
-      <CalendarDialog />
+      <BookingsDialogComponent
+        open={showBookingsDialog}
+        selectedComputer={selectedComputer}
+        userRole={userRole}
+        onClose={() => setShowBookingsDialog(false)}
+        onSwitchToCalendar={(computer) => {
+          setShowBookingsDialog(false);
+          handleCalendarView(computer);
+        }}
+        enrichBookingsWithTempReleases={enrichBookingsWithTempReleases}
+        getStatusColor={getStatusColor}
+      />
+      <CalendarDialogComponent
+        open={showCalendarDialog}
+        selectedComputer={selectedComputer}
+        userRole={userRole}
+        policy={policy}
+        onClose={() => setShowCalendarDialog(false)}
+        onNavigateBook={(computerId, date) => navigate("/book", { state: { computerId, date: date ? date.toISOString() : undefined } })}
+        calculateDateAvailability={calculateDateAvailability}
+      />
 
       {filteredComputers.length === 0 && (
         <Box sx={{ textAlign: "center", py: 8 }}>
@@ -1581,4 +1085,493 @@ const ComputerGrid: React.FC = () => {
   );
 };
 
+/* ── Standalone Dialog Components (Prevents unmounting/flicker on parent re-renders) ── */
+
+interface BookingsDialogProps {
+  open: boolean;
+  selectedComputer: Computer | null;
+  userRole: string;
+  onClose: () => void;
+  onSwitchToCalendar: (computer: Computer) => void;
+  enrichBookingsWithTempReleases: (bookings: Booking[], computerId: string) => Booking[];
+  getStatusColor: (status: string) => any;
+}
+
+const BookingsDialogComponent: React.FC<BookingsDialogProps> = React.memo(({
+  open,
+  selectedComputer,
+  userRole,
+  onClose,
+  onSwitchToCalendar,
+  enrichBookingsWithTempReleases,
+  getStatusColor,
+}) => {
+  if (!selectedComputer) return null;
+
+  const visibleBookings = (selectedComputer.bookings || []).filter(
+    (b) => b.status === "approved" || b.status === "pending"
+  );
+
+  const enrichedBookings = enrichBookingsWithTempReleases(visibleBookings, selectedComputer._id);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Typography variant="h6">
+            Schedule for {selectedComputer.name}
+          </Typography>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Chip
+              label={`${enrichedBookings.filter((b) => b.status === "approved").length} Approved`}
+              color="success"
+              variant="outlined"
+              size="small"
+            />
+            <Chip
+              label={`${enrichedBookings.filter((b) => b.status === "pending").length} Pending`}
+              color="warning"
+              variant="outlined"
+              size="small"
+            />
+            <Chip
+              label={`${enrichedBookings.reduce((acc, booking) => acc + (booking.temporaryReleases?.length || 0), 0)} Temp Release${enrichedBookings.reduce((acc, booking) => acc + (booking.temporaryReleases?.length || 0), 0) !== 1 ? "s" : ""}`}
+              color="secondary"
+              variant="outlined"
+              size="small"
+            />
+          </Box>
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        {enrichedBookings.length > 0 ? (
+          <Box sx={{ mt: 1 }}>
+            {enrichedBookings.map((booking) => {
+              const displayName =
+                userRole === "admin"
+                  ? booking.user?.name || booking.userId?.name || "Unknown User"
+                  : "Anonymous";
+
+              return (
+                <Card key={booking._id} sx={{ mb: 2, border: "1px solid", borderColor: booking.status === "pending" ? "warning.main" : "divider" }}>
+                  <CardContent>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="h6" fontWeight="bold">
+                          {displayName}
+                        </Typography>
+                        {booking.status === "pending" && (
+                          <Chip label="Pending Approval" color="warning" size="small" variant="filled" sx={{ fontWeight: 600 }} />
+                        )}
+                      </Box>
+                      <Chip
+                        label={booking.status.toUpperCase()}
+                        color={getStatusColor(booking.status)}
+                        size="small"
+                        variant={booking.status === "approved" ? "filled" : "outlined"}
+                      />
+                    </Box>
+
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="body2" color="text.primary" fontWeight={600}>
+                        Dates: {format(new Date(booking.startDate), "MMM d, yyyy")} – {format(new Date(booking.endDate), "MMM d, yyyy")}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Time Slot: {booking.startTime} – {booking.endTime}
+                      </Typography>
+                    </Box>
+
+                    {booking.temporaryReleases && booking.temporaryReleases.length > 0 && (
+                      <>
+                        <Divider sx={{ my: 2 }} />
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ mb: 1, color: "secondary.main" }}>
+                            Released Dates:
+                          </Typography>
+                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                            {booking.temporaryReleases
+                              ?.flatMap((release) => release.releasedDates)
+                              .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+                              .map((dateStr, index) => {
+                                const totalDates = booking.temporaryReleases?.flatMap((release) => release.releasedDates) || [];
+                                return (
+                                  <Typography key={index} variant="body2" color="secondary">
+                                    {format(new Date(dateStr), "MMM d")}
+                                    {index < totalDates.length - 1 && ", "}
+                                  </Typography>
+                                );
+                              })}
+                          </Box>
+                        </Box>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </Box>
+        ) : (
+          <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+            <Typography variant="body1">No active bookings</Typography>
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button
+          onClick={() => onSwitchToCalendar(selectedComputer)}
+          startIcon={<CalendarIcon />}
+          variant="outlined"
+        >
+          Calendar View
+        </Button>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
+});
+
+interface CalendarDialogProps {
+  open: boolean;
+  selectedComputer: Computer | null;
+  userRole: string;
+  policy: any;
+  onClose: () => void;
+  onNavigateBook: (computerId?: string, date?: Date | null) => void;
+  calculateDateAvailability: (date: Date, computer: Computer) => DateAvailability;
+}
+
+const CalendarDialogComponent: React.FC<CalendarDialogProps> = React.memo(({
+  open,
+  selectedComputer,
+  userRole,
+  policy,
+  onClose,
+  onNavigateBook,
+  calculateDateAvailability,
+}) => {
+  if (!selectedComputer) return null;
+
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [selectedDateAvailability, setSelectedDateAvailability] = useState<DateAvailability | null>(null);
+
+  useEffect(() => {
+    if (open && selectedComputer) {
+      const targetDate = selectedDate || new Date();
+      setSelectedDate(targetDate);
+      const availability = calculateDateAvailability(targetDate, selectedComputer);
+      setSelectedDateAvailability(availability);
+    }
+  }, [open, selectedComputer]);
+
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+    const availability = calculateDateAvailability(date, selectedComputer);
+    setSelectedDateAvailability(availability);
+  };
+
+  const shouldDisableDate = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateCheck = new Date(date);
+    dateCheck.setHours(0, 0, 0, 0);
+
+    const maxBookingDate = new Date(today);
+    maxBookingDate.setDate(today.getDate() + MAX_BOOKING_AHEAD_DAYS);
+
+    return dateCheck < today || CLOSED_DAYS.includes(dateCheck.getDay()) || dateCheck > maxBookingDate;
+  };
+
+  const ServerDay = (props: PickersDayProps<Date> & { selectedComputer?: Computer | null }) => {
+    const { day, selectedComputer: comp, ...other } = props;
+
+    let statusBg = undefined;
+    let statusBorder = undefined;
+    let hasTempRelease = false;
+
+    const targetComp = comp || selectedComputer;
+
+    if (targetComp && day) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dateCheck = new Date(day);
+      dateCheck.setHours(0, 0, 0, 0);
+
+      const maxBookingDate = new Date(today);
+      maxBookingDate.setDate(today.getDate() + MAX_BOOKING_AHEAD_DAYS);
+
+      const isPast = dateCheck < today;
+      const isClosed = CLOSED_DAYS.includes(dateCheck.getDay());
+      const isBeyond = dateCheck > maxBookingDate;
+
+      if (!isPast && !isClosed && !isBeyond) {
+        const availability = calculateDateAvailability(day, targetComp);
+        switch (availability.status) {
+          case "fully_available":
+            statusBg = "rgba(76, 175, 80, 0.18)";
+            statusBorder = "1px solid rgba(76, 175, 80, 0.4)";
+            break;
+          case "partially_available":
+            statusBg = "rgba(255, 193, 7, 0.18)";
+            statusBorder = "1px solid rgba(255, 193, 7, 0.4)";
+            break;
+          case "fully_booked":
+            statusBg = "rgba(244, 67, 54, 0.18)";
+            statusBorder = "1px solid rgba(244, 67, 54, 0.4)";
+            break;
+          case "closed":
+            statusBg = "rgba(158, 158, 158, 0.1)";
+            statusBorder = "1px solid rgba(158, 158, 158, 0.2)";
+            break;
+        }
+        hasTempRelease = availability.tempReleaseSlots.length > 0;
+      }
+    }
+
+    return (
+      <Box sx={{ position: "relative" }}>
+        <PickersDay
+          {...other}
+          day={day}
+          sx={{
+            backgroundColor: statusBg,
+            border: statusBorder,
+            "&:hover": {
+              backgroundColor: statusBg,
+              filter: "brightness(0.9)",
+            },
+          }}
+        />
+        {hasTempRelease && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 2,
+              right: 2,
+              width: 6,
+              height: 6,
+              backgroundColor: "#9c27b0",
+              borderRadius: "50%",
+              zIndex: 2,
+              pointerEvents: "none",
+            }}
+          />
+        )}
+      </Box>
+    );
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <CalendarIcon />
+          Availability Calendar - {selectedComputer.name}
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
+          <Box sx={{ flex: 1 }}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DateCalendar
+                value={selectedDate}
+                onChange={(newValue) => {
+                  if (newValue) handleDateClick(newValue);
+                }}
+                shouldDisableDate={shouldDisableDate}
+                slots={{
+                  day: ServerDay,
+                }}
+                slotProps={{
+                  day: {
+                    selectedComputer,
+                  } as any,
+                }}
+              />
+            </LocalizationProvider>
+
+            <Box sx={{ mt: 2, p: 2, border: 1, borderColor: "divider", borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>Legend:</Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, backgroundColor: "rgba(76, 175, 80, 0.6)", borderRadius: "50%" }} />
+                  <Typography variant="caption">Fully Available</Typography>
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, backgroundColor: "rgba(255, 193, 7, 0.6)", borderRadius: "50%" }} />
+                  <Typography variant="caption">Partially Available</Typography>
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, backgroundColor: "rgba(244, 67, 54, 0.6)", borderRadius: "50%" }} />
+                  <Typography variant="caption">Fully Booked</Typography>
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, backgroundColor: "rgba(158, 158, 158, 0.6)", borderRadius: "50%" }} />
+                  <Typography variant="caption">Closed</Typography>
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, backgroundColor: "rgba(156, 39, 176, 0.6)", borderRadius: "50%" }} />
+                  <Typography variant="caption">Temp Release</Typography>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+
+          <Box sx={{ flex: 1, minWidth: 300 }}>
+            {selectedDate && selectedDateAvailability ? (
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  {format(selectedDate, "MMMM d, yyyy")}
+                </Typography>
+
+                <Box sx={{ mb: 2 }}>
+                  <Chip
+                    label={selectedDateAvailability.status.replace("_", " ").toUpperCase()}
+                    color={
+                      selectedDateAvailability.status === "fully_available"
+                        ? "success"
+                        : selectedDateAvailability.status === "partially_available"
+                        ? "warning"
+                        : selectedDateAvailability.status === "fully_booked"
+                        ? "error"
+                        : "default"
+                    }
+                    variant="outlined"
+                  />
+                </Box>
+
+                {selectedDateAvailability.status === "closed" ? (
+                  <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+                    <Typography variant="body1">Lab is closed on this day</Typography>
+                  </Box>
+                ) : (
+                  <Box>
+                    {selectedDateAvailability.bookedSlots.length > 0 && (
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle1" gutterBottom color="error">
+                          Approved Booked Slots ({selectedDateAvailability.bookedSlots.length})
+                        </Typography>
+                        {selectedDateAvailability.bookedSlots.map((slot, index) => (
+                          <Card key={index} sx={{ mb: 1, p: 2, backgroundColor: "rgba(244, 67, 54, 0.05)" }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                              <BookIcon color="error" fontSize="small" />
+                              <Typography variant="body2" fontWeight="bold">
+                                {slot.startTime} - {slot.endTime}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                              User: {userRole === "admin" ? slot.booking.user?.name || slot.booking.userId?.name || "Unknown" : "Anonymous"}
+                            </Typography>
+                          </Card>
+                        ))}
+                      </Box>
+                    )}
+
+                    {selectedDateAvailability.pendingSlots.length > 0 && (
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle1" gutterBottom color="warning.main" fontWeight={700}>
+                          Pending Requests ({selectedDateAvailability.pendingSlots.length})
+                        </Typography>
+                        {selectedDateAvailability.pendingSlots.map((slot, index) => (
+                          <Card key={index} sx={{ mb: 1, p: 2, backgroundColor: "rgba(255, 152, 0, 0.08)", border: "1px dashed #ffa726" }}>
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                <BookIcon color="warning" fontSize="small" />
+                                <Typography variant="body2" fontWeight="bold">
+                                  {slot.startTime} - {slot.endTime}
+                                </Typography>
+                              </Box>
+                              <Chip label="Pending Approval" color="warning" size="small" variant="outlined" />
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                              User: {userRole === "admin" ? slot.booking.user?.name || slot.booking.userId?.name || "Unknown" : "Anonymous"}
+                            </Typography>
+                          </Card>
+                        ))}
+                      </Box>
+                    )}
+
+                    {selectedDateAvailability.tempReleaseSlots.length > 0 && (
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle1" gutterBottom color="secondary">
+                          Available (Temporary Release) ({selectedDateAvailability.tempReleaseSlots.length})
+                        </Typography>
+                        {selectedDateAvailability.tempReleaseSlots.map((slot, index) => (
+                          <Card key={index} sx={{ mb: 1, p: 2, backgroundColor: "rgba(156, 39, 176, 0.05)" }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                              <TempReleaseIcon color="secondary" fontSize="small" />
+                              <Typography variant="body2" fontWeight="bold">
+                                {slot.startTime} - {slot.endTime}
+                              </Typography>
+                              <Chip label="Available" color="secondary" size="small" />
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Released: {slot.release.reason}
+                            </Typography>
+                          </Card>
+                        ))}
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          startIcon={<BookIcon />}
+                          fullWidth
+                          onClick={() => onNavigateBook(selectedComputer._id, selectedDate)}
+                          sx={{ mt: 1 }}
+                        >
+                          Book This Slot
+                        </Button>
+                      </Box>
+                    )}
+
+                    {selectedDateAvailability.status === "fully_available" && (
+                      <Box sx={{ py: 4, textAlign: "center" }}>
+                        <CheckIcon sx={{ fontSize: 48, mb: 2, color: "success.main" }} />
+                        <Typography variant="body1" gutterBottom>
+                          Fully Available
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Lab hours: {policy.labOpenHour}:{policy.labOpenMinute.toString().padStart(2, "0")} - {policy.labCloseHour}:{policy.labCloseMinute.toString().padStart(2, "0")}
+                        </Typography>
+                        <Button variant="contained" startIcon={<BookIcon />} onClick={() => onNavigateBook(selectedComputer._id, selectedDate)} sx={{ mt: 2 }}>
+                          Book Computer
+                        </Button>
+                      </Box>
+                    )}
+
+                    {selectedDateAvailability.status === "partially_available" && selectedDateAvailability.tempReleaseSlots.length === 0 && (
+                      <Box sx={{ textAlign: "center", py: 2 }}>
+                        <Typography variant="body1" gutterBottom>
+                          Some slots are still available
+                        </Typography>
+                        <Button variant="outlined" startIcon={<BookIcon />} onClick={() => onNavigateBook(selectedComputer._id, selectedDate)}>
+                          Check Available Slots
+                        </Button>
+                      </Box>
+                    )}
+
+                    {selectedDateAvailability.status === "fully_booked" && (
+                      <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+                        <CancelIcon sx={{ fontSize: 48, mb: 2, color: "error.main" }} />
+                        <Typography variant="body1">Fully Booked</Typography>
+                        <Typography variant="body2">No available slots on this date</Typography>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            ) : (
+              <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+                <Typography variant="body1">Click on a date to view details</Typography>
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
+});
+
 export default ComputerGrid;
+
