@@ -166,6 +166,7 @@ interface DateAvailability {
   date: string;
   status: "fully_available" | "partially_available" | "fully_booked" | "closed";
   bookedSlots: { startTime: string; endTime: string; booking: Booking }[];
+  pendingSlots: { startTime: string; endTime: string; booking: Booking }[];
   availableSlots: { startTime: string; endTime: string }[];
   tempReleaseSlots: { startTime: string; endTime: string; release: TemporaryRelease }[];
 }
@@ -425,12 +426,13 @@ const ComputerGrid: React.FC = () => {
         date: dateStr,
         status: "closed",
         bookedSlots: [],
+        pendingSlots: [],
         availableSlots: [],
         tempReleaseSlots: []
       };
     }
 
-    // Get all bookings for this computer that cover this date (only approved bookings)
+    // Get all approved bookings for this computer that cover this date
     const dayBookings = (computer.bookings || []).filter(booking => {
       if (booking.status !== "approved") return false;
       
@@ -439,10 +441,26 @@ const ComputerGrid: React.FC = () => {
       return date >= startDate && date <= endDate;
     });
 
-    console.log(`Found ${dayBookings.length} bookings covering this date`);
+    // Get pending bookings for this computer covering this date
+    const dayPendingBookings = (computer.bookings || []).filter(booking => {
+      if (booking.status !== "pending") return false;
+
+      const startDate = parseISO(booking.startDate);
+      const endDate = parseISO(booking.endDate);
+      return date >= startDate && date <= endDate;
+    });
 
     const bookedSlots: { startTime: string; endTime: string; booking: Booking }[] = [];
+    const pendingSlots: { startTime: string; endTime: string; booking: Booking }[] = [];
     const tempReleaseSlots: { startTime: string; endTime: string; release: any }[] = [];
+
+    dayPendingBookings.forEach((booking) => {
+      pendingSlots.push({
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        booking,
+      });
+    });
 
     // Process each booking to determine if it's booked or temporarily released
     dayBookings.forEach((booking, index) => {
@@ -542,6 +560,7 @@ const ComputerGrid: React.FC = () => {
       date: dateStr,
       status,
       bookedSlots,
+      pendingSlots,
       availableSlots,
       tempReleaseSlots
     };
@@ -576,12 +595,12 @@ const ComputerGrid: React.FC = () => {
   const BookingsDialog = () => {
     if (!selectedComputer) return null;
 
-    const activeBookings = (selectedComputer.bookings || []).filter(
-      (b) => b.status === "approved"
+    const visibleBookings = (selectedComputer.bookings || []).filter(
+      (b) => b.status === "approved" || b.status === "pending"
     );
 
     // Enrich bookings with temporary release data
-    const enrichedBookings = enrichBookingsWithTempReleases(activeBookings, selectedComputer._id);
+    const enrichedBookings = enrichBookingsWithTempReleases(visibleBookings, selectedComputer._id);
 
     return (
       <Dialog
@@ -597,8 +616,14 @@ const ComputerGrid: React.FC = () => {
             </Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Chip
-                label={`${enrichedBookings.length} Booking${enrichedBookings.length !== 1 ? 's' : ''}`}
-                color="primary"
+                label={`${enrichedBookings.filter(b => b.status === 'approved').length} Approved`}
+                color="success"
+                variant="outlined"
+                size="small"
+              />
+              <Chip
+                label={`${enrichedBookings.filter(b => b.status === 'pending').length} Pending`}
+                color="warning"
                 variant="outlined"
                 size="small"
               />
@@ -613,38 +638,49 @@ const ComputerGrid: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           {enrichedBookings.length > 0 ? (
-            <Box>
-              {enrichedBookings.map((booking) => (
-                <Card key={booking._id} sx={{ mb: 3, border: "1px solid", borderColor: "divider" }}>
-                  <CardContent>
-                    {/* Booking Header */}
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        mb: 2,
-                      }}
-                    >
-                      <Typography variant="h6" fontWeight="bold">
-                        {userRole === 'admin' ? (booking.user?.name || "Unknown User") : "Booking"}
-                      </Typography>
-                      <Chip
-                        label={booking.status}
-                        color={getStatusColor(booking.status)}
-                        size="small"
-                      />
-                    </Box>
+            <Box sx={{ mt: 1 }}>
+              {enrichedBookings.map((booking) => {
+                const displayName = userRole === 'admin' 
+                  ? (booking.user?.name || booking.userId?.name || "Unknown User")
+                  : "Anonymous";
 
-                    {/* Booking Details */}
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {format(new Date(booking.startDate), "MMM d, yyyy")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Time: {booking.startTime} - {booking.endTime}
-                      </Typography>
-                    </Box>
+                return (
+                  <Card key={booking._id} sx={{ mb: 2, border: "1px solid", borderColor: booking.status === "pending" ? "warning.main" : "divider" }}>
+                    <CardContent>
+                      {/* Booking Header */}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justify: "space-between",
+                          alignItems: "center",
+                          mb: 1.5,
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="h6" fontWeight="bold">
+                            {displayName}
+                          </Typography>
+                          {booking.status === "pending" && (
+                            <Chip label="Pending Approval" color="warning" size="small" variant="filled" sx={{ fontWeight: 600 }} />
+                          )}
+                        </Box>
+                        <Chip
+                          label={booking.status.toUpperCase()}
+                          color={getStatusColor(booking.status)}
+                          size="small"
+                          variant={booking.status === "approved" ? "filled" : "outlined"}
+                        />
+                      </Box>
+
+                      {/* Booking Details */}
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="body2" color="text.primary" fontWeight={600}>
+                          Dates: {format(new Date(booking.startDate), "MMM d, yyyy")} – {format(new Date(booking.endDate), "MMM d, yyyy")}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Time Slot: {booking.startTime} – {booking.endTime}
+                        </Typography>
+                      </Box>
 
                     {/* Temporary Releases for this booking */}
                     {booking.temporaryReleases && booking.temporaryReleases.length > 0 && (
@@ -675,8 +711,9 @@ const ComputerGrid: React.FC = () => {
                     )}
                   </CardContent>
                 </Card>
-              ))}
-            </Box>
+              );
+            })}
+          </Box>
           ) : (
             <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
               <Typography variant="body1">No active bookings</Typography>
@@ -927,7 +964,7 @@ const ComputerGrid: React.FC = () => {
                       {selectedDateAvailability.bookedSlots.length > 0 && (
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="subtitle1" gutterBottom color="error">
-                            Booked Slots ({selectedDateAvailability.bookedSlots.length})
+                            Approved Booked Slots ({selectedDateAvailability.bookedSlots.length})
                           </Typography>
                           {selectedDateAvailability.bookedSlots.map((slot, index) => (
                             <Card key={index} sx={{ mb: 1, p: 2, backgroundColor: 'rgba(244, 67, 54, 0.05)' }}>
@@ -937,11 +974,34 @@ const ComputerGrid: React.FC = () => {
                                   {slot.startTime} - {slot.endTime}
                                 </Typography>
                               </Box>
-                              {userRole === 'admin' && (
-                                <Typography variant="body2" color="text.secondary">
-                                  User: {slot.booking.user?.name || "Unknown"}
-                                </Typography>
-                              )}
+                              <Typography variant="body2" color="text.secondary">
+                                User: {userRole === 'admin' ? (slot.booking.user?.name || slot.booking.userId?.name || "Unknown") : "Anonymous"}
+                              </Typography>
+                            </Card>
+                          ))}
+                        </Box>
+                      )}
+
+                      {/* Pending Slots */}
+                      {selectedDateAvailability.pendingSlots.length > 0 && (
+                        <Box sx={{ mb: 3 }}>
+                          <Typography variant="subtitle1" gutterBottom color="warning.main" fontWeight={700}>
+                            Pending Requests ({selectedDateAvailability.pendingSlots.length})
+                          </Typography>
+                          {selectedDateAvailability.pendingSlots.map((slot, index) => (
+                            <Card key={index} sx={{ mb: 1, p: 2, backgroundColor: 'rgba(255, 152, 0, 0.08)', border: '1px dashed #ffa726' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <BookIcon color="warning" fontSize="small" />
+                                  <Typography variant="body2" fontWeight="bold">
+                                    {slot.startTime} - {slot.endTime}
+                                  </Typography>
+                                </Box>
+                                <Chip label="Pending Approval" color="warning" size="small" variant="outlined" />
+                              </Box>
+                              <Typography variant="body2" color="text.secondary">
+                                User: {userRole === 'admin' ? (slot.booking.user?.name || slot.booking.userId?.name || "Unknown") : "Anonymous"}
+                              </Typography>
                             </Card>
                           ))}
                         </Box>
