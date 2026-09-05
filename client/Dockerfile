@@ -1,7 +1,13 @@
 # Multi-stage build for production
 FROM docker.io/node:20-alpine AS builder
 
-# Build Arguments for Automated Deployment Tracking
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY client/package*.json ./
+RUN npm install
+
+# Build Arguments for Automated Deployment Tracking (Declared AFTER npm install so cache is preserved)
 ARG VITE_GIT_COMMIT_HASH="dev"
 ARG VITE_GIT_COMMIT_DATE="unknown"
 ARG VITE_GIT_BRANCH="main"
@@ -10,12 +16,6 @@ ARG VITE_GIT_BRANCH="main"
 ENV VITE_GIT_COMMIT_HASH=${VITE_GIT_COMMIT_HASH}
 ENV VITE_GIT_COMMIT_DATE=${VITE_GIT_COMMIT_DATE}
 ENV VITE_GIT_BRANCH=${VITE_GIT_BRANCH}
-
-WORKDIR /app
-
-# Copy package files first for better caching
-COPY client/package*.json ./
-RUN npm install
 
 # Copy environment file
 COPY client/.env ./
