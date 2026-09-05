@@ -136,6 +136,45 @@ const AdminAttendanceHistory: React.FC = () => {
   );
 };
 
+const UserCoolDownStatusSection: React.FC = () => {
+  const [coolDownStatus, setCoolDownStatus] = useState<any>(null);
+
+  useEffect(() => {
+    bookingsAPI.getCoolDownStatus()
+      .then(res => setCoolDownStatus(res.data))
+      .catch(err => console.error('Failed to load cool-down status in Profile:', err));
+  }, []);
+
+  if (!coolDownStatus || (!coolDownStatus.active && !coolDownStatus.isWaived)) return null;
+
+  return (
+    <Box sx={{ mb: 4 }}>
+      {coolDownStatus.isWaived ? (
+        <Alert severity="success" icon={<CheckCircle />} sx={{ borderRadius: 2 }}>
+          <Typography variant="subtitle2" fontWeight={700}>
+            Cool-Down Exemption Active (Waived by Admin)
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5 }}>
+            <strong>Granted by:</strong> {coolDownStatus.waivedInfo?.waivedByAdminEmail || 'Administrator'}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Exemption Reason:</strong> {coolDownStatus.waivedInfo?.reason || 'Administrative Override'}
+          </Typography>
+        </Alert>
+      ) : (
+        <Alert severity="warning" sx={{ borderRadius: 2 }}>
+          <Typography variant="subtitle2" fontWeight={700}>
+            Cool-Down Period Active ({coolDownStatus.tierName})
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5 }}>
+            {coolDownStatus.message || `Next eligible booking date: ${coolDownStatus.eligibleDate}`}
+          </Typography>
+        </Alert>
+      )}
+    </Box>
+  );
+};
+
 const Profile: React.FC = () => {
   const { currentUser, userRole } = useAuth();
 
@@ -246,6 +285,9 @@ const Profile: React.FC = () => {
               </Box>
 
               <Divider sx={{ mb: 4 }} />
+
+              {/* Cool-Down Exemption Section */}
+              <UserCoolDownStatusSection />
 
               {/* Attendance History Section (Visible for Admin users only) */}
               {userRole === 'admin' && (

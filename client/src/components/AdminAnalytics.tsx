@@ -696,6 +696,7 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
   const [search, setSearch] = useState('');
   const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
   const [waivedMetrics, setWaivedMetrics] = useState<{ totalWaivedCount: number; waivedBookingsCount: number }>({ totalWaivedCount: 0, waivedBookingsCount: 0 });
+  const [waiverLogs, setWaiverLogs] = useState<any[]>([]);
 
   useEffect(() => {
     cooldownsAPI.getCoolDownMetrics()
@@ -705,6 +706,10 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
         }
       })
       .catch((err) => console.error('Failed to load cool-down metrics:', err));
+
+    cooldownsAPI.getCoolDownLogs()
+      .then((res) => setWaiverLogs(res.data || []))
+      .catch((err) => console.error('Failed to load cool-down logs:', err));
   }, []);
 
   // Build user list from all bookings
@@ -728,6 +733,11 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
   const userBookings = useMemo(() =>
     selectedUserEmail ? allBookings.filter(b => getUserEmail(b) === selectedUserEmail) : []
   , [allBookings, selectedUserEmail]);
+
+  const selectedUserWaivers = useMemo(() => {
+    if (!selectedUserEmail) return [];
+    return waiverLogs.filter(w => w.userEmail?.toLowerCase() === selectedUserEmail.toLowerCase());
+  }, [waiverLogs, selectedUserEmail]);
 
   // User KPIs
   const uKpis = useMemo(() => {
@@ -859,7 +869,7 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
               <KpiCard label="Rejected" value={uKpis.rejected} color="#ef4444" bg="#fef2f2" icon={<CancelIcon sx={{ fontSize: 14 }} />} />
               <KpiCard label="GPU Requests" value={uKpis.gpu} color="#8b5cf6" bg="#f5f3ff" icon={<MemoryIcon sx={{ fontSize: 14 }} />} />
               <KpiCard label="Total Approved Hours" value={`${uKpis.hours}h`} color="#0891b2" bg="#ecfeff" icon={<ScheduleIcon sx={{ fontSize: 14 }} />} />
-              <KpiCard label="Waived Cool-Downs" value={waivedMetrics.totalWaivedCount} color="#d97706" bg="#fef3c7" icon={<TimerIcon sx={{ fontSize: 14 }} />} />
+              <KpiCard label="Waived Cool-Downs" value={selectedUserWaivers.length} color="#d97706" bg="#fef3c7" icon={<TimerIcon sx={{ fontSize: 14 }} />} />
             </Box>
 
             {/* Chart + System preference */}
@@ -892,6 +902,42 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
                 </CardContent>
               </Card>
             </Box>
+
+            {/* User Cool-Down Exemption History */}
+            <Card sx={{ borderRadius: 3, border: '1px solid #fef08a', bgcolor: '#fffbeb', boxShadow: 'none' }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                  <TimerIcon sx={{ color: '#d97706', fontSize: 18 }} />
+                  <Typography variant="subtitle2" fontWeight={800} color="#92400e">
+                    Cool-Down Exemptions &amp; Overrides for {selectedUser.name} ({selectedUserWaivers.length})
+                  </Typography>
+                </Box>
+                {selectedUserWaivers.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No administrative cool-down waivers granted to this user.
+                  </Typography>
+                ) : (
+                  <Stack spacing={1.5}>
+                    {selectedUserWaivers.map((w: any, idx: number) => (
+                      <Paper key={idx} variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: '#ffffff' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                          <Typography variant="body2" fontWeight={700} color="text.primary">
+                            Waived by: {w.waivedByAdminName || w.waivedByAdminEmail} ({w.waivedByAdminEmail})
+                          </Typography>
+                          <Chip label={w.tierName || "Waived"} size="small" color="warning" variant="outlined" sx={{ fontWeight: 700 }} />
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                          <strong>Reason:</strong> {w.reason}
+                        </Typography>
+                        <Typography variant="caption" color="text.disabled">
+                          Granted on: {new Date(w.waivedAt).toLocaleString()}
+                        </Typography>
+                      </Paper>
+                    ))}
+                  </Stack>
+                )}
+              </CardContent>
+            </Card>
 
             {/* User bookings table */}
             <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
