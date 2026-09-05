@@ -1257,6 +1257,9 @@ const ComputerGrid: React.FC = () => {
             const activeBookings = (computer.bookings || []).filter(
               (b) => b.status === "approved"
             ).length || 0;
+            const pendingBookings = (computer.bookings || []).filter(
+              (b) => b.status === "pending"
+            ).length || 0;
 
             // Determine the display status and color
             const getDisplayInfo = () => {
@@ -1397,14 +1400,23 @@ const ComputerGrid: React.FC = () => {
                   </Box>
 
                   {/* Status/Booking Information */}
-                  <Box>
+                  <Stack spacing={0.75} alignItems="center">
                     <Chip
                       label={displayInfo.chipLabel}
                       color={displayInfo.chipColor as any}
                       size="small"
                       sx={{ fontWeight: 500 }}
                     />
-                  </Box>
+                    {pendingBookings > 0 && (
+                      <Chip
+                        label={`${pendingBookings} Pending Booking${pendingBookings !== 1 ? "s" : ""}`}
+                        color="warning"
+                        variant="outlined"
+                        size="small"
+                        sx={{ fontWeight: 600, fontSize: "0.72rem" }}
+                      />
+                    )}
+                  </Stack>
 
                   {/* Location */}
                   <Typography
