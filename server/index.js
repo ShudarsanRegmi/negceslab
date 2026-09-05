@@ -102,8 +102,7 @@ app.get('/', (req, res) => {
 		msg: "Welcome to Negces Lab Server API",
 		version: "3.0.3",
 		deploymentHash: process.env.GIT_COMMIT_HASH || "dev",
-		lastUpdatedOn: process.env.GIT_COMMIT_DATE || new Date().toISOString(),
-		branch: process.env.GIT_BRANCH || "main"
+		lastUpdatedOn: process.env.GIT_COMMIT_DATE || new Date().toISOString()
 	});
 });
 

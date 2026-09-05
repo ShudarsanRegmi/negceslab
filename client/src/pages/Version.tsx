@@ -60,14 +60,14 @@ const Version: React.FC = () => {
                     sx={{ fontWeight: 700, fontSize: '0.95rem', borderRadius: 2 }} 
                   />
                   <Chip 
-                    label={`Hash: ${import.meta.env.VITE_GIT_COMMIT_HASH || "dev"}`} 
+                    label={`Deployment Hash: ${import.meta.env.VITE_GIT_COMMIT_HASH || "dev"}`} 
                     color="secondary" 
                     variant="outlined" 
                     sx={{ fontWeight: 700, fontSize: '0.85rem', borderRadius: 2 }} 
                   />
                 </Stack>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  Deployment Commit: {import.meta.env.VITE_GIT_COMMIT_DATE || "Development Build"} ({import.meta.env.VITE_GIT_BRANCH || "local"})
+                  Last Deployed: {import.meta.env.VITE_GIT_COMMIT_DATE || "Development Build"}
                 </Typography>
               </Box>
             </Box>
