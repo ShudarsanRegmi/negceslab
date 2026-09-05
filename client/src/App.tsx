@@ -29,6 +29,7 @@ import AdminFeedbackManagement from "./pages/AdminFeedbackManagement";
 import AdminAgentRegistration from "./pages/AdminAgentRegistration";
 import AdminPolicyPage from "./pages/AdminPolicyPage";
 import AdminCoolDownManagement from "./pages/AdminCoolDownManagement";
+import AdminSystemMonitoring from "./pages/AdminSystemMonitoring";
 import BookingForm from "./pages/BookingForm";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
@@ -214,6 +215,16 @@ const AppContent = () => {
                     <ProtectedRoute requiredRole="admin">
                       <Layout>
                         <AdminCoolDownManagement />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/monitoring"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <Layout>
+                        <AdminSystemMonitoring />
                       </Layout>
                     </ProtectedRoute>
                   }

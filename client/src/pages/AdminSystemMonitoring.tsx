@@ -1,0 +1,736 @@
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Chip,
+  Button,
+  IconButton,
+  Tooltip,
+  Paper,
+  LinearProgress,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  TextField,
+  InputAdornment,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  useTheme,
+  useMediaQuery,
+  Alert,
+} from "@mui/material";
+import {
+  Computer as ComputerIcon,
+  DesktopWindows as DesktopWindowsIcon,
+  Terminal as TerminalIcon,
+  Refresh as RefreshIcon,
+  Search as SearchIcon,
+  Memory as MemoryIcon,
+  Speed as CpuIcon,
+  BarChart as BarChartIcon,
+  Person as PersonIcon,
+  Schedule as ScheduleIcon,
+  CheckCircle as CheckIcon,
+  Cancel as CancelIcon,
+  Thermostat as TempIcon,
+  Wifi as OnlineIcon,
+  WifiOff as OfflineIcon,
+  Download as DownloadIcon,
+} from "@mui/icons-material";
+import { computersAPI, bookingsAPI } from "../services/api";
+import SystemTelemetryAnalyticsModal from "../components/SystemTelemetryAnalyticsModal";
+
+interface LiveMetrics {
+  cpuUtil: number;
+  ramUtil: number;
+  gpuUtil: number;
+  gpuMemUsed: number;
+  gpuMemTotal: number;
+  cpuTemp: number;
+  gpuTemp: number;
+  netSentSpeed: number;
+  netRecvSpeed: number;
+}
+
+interface AgentActiveSession {
+  checkedIn: boolean;
+  currentUser?: string;
+  email?: string;
+  agenda?: string;
+  sessionType?: string;
+  checkInTime?: string;
+  activeBookingId?: string;
+}
+
+interface SystemDetails {
+  operatingSystem?: string;
+  architecture?: string;
+  hostname?: string;
+  ipAddress?: string;
+}
+
+interface Computer {
+  _id: string;
+  name: string;
+  location: string;
+  status: "available" | "maintenance" | "reserved";
+  specifications: string;
+  isOnline?: boolean;
+  lastSeen?: string;
+  liveMetrics?: LiveMetrics;
+  agentActiveSession?: AgentActiveSession;
+  systemDetails?: SystemDetails;
+  bookings?: any[];
+}
+
+const formatBytes = (bytes: number, decimals = 1) => {
+  if (!bytes || bytes === 0) return "0 B";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+};
+
+const getMetricColor = (val: number): "success" | "warning" | "error" => {
+  if (val >= 85) return "error";
+  if (val >= 65) return "warning";
+  return "success";
+};
+
+const AdminSystemMonitoring: React.FC = () => {
+  const [computers, setComputers] = useState<Computer[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters & Search
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [osFilter, setOsFilter] = useState<string>("ALL");
+
+  // Selected computer modal inspector
+  const [selectedComp, setSelectedComp] = useState<Computer | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+
+  // Table pagination for inspector attendance log
+  const [attendancePage, setAttendancePage] = useState(0);
+  const [attendanceRowsPerPage, setAttendanceRowsPerPage] = useState(5);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 10000); // 10s polling for live telemetry
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [compRes, bookRes] = await Promise.all([
+        computersAPI.getComputersWithBookings(),
+        bookingsAPI.getAllBookings(),
+      ]);
+
+      const compList: Computer[] = Array.isArray(compRes.data) ? compRes.data : [];
+      const bookList: any[] = Array.isArray(bookRes.data) ? bookRes.data : [];
+
+      setComputers(compList);
+      setBookings(bookList);
+
+      // Update inspector reference if open
+      if (selectedComp) {
+        const updated = compList.find((c) => c._id === selectedComp._id);
+        if (updated) setSelectedComp(updated);
+      }
+      setError(null);
+    } catch (err: any) {
+      console.error("Failed to load monitoring data:", err);
+      setError("Failed to connect to backend telemetry feed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filtered Computers
+  const filteredComputers = computers.filter((c) => {
+    const matchesSearch =
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.systemDetails?.hostname || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.agentActiveSession?.currentUser || "").toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "ALL"
+        ? true
+        : statusFilter === "ONLINE"
+        ? c.isOnline
+        : statusFilter === "OFFLINE"
+        ? !c.isOnline
+        : statusFilter === "CHECKED_IN"
+        ? c.agentActiveSession?.checkedIn
+        : true;
+
+    const matchesOS =
+      osFilter === "ALL"
+        ? true
+        : (c.systemDetails?.operatingSystem || "").toLowerCase() === osFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus && matchesOS;
+  });
+
+  // Extract combined attendance history for selected computer
+  const selectedComputerAttendanceHistory = React.useMemo(() => {
+    if (!selectedComp) return [];
+    const list: any[] = [];
+
+    // Find all bookings for this computer across system bookings
+    const compBookings = bookings.filter(
+      (b) => (b.computerId?._id || b.computerId) === selectedComp._id
+    );
+
+    compBookings.forEach((b) => {
+      if (Array.isArray(b.attendanceHistory)) {
+        b.attendanceHistory.forEach((h: any) => {
+          list.push({
+            date: h.date,
+            user: h.currentUser || b.user?.name || b.userInfo?.name || "Unknown",
+            email: h.email || b.user?.email || b.userInfo?.email || "-",
+            agenda: h.agenda || b.reason || "General Usage",
+            sessionType: h.sessionType || "Scheduled Lab Booking",
+            checkInTime: h.checkInTime,
+            checkOutTime: h.checkOutTime,
+          });
+        });
+      }
+    });
+
+    // Sort newest first
+    return list.sort((a, b) => new Date(b.checkInTime || 0).getTime() - new Date(a.checkInTime || 0).getTime());
+  }, [selectedComp, bookings]);
+
+  return (
+    <Box sx={{ pb: 6 }}>
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 2 }}>
+        <Box>
+          <Typography variant="h4" fontWeight={800} color="#0f172a" gutterBottom>
+            System Monitoring & Attendance
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Real-time compute cluster hardware telemetry, booted OS inspection, and live student attendance tracking.
+          </Typography>
+        </Box>
+
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={fetchData}
+          disabled={loading}
+          sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700 }}
+        >
+          {loading ? "Polling Telemetry..." : "Refresh Status"}
+        </Button>
+      </Box>
+
+      {/* Summary KPI Badges */}
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid item xs={6} sm={3}>
+          <Paper sx={{ p: 2, borderRadius: 2.5, border: "1px solid #e2e8f0", bgcolor: "#f8fafc" }}>
+            <Typography variant="caption" color="text.secondary" fontWeight={700}>
+              TOTAL SYSTEMS
+            </Typography>
+            <Typography variant="h4" fontWeight={800} color="#1e293b" sx={{ mt: 0.5 }}>
+              {computers.length}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Paper sx={{ p: 2, borderRadius: 2.5, border: "1px solid #e2e8f0", bgcolor: "#f0fdf4" }}>
+            <Typography variant="caption" color="success.main" fontWeight={700}>
+              ONLINE & ACTIVE
+            </Typography>
+            <Typography variant="h4" fontWeight={800} color="#15803d" sx={{ mt: 0.5 }}>
+              {computers.filter((c) => c.isOnline).length}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Paper sx={{ p: 2, borderRadius: 2.5, border: "1px solid #e2e8f0", bgcolor: "#eff6ff" }}>
+            <Typography variant="caption" color="primary" fontWeight={700}>
+              ACTIVE ATTENDANCE
+            </Typography>
+            <Typography variant="h4" fontWeight={800} color="#1d4ed8" sx={{ mt: 0.5 }}>
+              {computers.filter((c) => c.agentActiveSession?.checkedIn).length}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Paper sx={{ p: 2, borderRadius: 2.5, border: "1px solid #e2e8f0", bgcolor: "#fef2f2" }}>
+            <Typography variant="caption" color="error.main" fontWeight={700}>
+              OFFLINE / DISCONNECTED
+            </Typography>
+            <Typography variant="h4" fontWeight={800} color="#b91c1c" sx={{ mt: 0.5 }}>
+              {computers.filter((c) => !c.isOnline).length}
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Filter Controls Bar */}
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2.5, border: "1px solid #e2e8f0" }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search by Computer Name, Location, Hostname, or Active User..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+          <Grid item xs={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Status Filter</InputLabel>
+              <Select value={statusFilter} label="Status Filter" onChange={(e) => setStatusFilter(e.target.value)}>
+                <MenuItem value="ALL">All Telemetry States</MenuItem>
+                <MenuItem value="ONLINE">Online Systems Only</MenuItem>
+                <MenuItem value="OFFLINE">Offline Systems Only</MenuItem>
+                <MenuItem value="CHECKED_IN">Active Check-ins Only</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>OS Filter</InputLabel>
+              <Select value={osFilter} label="OS Filter" onChange={(e) => setOsFilter(e.target.value)}>
+                <MenuItem value="ALL">All OS Environments</MenuItem>
+                <MenuItem value="Windows">Windows Systems</MenuItem>
+                <MenuItem value="Linux">Linux Systems</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Main Monitoring Grid */}
+      <Grid container spacing={2.5}>
+        {filteredComputers.map((computer) => {
+          const live = computer.liveMetrics;
+          const session = computer.agentActiveSession;
+          const os = computer.systemDetails?.operatingSystem;
+
+          return (
+            <Grid item xs={12} sm={6} md={4} key={computer._id}>
+              <Card
+                sx={{
+                  borderRadius: 3,
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                  cursor: "pointer",
+                  "&:hover": {
+                    transform: "translateY(-3px)",
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.08)",
+                  },
+                }}
+                onClick={() => setSelectedComp(computer)}
+              >
+                <CardContent sx={{ p: 2.5 }}>
+                  {/* Card Header: Computer Name & Online/OS Status */}
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <ComputerIcon sx={{ color: computer.isOnline ? "#10b981" : "#94a3b8", fontSize: 28 }} />
+                      <Box>
+                        <Typography variant="subtitle1" fontWeight={800} color="#0f172a" lineHeight={1.2}>
+                          {computer.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {computer.location}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0.5 }}>
+                      {/* Online Status Chip */}
+                      <Chip
+                        icon={computer.isOnline ? <OnlineIcon sx={{ fontSize: "0.8rem !important" }} /> : <OfflineIcon sx={{ fontSize: "0.8rem !important" }} />}
+                        label={computer.isOnline ? "Online" : "Offline"}
+                        size="small"
+                        color={computer.isOnline ? "success" : "default"}
+                        variant={computer.isOnline ? "filled" : "outlined"}
+                        sx={{ height: 20, fontSize: "0.65rem", fontWeight: 800 }}
+                      />
+
+                      {/* OS Badge with Formal Icon */}
+                      {computer.isOnline && os && (
+                        <Chip
+                          icon={
+                            os === "Windows" ? (
+                              <DesktopWindowsIcon sx={{ fontSize: "0.75rem !important" }} />
+                            ) : os === "Linux" ? (
+                              <TerminalIcon sx={{ fontSize: "0.75rem !important" }} />
+                            ) : (
+                              <ComputerIcon sx={{ fontSize: "0.75rem !important" }} />
+                            )
+                          }
+                          label={os}
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: "0.65rem",
+                            fontWeight: 700,
+                            backgroundColor: os === "Windows" ? "rgba(25, 118, 210, 0.08)" : "rgba(76, 175, 80, 0.08)",
+                            color: os === "Windows" ? "#1976d2" : "#2e7d32",
+                            border: "1px solid",
+                            borderColor: os === "Windows" ? "rgba(25, 118, 210, 0.2)" : "rgba(76, 175, 80, 0.2)",
+                          }}
+                        />
+                      )}
+                    </Box>
+                  </Box>
+
+                  <Divider sx={{ my: 1.5 }} />
+
+                  {/* Live Metrics utilization grid */}
+                  {computer.isOnline && live ? (
+                    <Box sx={{ mb: 2 }}>
+                      <Grid container spacing={1} sx={{ mb: 1 }}>
+                        <Grid item xs={4}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem", display: "block" }}>
+                            CPU
+                          </Typography>
+                          <Typography variant="body2" fontWeight={800} color="#0f172a">
+                            {Math.round(live.cpuUtil)}%
+                          </Typography>
+                          <LinearProgress variant="determinate" value={live.cpuUtil} color={getMetricColor(live.cpuUtil)} sx={{ height: 4, borderRadius: 2 }} />
+                        </Grid>
+
+                        <Grid item xs={4}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem", display: "block" }}>
+                            RAM
+                          </Typography>
+                          <Typography variant="body2" fontWeight={800} color="#0f172a">
+                            {Math.round(live.ramUtil)}%
+                          </Typography>
+                          <LinearProgress variant="determinate" value={live.ramUtil} color={getMetricColor(live.ramUtil)} sx={{ height: 4, borderRadius: 2 }} />
+                        </Grid>
+
+                        <Grid item xs={4}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem", display: "block" }}>
+                            GPU
+                          </Typography>
+                          <Typography variant="body2" fontWeight={800} color="#0f172a">
+                            {Math.round(live.gpuUtil)}%
+                          </Typography>
+                          <LinearProgress variant="determinate" value={live.gpuUtil} color={getMetricColor(live.gpuUtil)} sx={{ height: 4, borderRadius: 2 }} />
+                        </Grid>
+                      </Grid>
+
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
+                          Net: ↑ {formatBytes(live.netSentSpeed)}/s ↓ {formatBytes(live.netRecvSpeed)}/s
+                        </Typography>
+                        {live.cpuTemp > 0 && (
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
+                            Temp: {Math.round(live.cpuTemp)}°C
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  ) : (
+                    <Box sx={{ py: 2, textAlign: "center", bgcolor: "#f8fafc", borderRadius: 2, mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary" fontStyle="italic">
+                        System telemetry offline
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Attendance Section */}
+                  {session && session.checkedIn ? (
+                    <Paper sx={{ p: 1.25, borderRadius: 2, bgcolor: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          <PersonIcon sx={{ fontSize: 16, color: "#16a34a" }} />
+                          <Typography variant="caption" fontWeight={800} color="#15803d">
+                            {session.currentUser}
+                          </Typography>
+                        </Box>
+                        <Chip label={session.sessionType} size="small" variant="outlined" sx={{ height: 16, fontSize: "0.55rem", fontWeight: 700 }} />
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                        <strong>Agenda:</strong> {session.agenda}
+                      </Typography>
+                    </Paper>
+                  ) : (
+                    <Paper sx={{ p: 1.25, borderRadius: 2, bgcolor: "#f8fafc", border: "1px dashed #cbd5e1", textAlign: "center" }}>
+                      <Typography variant="caption" color="text.secondary" fontStyle="italic">
+                        No active attendance check-in
+                      </Typography>
+                    </Paper>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          );
+        })}
+      </Grid>
+
+      {/* Inspector Modal Dialog */}
+      {selectedComp && (
+        <Dialog open={Boolean(selectedComp)} onClose={() => setSelectedComp(null)} maxWidth="md" fullWidth>
+          <DialogTitle sx={{ borderBottom: 1, borderColor: "divider" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <ComputerIcon color="primary" fontSize="large" />
+                <Box>
+                  <Typography variant="h6" fontWeight={800}>
+                    {selectedComp.name} Inspector
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {selectedComp.location} • {selectedComp.systemDetails?.hostname || "No hostname"}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {selectedComp.systemDetails?.operatingSystem && (
+                <Chip
+                  icon={
+                    selectedComp.systemDetails.operatingSystem === "Windows" ? (
+                      <DesktopWindowsIcon sx={{ fontSize: "0.85rem !important" }} />
+                    ) : selectedComp.systemDetails.operatingSystem === "Linux" ? (
+                      <TerminalIcon sx={{ fontSize: "0.85rem !important" }} />
+                    ) : (
+                      <ComputerIcon sx={{ fontSize: "0.85rem !important" }} />
+                    )
+                  }
+                  label={selectedComp.systemDetails.operatingSystem}
+                  color={selectedComp.systemDetails.operatingSystem === "Windows" ? "primary" : "success"}
+                  variant="outlined"
+                  sx={{ fontWeight: 700 }}
+                />
+              )}
+            </Box>
+          </DialogTitle>
+
+          <DialogContent dividers>
+            <Grid container spacing={3}>
+              {/* Active Attendance Session */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
+                  Active Attendance Check-in
+                </Typography>
+                <Paper sx={{ p: 2, mb: 3, bgcolor: selectedComp.agentActiveSession?.checkedIn ? "#f0fdf4" : "#f8fafc", border: "1px solid", borderColor: selectedComp.agentActiveSession?.checkedIn ? "#bbf7d0" : "#e2e8f0", borderRadius: 2 }}>
+                  {selectedComp.agentActiveSession?.checkedIn ? (
+                    <Box>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                        <Typography variant="body2" fontWeight={800} color="#15803d">
+                          👤 {selectedComp.agentActiveSession.currentUser}
+                        </Typography>
+                        <Chip label={selectedComp.agentActiveSession.sessionType} size="small" color="success" />
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Email: {selectedComp.agentActiveSession.email}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        <strong>Agenda Purpose:</strong> {selectedComp.agentActiveSession.agenda}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                        Check-in Time: {selectedComp.agentActiveSession.checkInTime ? new Date(selectedComp.agentActiveSession.checkInTime).toLocaleString() : "N/A"}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                      Computer is currently idle with no active student attendance check-in.
+                    </Typography>
+                  )}
+                </Paper>
+
+                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
+                  System Specifications
+                </Typography>
+                <Paper sx={{ p: 2, borderRadius: 2, border: "1px solid #e2e8f0" }}>
+                  <Typography variant="body2"><strong>Hardware Specs:</strong> {selectedComp.specifications}</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}><strong>IP Address:</strong> {selectedComp.systemDetails?.ipAddress || "N/A"}</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}><strong>Last Seen:</strong> {selectedComp.lastSeen ? new Date(selectedComp.lastSeen).toLocaleString() : "Never"}</Typography>
+                </Paper>
+              </Grid>
+
+              {/* Live Telemetry Resource Load */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
+                  Real-time Telemetry Load
+                </Typography>
+                {selectedComp.isOnline && selectedComp.liveMetrics ? (
+                  <Paper sx={{ p: 2, borderRadius: 2, border: "1px solid #e2e8f0" }}>
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight={700}>CPU Core Load</Typography>
+                        <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.cpuUtil)}%</Typography>
+                      </Box>
+                      <LinearProgress variant="determinate" value={selectedComp.liveMetrics.cpuUtil} color={getMetricColor(selectedComp.liveMetrics.cpuUtil)} sx={{ height: 6, borderRadius: 3 }} />
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight={700}>RAM Occupied</Typography>
+                        <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.ramUtil)}%</Typography>
+                      </Box>
+                      <LinearProgress variant="determinate" value={selectedComp.liveMetrics.ramUtil} color={getMetricColor(selectedComp.liveMetrics.ramUtil)} sx={{ height: 6, borderRadius: 3 }} />
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight={700}>GPU Core Load</Typography>
+                        <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.gpuUtil)}%</Typography>
+                      </Box>
+                      <LinearProgress variant="determinate" value={selectedComp.liveMetrics.gpuUtil} color={getMetricColor(selectedComp.liveMetrics.gpuUtil)} sx={{ height: 6, borderRadius: 3 }} />
+                    </Box>
+
+                    {selectedComp.liveMetrics.gpuMemTotal > 0 && (
+                      <Typography variant="body2">
+                        <strong>VRAM Memory:</strong> {Math.round(selectedComp.liveMetrics.gpuMemUsed)} / {Math.round(selectedComp.liveMetrics.gpuMemTotal)} MB
+                      </Typography>
+                    )}
+
+                    <Box sx={{ display: "flex", gap: 3, mt: 1.5 }}>
+                      <Typography variant="caption"><strong>CPU Temp:</strong> {selectedComp.liveMetrics.cpuTemp}°C</Typography>
+                      <Typography variant="caption"><strong>GPU Temp:</strong> {selectedComp.liveMetrics.gpuTemp}°C</Typography>
+                    </Box>
+                  </Paper>
+                ) : (
+                  <Paper sx={{ p: 2, borderRadius: 2, border: "1px dashed #cbd5e1", textAlign: "center", bgcolor: "#f8fafc" }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No live telemetry packet feed. System is offline.
+                    </Typography>
+                  </Paper>
+                )}
+              </Grid>
+
+              {/* Browseable Historical Attendance Log */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
+                  Historical Attendance Log ({selectedComputerAttendanceHistory.length} Sessions)
+                </Typography>
+                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 300 }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead sx={{ bgcolor: "#f8fafc" }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>Student User</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>Agenda Purpose</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>Session Type</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>Check-in</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>Check-out</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedComputerAttendanceHistory.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                            No attendance history logged for this computer yet.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        selectedComputerAttendanceHistory
+                          .slice(attendancePage * attendanceRowsPerPage, attendancePage * attendanceRowsPerPage + attendanceRowsPerPage)
+                          .map((hist, idx) => (
+                            <TableRow key={idx} hover>
+                              <TableCell sx={{ fontWeight: 700 }}>{hist.date}</TableCell>
+                              <TableCell>
+                                <Typography variant="body2" fontWeight={700}>{hist.user}</Typography>
+                                <Typography variant="caption" color="text.secondary">{hist.email}</Typography>
+                              </TableCell>
+                              <TableCell>{hist.agenda}</TableCell>
+                              <TableCell>
+                                <Chip label={hist.sessionType} size="small" variant="outlined" sx={{ fontWeight: 700, fontSize: "0.6rem" }} />
+                              </TableCell>
+                              <TableCell>
+                                {hist.checkInTime ? new Date(hist.checkInTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "-"}
+                              </TableCell>
+                              <TableCell>
+                                {hist.checkOutTime ? (
+                                  new Date(hist.checkOutTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+                                ) : (
+                                  <Chip label="No Check-out" size="small" color="warning" sx={{ height: 16, fontSize: "0.55rem" }} />
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                {selectedComputerAttendanceHistory.length > 0 && (
+                  <TablePagination
+                    component="div"
+                    count={selectedComputerAttendanceHistory.length}
+                    page={attendancePage}
+                    onPageChange={(_, p) => setAttendancePage(p)}
+                    rowsPerPage={attendanceRowsPerPage}
+                    onRowsPerPageChange={(e) => {
+                      setAttendanceRowsPerPage(parseInt(e.target.value, 10));
+                      setAttendancePage(0);
+                    }}
+                    rowsPerPageOptions={[5, 10, 25]}
+                  />
+                )}
+              </Grid>
+            </Grid>
+          </DialogContent>
+
+          <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<BarChartIcon />}
+              onClick={() => setHistoryModalOpen(true)}
+              sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2 }}
+            >
+              Analyze Historical Telemetry
+            </Button>
+            <Button onClick={() => setSelectedComp(null)} sx={{ textTransform: "none", fontWeight: 700 }}>
+              Close Inspector
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      {/* Historical Telemetry Modal */}
+      {selectedComp && (
+        <SystemTelemetryAnalyticsModal
+          open={historyModalOpen}
+          onClose={() => setHistoryModalOpen(false)}
+          computerId={selectedComp._id}
+          computerName={selectedComp.name}
+          bookings={selectedComp.bookings || []}
+        />
+      )}
+    </Box>
+  );
+};
+
+export default AdminSystemMonitoring;

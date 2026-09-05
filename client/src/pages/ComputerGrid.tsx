@@ -52,6 +52,8 @@ import {
   Schedule as ScheduleIcon,
   ExitToApp as TempReleaseIcon,
   Event as EventIcon,
+  DesktopWindows as DesktopWindowsIcon,
+  Terminal as TerminalIcon,
 } from "@mui/icons-material";
 import { computersAPI, temporaryReleaseAPI, bookingsAPI, policyAPI } from "../services/api";
 import { format, isWithinInterval, parseISO, isSameDay, addDays, startOfMonth, endOfMonth } from "date-fns";
@@ -866,14 +868,15 @@ const ComputerGrid: React.FC = () => {
                     </Typography>
                     {computer.isOnline && computer.systemDetails?.operatingSystem && (
                       <Chip
-                        label={
-                          computer.systemDetails.operatingSystem === "Windows" ? "🪟 Windows" : 
-                          computer.systemDetails.operatingSystem === "Linux" ? "🐧 Linux" : 
-                          `💻 ${computer.systemDetails.operatingSystem}`
+                        icon={
+                          computer.systemDetails.operatingSystem === "Windows" ? <DesktopWindowsIcon sx={{ fontSize: "0.75rem !important" }} /> : 
+                          computer.systemDetails.operatingSystem === "Linux" ? <TerminalIcon sx={{ fontSize: "0.75rem !important" }} /> : 
+                          <ComputerIcon sx={{ fontSize: "0.75rem !important" }} />
                         }
+                        label={computer.systemDetails.operatingSystem}
                         size="small"
                         sx={{
-                          height: 18,
+                          height: 20,
                           fontSize: "0.65rem",
                           fontWeight: 700,
                           backgroundColor: computer.systemDetails.operatingSystem === "Windows" ? "rgba(25, 118, 210, 0.08)" : "rgba(76, 175, 80, 0.08)",
@@ -916,73 +919,10 @@ const ComputerGrid: React.FC = () => {
                     {computer.location}
                   </Typography>
 
-                  {/* Agent Live Telemetry (if online) */}
-                  {computer.isOnline && computer.liveMetrics && (
-                    <Box sx={{ mt: 2, mb: 1, width: "100%", textAlign: "left" }}>
-                      <Divider sx={{ my: 1.5 }} />
-                      
-                      {/* Metric Utilization Grid */}
-                      <Grid container spacing={1} sx={{ mb: 1.5 }}>
-                        <Grid item xs={4}>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.68rem" }}>CPU</Typography>
-                          <Typography variant="body2" fontWeight={700} color="text.primary">{Math.round(computer.liveMetrics.cpuUtil)}%</Typography>
-                          <LinearProgress variant="determinate" value={computer.liveMetrics.cpuUtil} color="primary" sx={{ height: 4, borderRadius: 2, mt: 0.5 }} />
-                        </Grid>
-                        <Grid item xs={4}>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.68rem" }}>RAM</Typography>
-                          <Typography variant="body2" fontWeight={700} color="text.primary">{Math.round(computer.liveMetrics.ramUtil)}%</Typography>
-                          <LinearProgress variant="determinate" value={computer.liveMetrics.ramUtil} color="info" sx={{ height: 4, borderRadius: 2, mt: 0.5 }} />
-                        </Grid>
-                        <Grid item xs={4}>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.68rem" }}>GPU</Typography>
-                          <Typography variant="body2" fontWeight={700} color="text.primary">{Math.round(computer.liveMetrics.gpuUtil)}%</Typography>
-                          <LinearProgress variant="determinate" value={computer.liveMetrics.gpuUtil} color="secondary" sx={{ height: 4, borderRadius: 2, mt: 0.5 }} />
-                        </Grid>
-                      </Grid>
-
-                      {/* Network & Temps Info */}
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: "flex", gap: 0.5, fontSize: "0.65rem" }}>
-                          Net: ↑ {formatBytes(computer.liveMetrics.netSentSpeed)}/s ↓ {formatBytes(computer.liveMetrics.netRecvSpeed)}/s
-                        </Typography>
-                        {computer.liveMetrics.cpuTemp > 0 && (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
-                            Temp: {Math.round(computer.liveMetrics.cpuTemp)}°C
-                          </Typography>
-                        )}
-                      </Box>
-
-                      {/* Active Attendance Info */}
-                      {computer.agentActiveSession && computer.agentActiveSession.checkedIn ? (
-                        <Box sx={{ p: 1, borderRadius: 2, bgcolor: "action.hover", border: "1px solid", borderColor: "divider" }}>
-                          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
-                            <Typography variant="caption" fontWeight={700} color="primary">
-                              👤 {computer.agentActiveSession.currentUser}
-                            </Typography>
-                            <Chip 
-                              label={computer.agentActiveSession.sessionType} 
-                              size="small" 
-                              sx={{ height: 16, fontSize: "0.58rem", textTransform: "uppercase" }} 
-                            />
-                          </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.68rem", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                            <strong>Agenda:</strong> {computer.agentActiveSession.agenda}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Box sx={{ p: 1, borderRadius: 2, bgcolor: "action.hover", border: "1px dashed", borderColor: "divider", textAlign: "center" }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic", fontSize: "0.65rem" }}>
-                            No active attendance check-in
-                          </Typography>
-                        </Box>
-                      )}
-                      
                       {/* Last Seen timestamp */}
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.6rem", textAlign: "right", mt: 1 }}>
                         Last seen: {computer.lastSeen ? new Date(computer.lastSeen).toLocaleTimeString() : "N/A"}
                       </Typography>
-                    </Box>
-                  )}
 
                   {/* Action Buttons */}
                   <Box sx={{ mt: 2, display: "flex", gap: 1, justifyContent: "center" }}>
