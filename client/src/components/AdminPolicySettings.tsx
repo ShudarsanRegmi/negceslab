@@ -433,11 +433,9 @@ export const AdminPolicySettings: React.FC = () => {
                     Lab Daily Operating Hours
                   </Typography>
                   {activeEditingField !== "operatingHours" && (
-                    <Tooltip title="Edit Operating Hours" placement="right" arrow disableInteractive>
-                      <IconButton size="small" onClick={() => startEditField("operatingHours")} color="primary">
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    <IconButton size="small" onClick={() => startEditField("operatingHours")} color="primary" aria-label="Edit Operating Hours">
+                      <EditIcon fontSize="small" />
+                    </IconButton>
                   )}
                 </Box>
 
@@ -545,11 +543,9 @@ export const AdminPolicySettings: React.FC = () => {
                 </Typography>
               </Box>
               {activeEditingField !== "closedDays" && (
-                <Tooltip title="Edit Weekly Closed Days" placement="right" arrow disableInteractive>
-                  <IconButton size="small" onClick={() => startEditField("closedDays")} color="primary">
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <IconButton size="small" onClick={() => startEditField("closedDays")} color="primary" aria-label="Edit Weekly Closed Days">
+                  <EditIcon fontSize="small" />
+                </IconButton>
               )}
             </Box>
             <Divider sx={{ mb: 2 }} />
@@ -666,11 +662,9 @@ const SingleFieldEditor: React.FC<SingleFieldEditorProps> = ({
           {label}
         </Typography>
         {!isEditing && (
-          <Tooltip title={`Edit ${label}`} placement="right" arrow disableInteractive>
-            <IconButton size="small" onClick={onStartEdit} color="primary" sx={{ p: 0.5 }}>
-              <EditIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Tooltip>
+          <IconButton size="small" onClick={onStartEdit} color="primary" sx={{ p: 0.5 }} aria-label={`Edit ${label}`}>
+            <EditIcon sx={{ fontSize: 16 }} />
+          </IconButton>
         )}
       </Box>
 
