@@ -696,6 +696,7 @@ function OverviewTab({
 function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; onViewDetails: (b: Booking) => void }) {
   const [search, setSearch] = useState('');
   const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
+  const [userSubTab, setUserSubTab] = useState(0);
   const [waivedMetrics, setWaivedMetrics] = useState<{ totalWaivedCount: number; waivedBookingsCount: number }>({ totalWaivedCount: 0, waivedBookingsCount: 0 });
   const [waiverLogs, setWaiverLogs] = useState<any[]>([]);
 
@@ -904,49 +905,70 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
               </Card>
             </Box>
 
-            {/* User Cool-Down Exemption History */}
-            <Card sx={{ borderRadius: 3, border: '1px solid #fef08a', bgcolor: '#fffbeb', boxShadow: 'none' }}>
-              <CardContent sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                  <TimerIcon sx={{ color: '#d97706', fontSize: 18 }} />
-                  <Typography variant="subtitle2" fontWeight={800} color="#92400e">
-                    Cool-Down Exemptions &amp; Overrides for {selectedUser.name} ({selectedUserWaivers.length})
-                  </Typography>
-                </Box>
-                {selectedUserWaivers.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No administrative cool-down waivers granted to this user.
-                  </Typography>
-                ) : (
-                  <Stack spacing={1.5}>
-                    {selectedUserWaivers.map((w: any, idx: number) => (
-                      <Paper key={idx} variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: '#ffffff' }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
-                          <Typography variant="body2" fontWeight={700} color="text.primary">
-                            Waived by: {w.waivedByAdminName || w.waivedByAdminEmail} ({w.waivedByAdminEmail})
-                          </Typography>
-                          <Chip label={w.tierName || "Waived"} size="small" color="warning" variant="outlined" sx={{ fontWeight: 700 }} />
-                        </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                          <strong>Reason:</strong> {w.reason}
-                        </Typography>
-                        <Typography variant="caption" color="text.disabled">
-                          Granted on: {new Date(w.waivedAt).toLocaleString()}
-                        </Typography>
-                      </Paper>
-                    ))}
-                  </Stack>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* User bookings table */}
+            {/* User Detail Tabs: Booking Records vs Cool-Down Exemptions */}
             <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
-              <CardContent sx={{ p: 2, pb: '0 !important' }}>
-                <Typography variant="subtitle2" fontWeight={800} color="#0f172a" gutterBottom>All Bookings by {selectedUser.name}</Typography>
-                <Divider sx={{ mb: 1.5 }} />
-              </CardContent>
-              <BookingTable rows={userBookings} onViewDetails={onViewDetails} emptyMsg="No bookings for this user." />
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, pt: 1, bgcolor: '#f8fafc' }}>
+                <Tabs value={userSubTab} onChange={(_, val) => setUserSubTab(val)}>
+                  <Tab
+                    label={
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <CalendarMonthIcon sx={{ fontSize: 16 }} />
+                        <span>Booking Records ({userBookings.length})</span>
+                      </Stack>
+                    }
+                  />
+                  <Tab
+                    label={
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <TimerIcon sx={{ fontSize: 16 }} />
+                        <span>Cool-Down Exemptions ({selectedUserWaivers.length})</span>
+                      </Stack>
+                    }
+                  />
+                </Tabs>
+              </Box>
+
+              {/* SubTab 0: Booking Records */}
+              {userSubTab === 0 && (
+                <BookingTable rows={userBookings} onViewDetails={onViewDetails} emptyMsg="No bookings found for this user." />
+              )}
+
+              {/* SubTab 1: Cool-Down Exemptions */}
+              {userSubTab === 1 && (
+                <CardContent sx={{ p: 2 }}>
+                  {selectedUserWaivers.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No administrative cool-down waivers granted to this user.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Stack spacing={1.5}>
+                      {selectedUserWaivers.map((w: any, idx: number) => (
+                        <Paper key={idx} variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: '#fffbeb', borderColor: '#fef08a' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                            <Box>
+                              <Typography variant="subtitle2" fontWeight={800} color="#92400e">
+                                Waived by Admin: {w.waivedByAdminName || w.waivedByAdminEmail}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Admin Email: {w.waivedByAdminEmail}
+                              </Typography>
+                            </Box>
+                            <Chip label={w.tierName || "Waived"} size="small" color="warning" sx={{ fontWeight: 700 }} />
+                          </Box>
+                          <Typography variant="body2" color="text.primary" sx={{ mb: 1 }}>
+                            <strong>Exemption Justification:</strong> {w.reason}
+                          </Typography>
+                          <Typography variant="caption" color="text.disabled" display="block">
+                            Granted Date: {new Date(w.waivedAt).toLocaleString()}
+                          </Typography>
+                        </Paper>
+                      ))}
+                    </Stack>
+                  )}
+                </CardContent>
+              )}
             </Card>
           </Box>
         )}
