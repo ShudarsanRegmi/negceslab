@@ -724,10 +724,10 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
     return userList.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
   }, [userList, search]);
 
-  const selectedUser = selectedEmail ? userList.find(u => u.email === selectedEmail) : null;
+  const selectedUser = selectedUserEmail ? userList.find(u => u.email === selectedUserEmail) : null;
   const userBookings = useMemo(() =>
-    selectedEmail ? allBookings.filter(b => getUserEmail(b) === selectedEmail) : []
-  , [allBookings, selectedEmail]);
+    selectedUserEmail ? allBookings.filter(b => getUserEmail(b) === selectedUserEmail) : []
+  , [allBookings, selectedUserEmail]);
 
   // User KPIs
   const uKpis = useMemo(() => {
@@ -794,12 +794,12 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
               ) : filteredUsers.map(u => (
                 <Box
                   key={u.email}
-                  onClick={() => setSelectedEmail(u.email)}
+                  onClick={() => setSelectedUserEmail(u.email)}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1.25, p: 1, borderRadius: 1.5, cursor: 'pointer',
-                    bgcolor: selectedEmail === u.email ? '#ede9fe' : 'transparent',
-                    border: selectedEmail === u.email ? '1px solid #c4b5fd' : '1px solid transparent',
-                    '&:hover': { bgcolor: selectedEmail === u.email ? '#ede9fe' : '#f8fafc' },
+                    bgcolor: selectedUserEmail === u.email ? '#ede9fe' : 'transparent',
+                    border: selectedUserEmail === u.email ? '1px solid #c4b5fd' : '1px solid transparent',
+                    '&:hover': { bgcolor: selectedUserEmail === u.email ? '#ede9fe' : '#f8fafc' },
                   }}
                 >
                   <Avatar sx={{ width: 28, height: 28, bgcolor: '#f5f3ff', color: '#8b5cf6', fontSize: '0.72rem', fontWeight: 800 }}>
