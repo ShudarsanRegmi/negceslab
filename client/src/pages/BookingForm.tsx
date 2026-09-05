@@ -30,7 +30,7 @@ import {
   ListItemText,
 
 } from "@mui/material";
-import { DatePicker, TimePicker } from "@mui/x-date-pickers";
+import { DatePicker, TimePicker, PickersDay, type PickersDayProps } from "@mui/x-date-pickers";
 import {
   format,
   addDays,
@@ -126,6 +126,17 @@ const BookingForm: React.FC = (): ReactElement => {
   const [endDate, setEndDate] = useState<Date | null>(
     locationState?.date ? new Date(locationState.date) : null
   );
+
+  useEffect(() => {
+    if (locationState?.computerId) {
+      setSelectedComputer(locationState.computerId);
+    }
+    if (locationState?.date) {
+      const parsedDate = new Date(locationState.date);
+      setStartDate(parsedDate);
+      setEndDate(parsedDate);
+    }
+  }, [location.state]);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [reason, setReason] = useState("");
@@ -1404,6 +1415,37 @@ const BookingForm: React.FC = (): ReactElement => {
               </Alert>
             )}
 
+            {/* Date Availability Legend */}
+            {selectedComputer && (
+              <Box sx={{ mb: 2, p: 2, border: 1, borderColor: "divider", borderRadius: 1 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Date Availability Legend (for selected computer):
+                </Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, backgroundColor: "rgba(76, 175, 80, 0.6)", borderRadius: "50%" }} />
+                    <Typography variant="caption">Fully Available</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, backgroundColor: "rgba(255, 193, 7, 0.6)", borderRadius: "50%" }} />
+                    <Typography variant="caption">Partially Available</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, backgroundColor: "rgba(244, 67, 54, 0.6)", borderRadius: "50%" }} />
+                    <Typography variant="caption">Fully Booked</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, backgroundColor: "rgba(158, 158, 158, 0.6)", borderRadius: "50%" }} />
+                    <Typography variant="caption">Closed</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ width: 6, height: 6, backgroundColor: "#9c27b0", borderRadius: "50%" }} />
+                    <Typography variant="caption">Temp Release</Typography>
+                  </Box>
+                </Box>
+              </Box>
+            )}
+
             <Box
               sx={{
                 display: "grid",
@@ -1421,6 +1463,126 @@ const BookingForm: React.FC = (): ReactElement => {
                     : startOfDay(new Date())
                 }
                 maxDate={addDays(new Date(), policy.maxBookingAheadDays)}
+                slots={{
+                  day: (props: PickersDayProps<Date>) => {
+                    const { day, ...other } = props;
+                    let statusBg = undefined;
+                    let statusBorder = undefined;
+                    let hasTempRelease = false;
+
+                    const comp = computers.find((c) => c._id === selectedComputer);
+                    if (comp && day) {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const dateCheck = new Date(day);
+                      dateCheck.setHours(0, 0, 0, 0);
+
+                      const maxBookingDate = new Date(today);
+                      maxBookingDate.setDate(today.getDate() + policy.maxBookingAheadDays);
+
+                      const isPast = dateCheck < today;
+                      const isClosed = policy.closedDays.includes(dateCheck.getDay());
+                      const isBeyond = dateCheck > maxBookingDate;
+
+                      if (!isPast && !isClosed && !isBeyond) {
+                        const dateStr = format(day, "yyyy-MM-dd");
+                        const dayBookings = (comp.bookings || []).filter((b) => {
+                          if (b.status !== "approved") return false;
+                          const sD = parseISO(b.startDate);
+                          const eD = parseISO(b.endDate);
+                          return dateCheck >= sD && dateCheck <= eD;
+                        });
+
+                        const bookedSlots: any[] = [];
+                        const tempReleaseSlots: any[] = [];
+
+                        dayBookings.forEach((b) => {
+                          const isReleased = b.temporaryRelease?.hasActiveReleases &&
+                            b.temporaryRelease?.releasedDates?.some(rd => rd.date === dateStr && !rd.isBooked);
+                          if (isReleased) {
+                            tempReleaseSlots.push(b);
+                          } else {
+                            bookedSlots.push(b);
+                          }
+                        });
+
+                        const labOpenMins = policy.labOpenHour * 60 + policy.labOpenMinute;
+                        const labCloseMins = policy.labCloseHour * 60 + policy.labCloseMinute;
+                        const totalLabMins = labCloseMins - labOpenMins;
+
+                        const timeToMins = (tStr: string) => {
+                          const [h, m] = tStr.split(":").map(Number);
+                          return h * 60 + m;
+                        };
+
+                        const totalBookedMins = bookedSlots.reduce((tot, slot) => {
+                          return tot + (timeToMins(slot.endTime) - timeToMins(slot.startTime));
+                        }, 0);
+
+                        let status = "fully_available";
+                        if (totalBookedMins === 0) {
+                          status = "fully_available";
+                        } else if (totalBookedMins >= totalLabMins) {
+                          status = "fully_booked";
+                        } else {
+                          status = "partially_available";
+                        }
+
+                        if (tempReleaseSlots.length > 0 && bookedSlots.length === 0) {
+                          status = "fully_available";
+                        }
+
+                        switch (status) {
+                          case "fully_available":
+                            statusBg = "rgba(76, 175, 80, 0.18)";
+                            statusBorder = "1px solid rgba(76, 175, 80, 0.4)";
+                            break;
+                          case "partially_available":
+                            statusBg = "rgba(255, 193, 7, 0.18)";
+                            statusBorder = "1px solid rgba(255, 193, 7, 0.4)";
+                            break;
+                          case "fully_booked":
+                            statusBg = "rgba(244, 67, 54, 0.18)";
+                            statusBorder = "1px solid rgba(244, 67, 54, 0.4)";
+                            break;
+                        }
+                        hasTempRelease = tempReleaseSlots.length > 0;
+                      }
+                    }
+
+                    return (
+                      <Box sx={{ position: "relative" }}>
+                        <PickersDay
+                          {...other}
+                          day={day}
+                          sx={{
+                            backgroundColor: statusBg,
+                            border: statusBorder,
+                            "&:hover": {
+                              backgroundColor: statusBg,
+                              filter: "brightness(0.9)",
+                            },
+                          }}
+                        />
+                        {hasTempRelease && (
+                          <Box
+                            sx={{
+                              position: "absolute",
+                              top: 2,
+                              right: 2,
+                              width: 6,
+                              height: 6,
+                              backgroundColor: "#9c27b0",
+                              borderRadius: "50%",
+                              zIndex: 2,
+                              pointerEvents: "none",
+                            }}
+                          />
+                        )}
+                      </Box>
+                    );
+                  },
+                }}
                 slotProps={{
                   textField: {
                     fullWidth: true,
@@ -1439,6 +1601,126 @@ const BookingForm: React.FC = (): ReactElement => {
                   startDate || (coolDownStatus.active && coolDownStatus.eligibleDate ? parseISO(coolDownStatus.eligibleDate) : startOfDay(new Date()))
                 }
                 maxDate={startDate ? addDays(startDate, policy.maxBookingDays - 1) : addDays(new Date(), policy.maxBookingAheadDays)}
+                slots={{
+                  day: (props: PickersDayProps<Date>) => {
+                    const { day, ...other } = props;
+                    let statusBg = undefined;
+                    let statusBorder = undefined;
+                    let hasTempRelease = false;
+
+                    const comp = computers.find((c) => c._id === selectedComputer);
+                    if (comp && day) {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const dateCheck = new Date(day);
+                      dateCheck.setHours(0, 0, 0, 0);
+
+                      const maxBookingDate = new Date(today);
+                      maxBookingDate.setDate(today.getDate() + policy.maxBookingAheadDays);
+
+                      const isPast = dateCheck < today;
+                      const isClosed = policy.closedDays.includes(dateCheck.getDay());
+                      const isBeyond = dateCheck > maxBookingDate;
+
+                      if (!isPast && !isClosed && !isBeyond) {
+                        const dateStr = format(day, "yyyy-MM-dd");
+                        const dayBookings = (comp.bookings || []).filter((b) => {
+                          if (b.status !== "approved") return false;
+                          const sD = parseISO(b.startDate);
+                          const eD = parseISO(b.endDate);
+                          return dateCheck >= sD && dateCheck <= eD;
+                        });
+
+                        const bookedSlots: any[] = [];
+                        const tempReleaseSlots: any[] = [];
+
+                        dayBookings.forEach((b) => {
+                          const isReleased = b.temporaryRelease?.hasActiveReleases &&
+                            b.temporaryRelease?.releasedDates?.some(rd => rd.date === dateStr && !rd.isBooked);
+                          if (isReleased) {
+                            tempReleaseSlots.push(b);
+                          } else {
+                            bookedSlots.push(b);
+                          }
+                        });
+
+                        const labOpenMins = policy.labOpenHour * 60 + policy.labOpenMinute;
+                        const labCloseMins = policy.labCloseHour * 60 + policy.labCloseMinute;
+                        const totalLabMins = labCloseMins - labOpenMins;
+
+                        const timeToMins = (tStr: string) => {
+                          const [h, m] = tStr.split(":").map(Number);
+                          return h * 60 + m;
+                        };
+
+                        const totalBookedMins = bookedSlots.reduce((tot, slot) => {
+                          return tot + (timeToMins(slot.endTime) - timeToMins(slot.startTime));
+                        }, 0);
+
+                        let status = "fully_available";
+                        if (totalBookedMins === 0) {
+                          status = "fully_available";
+                        } else if (totalBookedMins >= totalLabMins) {
+                          status = "fully_booked";
+                        } else {
+                          status = "partially_available";
+                        }
+
+                        if (tempReleaseSlots.length > 0 && bookedSlots.length === 0) {
+                          status = "fully_available";
+                        }
+
+                        switch (status) {
+                          case "fully_available":
+                            statusBg = "rgba(76, 175, 80, 0.18)";
+                            statusBorder = "1px solid rgba(76, 175, 80, 0.4)";
+                            break;
+                          case "partially_available":
+                            statusBg = "rgba(255, 193, 7, 0.18)";
+                            statusBorder = "1px solid rgba(255, 193, 7, 0.4)";
+                            break;
+                          case "fully_booked":
+                            statusBg = "rgba(244, 67, 54, 0.18)";
+                            statusBorder = "1px solid rgba(244, 67, 54, 0.4)";
+                            break;
+                        }
+                        hasTempRelease = tempReleaseSlots.length > 0;
+                      }
+                    }
+
+                    return (
+                      <Box sx={{ position: "relative" }}>
+                        <PickersDay
+                          {...other}
+                          day={day}
+                          sx={{
+                            backgroundColor: statusBg,
+                            border: statusBorder,
+                            "&:hover": {
+                              backgroundColor: statusBg,
+                              filter: "brightness(0.9)",
+                            },
+                          }}
+                        />
+                        {hasTempRelease && (
+                          <Box
+                            sx={{
+                              position: "absolute",
+                              top: 2,
+                              right: 2,
+                              width: 6,
+                              height: 6,
+                              backgroundColor: "#9c27b0",
+                              borderRadius: "50%",
+                              zIndex: 2,
+                              pointerEvents: "none",
+                            }}
+                          />
+                        )}
+                      </Box>
+                    );
+                  },
+                }}
                 slotProps={{
                   textField: {
                     fullWidth: true,

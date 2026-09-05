@@ -1058,6 +1058,7 @@ const ComputerGrid: React.FC = () => {
           setShowBookingsDialog(false);
           handleCalendarView(computer);
         }}
+        onNavigateBook={(computerId) => navigate("/book", { state: { computerId } })}
         enrichBookingsWithTempReleases={enrichBookingsWithTempReleases}
         getStatusColor={getStatusColor}
       />
@@ -1093,6 +1094,7 @@ interface BookingsDialogProps {
   userRole: string;
   onClose: () => void;
   onSwitchToCalendar: (computer: Computer) => void;
+  onNavigateBook: (computerId?: string) => void;
   enrichBookingsWithTempReleases: (bookings: Booking[], computerId: string) => Booking[];
   getStatusColor: (status: string) => any;
 }
@@ -1103,6 +1105,7 @@ const BookingsDialogComponent: React.FC<BookingsDialogProps> = React.memo(({
   userRole,
   onClose,
   onSwitchToCalendar,
+  onNavigateBook,
   enrichBookingsWithTempReleases,
   getStatusColor,
 }) => {
@@ -1217,6 +1220,17 @@ const BookingsDialogComponent: React.FC<BookingsDialogProps> = React.memo(({
         )}
       </DialogContent>
       <DialogActions>
+        <Button
+          onClick={() => {
+            onClose();
+            onNavigateBook(selectedComputer._id);
+          }}
+          startIcon={<BookIcon />}
+          variant="contained"
+          color="primary"
+        >
+          Book Computer
+        </Button>
         <Button
           onClick={() => onSwitchToCalendar(selectedComputer)}
           startIcon={<CalendarIcon />}
