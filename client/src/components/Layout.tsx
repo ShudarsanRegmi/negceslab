@@ -67,6 +67,7 @@ import {
   AppRegistration as AppRegistrationIcon,
   MarkEmailRead as MarkEmailReadIcon,
   Policy as PolicyIcon,
+  Timer as TimerIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -296,6 +297,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       text: "Policy & Settings",
       icon: <PolicyIcon />,
       path: "/admin/policy",
+      roles: ["admin"],
+    },
+    {
+      text: "Cool-Down Management",
+      icon: <TimerIcon />,
+      path: "/admin/cooldowns",
       roles: ["admin"],
     },
     // {\n    //   text: "User Management",

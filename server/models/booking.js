@@ -89,6 +89,17 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     default: undefined
   },
+
+  // Cool-down Waiver Tracking
+  isWaivedCoolDown: {
+    type: Boolean,
+    default: false
+  },
+  waivedCoolDownInfo: {
+    waivedByAdminEmail: { type: String, default: "" },
+    reason: { type: String, default: "" },
+    waivedAt: { type: Date }
+  },
   
   // CORE TEMPORARY RELEASE INFO - Just the basics for fast queries
   temporaryRelease: {

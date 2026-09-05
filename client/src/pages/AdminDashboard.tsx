@@ -2031,7 +2031,20 @@ const AdminDashboard: React.FC = () => {
                         <TableCell>{formatBookingDateRange(booking.startDate, booking.endDate)}</TableCell>
                         <TableCell>{`${booking.startTime} - ${booking.endTime}`}</TableCell>
                         <TableCell>
-                          <Chip label={booking.status} color={getStatusColor(booking.status) as any} size="small" />
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                            <Chip label={booking.status} color={getStatusColor(booking.status) as any} size="small" />
+                            {(booking as any).isWaivedCoolDown && (
+                              <Tooltip title={`Cool-down waived by ${(booking as any).waivedCoolDownInfo?.waivedByAdminEmail || 'Admin'}. Reason: ${(booking as any).waivedCoolDownInfo?.reason || 'Approved override'}`}>
+                                <Chip
+                                  label="Cool-Down Waived"
+                                  color="warning"
+                                  variant="outlined"
+                                  size="small"
+                                  sx={{ fontWeight: 600 }}
+                                />
+                              </Tooltip>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell>{/* Only show actions for non-pending bookings if needed */}</TableCell>
                       </TableRow>

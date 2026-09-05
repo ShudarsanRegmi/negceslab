@@ -256,4 +256,13 @@ export const policyAPI = {
   updatePolicy: (data: any) => api.put('/policy', data),
 };
 
+// Cool-Down Management API endpoints (Admin only)
+export const cooldownsAPI = {
+  getActiveCoolDowns: () => api.get('/cooldowns/active'),
+  waiveCoolDown: (data: { targetUserId: string; reason: string; tierName?: string; lastBookingEndDate?: string }) => 
+    api.post('/cooldowns/waive', data),
+  getCoolDownLogs: () => api.get('/cooldowns/logs'),
+  getCoolDownMetrics: () => api.get('/cooldowns/metrics'),
+};
+
 export default api;

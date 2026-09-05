@@ -407,12 +407,35 @@ router.post('/', verifyToken, async (req, res) => {
         coolDownExpiryObj.setDate(coolDownExpiryObj.getDate() + coolDownDays);
 
         if (startDateObj <= coolDownExpiryObj) {
-          const eligibleDateObj = new Date(coolDownExpiryObj);
-          eligibleDateObj.setDate(eligibleDateObj.getDate() + 1);
-          const eligibleDateStr = eligibleDateObj.toISOString().split('T')[0];
-          return res.status(400).json({
-            message: `Cool-down policy active (${tierName}): You must wait ${coolDownDays} day(s) after your previous ${prevDurationDays}-day booking (ended ${latestPrev.endDate}). You can book again starting ${eligibleDateStr}.`
-          });
+          // Check if admin granted a cool-down waiver for this user
+          const CooldownWaiver = require('../models/cooldownWaiver');
+          const activeWaiver = await CooldownWaiver.findOne({
+            userId: req.user.firebaseUid,
+            waivedAt: { $gte: prevEndObj }
+          }).sort({ waivedAt: -1 });
+
+          if (activeWaiver) {
+            logger.info('Booking allowed via active Cool-down Waiver', {
+              user: req.user.email,
+              waivedBy: activeWaiver.waivedByAdminEmail,
+              reason: activeWaiver.reason
+            });
+            req.activeWaiverInfo = {
+              isWaivedCoolDown: true,
+              waivedCoolDownInfo: {
+                waivedByAdminEmail: activeWaiver.waivedByAdminEmail,
+                reason: activeWaiver.reason,
+                waivedAt: activeWaiver.waivedAt
+              }
+            };
+          } else {
+            const eligibleDateObj = new Date(coolDownExpiryObj);
+            eligibleDateObj.setDate(eligibleDateObj.getDate() + 1);
+            const eligibleDateStr = eligibleDateObj.toISOString().split('T')[0];
+            return res.status(400).json({
+              message: `Cool-down policy active (${tierName}): You must wait ${coolDownDays} day(s) after your previous ${prevDurationDays}-day booking (ended ${latestPrev.endDate}). You can book again starting ${eligibleDateStr}.`
+            });
+          }
         }
       }
     }
@@ -490,6 +513,8 @@ router.post('/', verifyToken, async (req, res) => {
       datasetLink,
       bottleneckExplanation,
       mentor: req.body.mentor || undefined,
+      isWaivedCoolDown: req.activeWaiverInfo?.isWaivedCoolDown || false,
+      waivedCoolDownInfo: req.activeWaiverInfo?.waivedCoolDownInfo || undefined
     });
 
     await booking.save();

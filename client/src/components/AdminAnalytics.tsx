@@ -34,7 +34,8 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { computersAPI } from '../services/api';
+import { computersAPI, cooldownsAPI } from '../services/api';
+import TimerIcon from '@mui/icons-material/Timer';
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -693,7 +694,18 @@ function OverviewTab({
 
 function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; onViewDetails: (b: Booking) => void }) {
   const [search, setSearch] = useState('');
-  const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
+  const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
+  const [waivedMetrics, setWaivedMetrics] = useState<{ totalWaivedCount: number; waivedBookingsCount: number }>({ totalWaivedCount: 0, waivedBookingsCount: 0 });
+
+  useEffect(() => {
+    cooldownsAPI.getCoolDownMetrics()
+      .then((res) => {
+        if (res.data) {
+          setWaivedMetrics(res.data);
+        }
+      })
+      .catch((err) => console.error('Failed to load cool-down metrics:', err));
+  }, []);
 
   // Build user list from all bookings
   const userList = useMemo(() => {
@@ -847,6 +859,7 @@ function PerUserTab({ allBookings, onViewDetails }: { allBookings: Booking[]; on
               <KpiCard label="Rejected" value={uKpis.rejected} color="#ef4444" bg="#fef2f2" icon={<CancelIcon sx={{ fontSize: 14 }} />} />
               <KpiCard label="GPU Requests" value={uKpis.gpu} color="#8b5cf6" bg="#f5f3ff" icon={<MemoryIcon sx={{ fontSize: 14 }} />} />
               <KpiCard label="Total Approved Hours" value={`${uKpis.hours}h`} color="#0891b2" bg="#ecfeff" icon={<ScheduleIcon sx={{ fontSize: 14 }} />} />
+              <KpiCard label="Waived Cool-Downs" value={waivedMetrics.totalWaivedCount} color="#d97706" bg="#fef3c7" icon={<TimerIcon sx={{ fontSize: 14 }} />} />
             </Box>
 
             {/* Chart + System preference */}
