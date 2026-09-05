@@ -24,6 +24,16 @@ COPY shared ./shared
 # -------------------------
 FROM node:20-bullseye-slim AS runtime
 
+# Build Arguments for Automated Deployment Tracking
+ARG GIT_COMMIT_HASH="dev"
+ARG GIT_COMMIT_DATE="unknown"
+ARG GIT_BRANCH="main"
+
+# Set environment variables inside runtime container
+ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
+ENV GIT_COMMIT_DATE=${GIT_COMMIT_DATE}
+ENV GIT_BRANCH=${GIT_BRANCH}
+
 WORKDIR /app
 
 # Copy built app from builder stage

@@ -26,6 +26,10 @@ services:
     build:
       context: .
       dockerfile: server/Dockerfile
+      args:
+        GIT_COMMIT_HASH: ${GIT_COMMIT_HASH:-dev}
+        GIT_COMMIT_DATE: ${GIT_COMMIT_DATE:-unknown}
+        GIT_BRANCH: ${GIT_BRANCH:-main}
     container_name: backend
     restart: unless-stopped
     environment:
@@ -45,6 +49,10 @@ services:
       context: .
       dockerfile: client/Dockerfile
       target: output
+      args:
+        VITE_GIT_COMMIT_HASH: ${GIT_COMMIT_HASH:-dev}
+        VITE_GIT_COMMIT_DATE: ${GIT_COMMIT_DATE:-unknown}
+        VITE_GIT_BRANCH: ${GIT_BRANCH:-main}
     container_name: frontend-builder
     volumes:
       - ./client/dist:/output

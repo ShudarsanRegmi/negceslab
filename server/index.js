@@ -97,8 +97,14 @@ if (process.env.NODE_ENV !== "production") {
   setupSwagger(app);
 }
 
-app.get('/', (req, res)=>{
-	res.status(200).json({'msg': "Welcome to Negces Lab Server API", 'Version': "3.0.3", "lastUpdatedOn": "Saturday 04 July 2026 06:41:14 PM IST"});
+app.get('/', (req, res) => {
+	res.status(200).json({
+		msg: "Welcome to Negces Lab Server API",
+		version: "3.0.3",
+		deploymentHash: process.env.GIT_COMMIT_HASH || "dev",
+		lastUpdatedOn: process.env.GIT_COMMIT_DATE || new Date().toISOString(),
+		branch: process.env.GIT_BRANCH || "main"
+	});
 });
 
 // Health endpoint

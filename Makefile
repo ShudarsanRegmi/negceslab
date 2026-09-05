@@ -1,5 +1,10 @@
 .PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh prod-services setup-env build-backend up-backend down-backend logs-backend build-mongo up-mongo down-mongo logs-mongo build-agent-linux build-agent-windows build-agent-all up-observability down-observability logs-observability systemd-install systemd-enable systemd-start systemd-stop systemd-restart systemd-status systemd-logs systemd-logs-mongodb systemd-logs-backend systemd-update-backend systemd-uninstall
 
+# Automatic Git Deployment Metadata
+export GIT_COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
+export GIT_COMMIT_DATE ?= $(shell git log -1 --format="%cd" --date=format:"%Y-%m-%d %H:%M:%S IST" 2>/dev/null || date +"%Y-%m-%d %H:%M:%S IST")
+export GIT_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+
 # Default target
 help:
 	@echo "Available commands:"

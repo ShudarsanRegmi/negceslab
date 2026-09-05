@@ -11,7 +11,8 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Stack
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -52,13 +53,21 @@ const Version: React.FC = () => {
                 </Typography>
               </Box>
               <Box sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
-                <Chip 
-                  label="Version 4.0.0" 
-                  color="primary" 
-                  sx={{ fontWeight: 700, fontSize: '0.95rem', px: 1, py: 2, borderRadius: 2 }} 
-                />
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontWeight: 500 }}>
-                  Released: July 11, 2026
+                <Stack direction="row" spacing={1} justifyContent={{ xs: 'flex-start', sm: 'flex-end' }} sx={{ mb: 1 }}>
+                  <Chip 
+                    label="Version 4.0.0" 
+                    color="primary" 
+                    sx={{ fontWeight: 700, fontSize: '0.95rem', borderRadius: 2 }} 
+                  />
+                  <Chip 
+                    label={`Hash: ${import.meta.env.VITE_GIT_COMMIT_HASH || "dev"}`} 
+                    color="secondary" 
+                    variant="outlined" 
+                    sx={{ fontWeight: 700, fontSize: '0.85rem', borderRadius: 2 }} 
+                  />
+                </Stack>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Deployment Commit: {import.meta.env.VITE_GIT_COMMIT_DATE || "Development Build"} ({import.meta.env.VITE_GIT_BRANCH || "local"})
                 </Typography>
               </Box>
             </Box>
