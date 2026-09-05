@@ -2,7 +2,7 @@
 
 # Automatic Git Deployment Metadata
 export GIT_COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
-export GIT_COMMIT_DATE ?= $(shell git log -1 --format="%cd" --date=format:"%Y-%m-%d %H:%M:%S IST" 2>/dev/null || date +"%Y-%m-%d %H:%M:%S IST")
+export GIT_COMMIT_DATE ?= $(shell date +"%Y-%m-%d %H:%M:%S IST")
 export GIT_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 
 # Default target
