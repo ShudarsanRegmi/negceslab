@@ -33,6 +33,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Stack,
 } from '@mui/material';
 import { computersAPI, cooldownsAPI } from '../services/api';
 import TimerIcon from '@mui/icons-material/Timer';
