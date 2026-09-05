@@ -1,4 +1,4 @@
-.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh prod-services setup-env build-backend up-backend down-backend logs-backend build-mongo up-mongo down-mongo logs-mongo build-agent-linux build-agent-windows build-agent-all up-observability down-observability logs-observability systemd-install systemd-enable systemd-start systemd-stop systemd-restart systemd-status systemd-logs systemd-logs-mongodb systemd-logs-backend systemd-update-backend systemd-uninstall
+.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh build-frontend-new build-frontend-fresh-new prod-services setup-env build-backend up-backend down-backend logs-backend build-mongo up-mongo down-mongo logs-mongo build-agent-linux build-agent-windows build-agent-all up-observability down-observability logs-observability systemd-install systemd-enable systemd-start systemd-stop systemd-restart systemd-status systemd-logs systemd-logs-mongodb systemd-logs-backend systemd-update-backend systemd-uninstall
 
 # Automatic Git Deployment Metadata
 export GIT_COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
@@ -10,8 +10,10 @@ help:
 	@echo "Available commands:"
 	@echo ""
 	@echo "Frontend:"
-	@echo "  build-frontend       - Build frontend and extract to ./client/dist/"
-	@echo "  build-frontend-fresh - Build frontend without cache (force rebuild)"
+	@echo "  build-frontend           - Build frontend and extract to ./client/dist/"
+	@echo "  build-frontend-fresh     - Build frontend without cache (force rebuild)"
+	@echo "  build-frontend-new       - Build frontend using cached dependency layers"
+	@echo "  build-frontend-fresh-new - Force a completely fresh frontend build"
 	@echo ""
 	@echo "Backend Services:"
 	@echo "  build-backend - Build only backend container"
@@ -70,6 +72,27 @@ build-frontend-fresh:
 	podman-compose -f docker-compose.yml up --force-recreate frontend-builder
 	@echo "Frontend built and extracted to ./client/dist/"
 	@echo "Files ready to serve from Apache HTTPD at /negces/ path"
+
+# Build frontend using cached dependency layers
+build-frontend-new:
+	@echo "Building frontend..."
+	@rm -rf ./client/dist
+	@mkdir -p ./client/dist
+	podman-compose -f docker-compose.yml build frontend-builder
+	podman-compose -f docker-compose.yml up --force-recreate frontend-builder
+	@echo "Frontend built and extracted to ./client/dist/"
+	@echo "Files ready to serve from Apache HTTPD at /negces/ path"
+
+# Force a completely fresh frontend build
+build-frontend-fresh-new:
+	@echo "Building frontend from scratch..."
+	@rm -rf ./client/dist
+	@mkdir -p ./client/dist
+	podman-compose -f docker-compose.yml build --no-cache frontend-builder
+	podman-compose -f docker-compose.yml up --force-recreate frontend-builder
+	@echo "Fresh frontend build completed."
+	@echo "Files ready to serve from Apache HTTPD at /negces/ path"
+
 
 
 # Setup environment files for first-time use
