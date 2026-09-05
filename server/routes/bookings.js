@@ -138,15 +138,32 @@ router.get('/cooldown-status', verifyToken, async (req, res) => {
     eligibleDateObj.setDate(eligibleDateObj.getDate() + 1);
     const eligibleDateStr = eligibleDateObj.toISOString().split('T')[0];
 
+    const CooldownWaiver = require('../models/cooldownWaiver');
+    const activeWaiver = await CooldownWaiver.findOne({
+      userId: req.user.firebaseUid,
+      waivedAt: { $gte: prevEndObj }
+    }).sort({ waivedAt: -1 });
+
+    const isWaived = Boolean(activeWaiver);
+
     return res.json({
-      active: isCoolDownActive,
+      active: isCoolDownActive && !isWaived,
+      isWaived: isCoolDownActive && isWaived,
       coolDownDays,
       tierName,
       lastBookingEndDate: latestPrev.endDate,
       lastBookingDurationDays: prevDurationDays,
       coolDownExpiryDate: coolDownExpiryObj.toISOString().split('T')[0],
       eligibleDate: eligibleDateStr,
-      message: isCoolDownActive
+      waivedInfo: activeWaiver ? {
+        waivedByAdminEmail: activeWaiver.waivedByAdminEmail,
+        waivedByAdminName: activeWaiver.waivedByAdminName,
+        reason: activeWaiver.reason,
+        waivedAt: activeWaiver.waivedAt
+      } : null,
+      message: (isCoolDownActive && isWaived)
+        ? `Cool-down Exemption Granted: Your cool-down period was waived by Admin (${activeWaiver.waivedByAdminEmail}). Reason: ${activeWaiver.reason}`
+        : isCoolDownActive
         ? `Cool-down active (${tierName}): You must wait ${coolDownDays} day(s) after your ${prevDurationDays}-day booking ended on ${latestPrev.endDate}. Next allowed booking date is ${eligibleDateStr}.`
         : null
     });

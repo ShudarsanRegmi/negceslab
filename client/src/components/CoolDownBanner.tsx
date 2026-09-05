@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
-  Alert,
-  AlertTitle,
   Paper,
   Chip,
   Stack,
@@ -11,10 +9,13 @@ import {
 } from "@mui/material";
 import TimerIcon from "@mui/icons-material/Timer";
 import LockIcon from "@mui/icons-material/Lock";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
+import VerifiedIcon from "@mui/icons-material/Verified";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 
 export interface CoolDownStatus {
   active: boolean;
+  isWaived?: boolean;
   coolDownDays: number;
   tierName?: string;
   lastBookingEndDate?: string;
@@ -22,6 +23,12 @@ export interface CoolDownStatus {
   coolDownExpiryDate?: string;
   eligibleDate?: string | null;
   message?: string | null;
+  waivedInfo?: {
+    waivedByAdminEmail: string;
+    waivedByAdminName?: string;
+    reason: string;
+    waivedAt: string;
+  } | null;
 }
 
 interface CoolDownBannerProps {
@@ -64,6 +71,69 @@ export const CoolDownBanner: React.FC<CoolDownBannerProps> = ({ status, title })
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [status.active, status.eligibleDate]);
+
+  // Handle Waived / Exempted Cool-Down Display
+  if (status.isWaived) {
+    return (
+      <Paper
+        elevation={3}
+        sx={{
+          p: 3,
+          mb: 3,
+          borderRadius: 3,
+          border: "1px solid",
+          borderColor: "success.main",
+          background: "linear-gradient(135deg, rgba(76,175,80,0.08) 0%, rgba(232,245,233,0.4) 100%)",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2, mb: 1.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box
+              sx={{
+                p: 1.2,
+                borderRadius: "50%",
+                bgcolor: "success.main",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <VerifiedIcon sx={{ fontSize: 28 }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight={800} color="success.dark">
+                Cool-Down Exemption Granted (Waived)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                Exempted by Admin ({status.waivedInfo?.waivedByAdminEmail || "Admin"})
+              </Typography>
+            </Box>
+          </Box>
+
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip
+              icon={<LockOpenIcon fontSize="small" />}
+              label="Booking Requests Unlocked"
+              color="success"
+              sx={{ fontWeight: 700 }}
+            />
+          </Stack>
+        </Box>
+
+        <Divider sx={{ my: 1.5 }} />
+
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+          <Typography variant="body2" color="text.primary" fontWeight={600}>
+            <strong>Exemption Reason:</strong> {status.waivedInfo?.reason || "Approved administrative override."}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" fontWeight={500}>
+            You may proceed to reserve lab computers without waiting for cool-down expiry.
+          </Typography>
+        </Box>
+      </Paper>
+    );
+  }
 
   if (!status.active || timeLeft.expired) {
     return null;

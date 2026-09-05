@@ -452,7 +452,7 @@ const Dashboard: React.FC = () => {
         Dashboard
       </Typography>
 
-      {coolDownStatus.active && <CoolDownBanner status={coolDownStatus} />}
+      {(coolDownStatus.active || coolDownStatus.isWaived) && <CoolDownBanner status={coolDownStatus} />}
 
       {/* Summary Cards */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>

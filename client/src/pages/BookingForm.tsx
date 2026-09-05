@@ -1980,7 +1980,7 @@ const BookingForm: React.FC = (): ReactElement => {
         </Alert>
       )}
 
-      {coolDownStatus.active && (
+      {(coolDownStatus.active || coolDownStatus.isWaived) && (
         <CoolDownBanner status={coolDownStatus} title="Booking Requests Locked (Cool-Down Active)" />
       )}
 
