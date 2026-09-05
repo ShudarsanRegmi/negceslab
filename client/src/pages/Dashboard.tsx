@@ -50,6 +50,7 @@ import {
 import { format, addDays, isBefore, startOfDay, isWithinInterval, parseISO } from "date-fns";
 import { bookingsAPI, computersAPI, temporaryReleaseAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import CoolDownBanner, { type CoolDownStatus } from "../components/CoolDownBanner";
 
 
 interface Booking {
@@ -122,6 +123,10 @@ const Dashboard: React.FC = () => {
   const [selectedReleaseDates, setSelectedReleaseDates] = useState<Date[]>([]);
   const [tempReleaseReason, setTempReleaseReason] = useState("");
   const [calendarValue, setCalendarValue] = useState<Date | null>(null);
+  const [coolDownStatus, setCoolDownStatus] = useState<CoolDownStatus>({
+    active: false,
+    coolDownDays: 0,
+  });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -132,12 +137,16 @@ const Dashboard: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [bookingsRes, computersRes] = await Promise.all([
+      const [bookingsRes, computersRes, coolDownRes] = await Promise.all([
         bookingsAPI.getUserBookings(),
         computersAPI.getComputersWithBookings(),
+        bookingsAPI.getCoolDownStatus(),
       ]);
       setBookings(bookingsRes.data || []);
       setComputers(computersRes.data || []);
+      if (coolDownRes.data) {
+        setCoolDownStatus(coolDownRes.data);
+      }
       
       // Fetch temporary releases separately to handle potential API errors
       try {
@@ -442,6 +451,8 @@ const Dashboard: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Dashboard
       </Typography>
+
+      {coolDownStatus.active && <CoolDownBanner status={coolDownStatus} />}
 
       {/* Summary Cards */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>

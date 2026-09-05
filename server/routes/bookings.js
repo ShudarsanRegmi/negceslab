@@ -129,11 +129,10 @@ router.get('/cooldown-status', verifyToken, async (req, res) => {
     const prevEndDateObj = new Date(latestPrev.endDate + 'T00:00:00');
     const coolDownExpiryObj = new Date(prevEndDateObj);
     coolDownExpiryObj.setDate(coolDownExpiryObj.getDate() + coolDownDays);
+    coolDownExpiryObj.setHours(23, 59, 59, 999);
 
-    const todayDateOnly = new Date();
-    todayDateOnly.setHours(0, 0, 0, 0);
-
-    const isCoolDownActive = todayDateOnly <= coolDownExpiryObj;
+    const now = new Date();
+    const isCoolDownActive = now <= coolDownExpiryObj;
 
     const eligibleDateObj = new Date(coolDownExpiryObj);
     eligibleDateObj.setDate(eligibleDateObj.getDate() + 1);

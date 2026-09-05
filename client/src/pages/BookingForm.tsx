@@ -12,6 +12,7 @@ import {
   Select,
   MenuItem,
   Alert,
+  AlertTitle,
   Paper,
   Stepper,
   Step,
@@ -45,8 +46,10 @@ import {
 import { computersAPI, bookingsAPI, temporaryReleaseAPI, policyAPI } from "../services/api";
 import Warning from "@mui/icons-material/Warning";
 import Info from "@mui/icons-material/Info";
+import TimerIcon from "@mui/icons-material/Timer";
 import { alpha } from "@mui/material/styles";
 import TermsAndConditionsDialog, { type TermsAccepted } from "../components/TermsAndConditionsDialog";
+import CoolDownBanner from "../components/CoolDownBanner";
 import { useAuth } from "../contexts/AuthContext";
 // Import shared policy constants
 import {
@@ -1222,13 +1225,13 @@ const BookingForm: React.FC = (): ReactElement => {
               Choose from the available computers in the lab
             </Typography>
 
-            <FormControl fullWidth disabled={!hasValidAmritaEmail}>
+            <FormControl fullWidth disabled={!hasValidAmritaEmail || coolDownStatus.active}>
               <InputLabel>Computer</InputLabel>
               <Select
                 value={selectedComputer}
                 onChange={(e) => setSelectedComputer(e.target.value)}
                 label="Computer"
-                disabled={!hasValidAmritaEmail}
+                disabled={!hasValidAmritaEmail || coolDownStatus.active}
               >
                 {computers
                   .sort((a, b) => {
@@ -1279,6 +1282,16 @@ const BookingForm: React.FC = (): ReactElement => {
                 <Typography variant="body2">
                   <strong>📧 Computer selection is disabled</strong> because you're not signed in with an Amrita email address. 
                   Please sign out and log in with your institutional email to proceed with bookings.
+                </Typography>
+              </Alert>
+            )}
+
+            {/* Cool-Down Selection Disabled Message */}
+            {coolDownStatus.active && (
+              <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>🔒 Computer selection is locked</strong> because your account is currently in an active cool-down period. 
+                  You can submit your next booking request starting <strong>{coolDownStatus.eligibleDate}</strong>.
                 </Typography>
               </Alert>
             )}
@@ -1968,10 +1981,7 @@ const BookingForm: React.FC = (): ReactElement => {
       )}
 
       {coolDownStatus.active && (
-        <Alert severity="warning" icon={<TimerIcon />} sx={{ mb: 3 }}>
-          <AlertTitle sx={{ fontWeight: "bold" }}>Cool-Down Period Active ({coolDownStatus.tierName || 'Tiered Policy'})</AlertTitle>
-          {coolDownStatus.message || `You currently have an active cool-down period. Next allowed booking date is ${coolDownStatus.eligibleDate}.`}
-        </Alert>
+        <CoolDownBanner status={coolDownStatus} title="Booking Requests Locked (Cool-Down Active)" />
       )}
 
       <Card>
