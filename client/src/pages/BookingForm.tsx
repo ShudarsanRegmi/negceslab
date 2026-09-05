@@ -681,10 +681,14 @@ const BookingForm: React.FC = (): ReactElement => {
   };
 
   const handleNext = () => {
-    // Check active cool-down period
-    if (coolDownStatus.active) {
-      setError(coolDownStatus.message || `Cool-down active: Your account is in a mandatory cool-down period until ${coolDownStatus.eligibleDate}. Booking requests cannot be submitted to any system until then.`);
-      return;
+    // Check active cool-down period against selected start date
+    if (coolDownStatus.active && coolDownStatus.eligibleDate && startDate) {
+      const eligibleDateObj = startOfDay(parseISO(coolDownStatus.eligibleDate));
+      const selectedStartDateObj = startOfDay(startDate);
+      if (isBefore(selectedStartDateObj, eligibleDateObj)) {
+        setError(coolDownStatus.message || `Cool-down active: Your booking start date must be on or after ${coolDownStatus.eligibleDate}.`);
+        return;
+      }
     }
 
     // Check email validity first
@@ -743,9 +747,13 @@ const BookingForm: React.FC = (): ReactElement => {
   };
 
   const handleSubmit = async () => {
-    if (coolDownStatus.active) {
-      setError(coolDownStatus.message || `Cool-down active: Your account is in a mandatory cool-down period until ${coolDownStatus.eligibleDate}. Booking requests cannot be submitted to any system until then.`);
-      return;
+    if (coolDownStatus.active && coolDownStatus.eligibleDate && startDate) {
+      const eligibleDateObj = startOfDay(parseISO(coolDownStatus.eligibleDate));
+      const selectedStartDateObj = startOfDay(startDate);
+      if (isBefore(selectedStartDateObj, eligibleDateObj)) {
+        setError(coolDownStatus.message || `Cool-down active: Your booking start date must be on or after ${coolDownStatus.eligibleDate}.`);
+        return;
+      }
     }
 
     // Check email validity first
@@ -1225,13 +1233,13 @@ const BookingForm: React.FC = (): ReactElement => {
               Choose from the available computers in the lab
             </Typography>
 
-            <FormControl fullWidth disabled={!hasValidAmritaEmail || coolDownStatus.active}>
+            <FormControl fullWidth disabled={!hasValidAmritaEmail}>
               <InputLabel>Computer</InputLabel>
               <Select
                 value={selectedComputer}
                 onChange={(e) => setSelectedComputer(e.target.value)}
                 label="Computer"
-                disabled={!hasValidAmritaEmail || coolDownStatus.active}
+                disabled={!hasValidAmritaEmail}
               >
                 {computers
                   .sort((a, b) => {
@@ -1286,12 +1294,12 @@ const BookingForm: React.FC = (): ReactElement => {
               </Alert>
             )}
 
-            {/* Cool-Down Selection Disabled Message */}
+            {/* Cool-Down Active Information Message */}
             {coolDownStatus.active && (
               <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
                 <Typography variant="body2">
-                  <strong>🔒 Computer selection is locked</strong> because your account is currently in an active cool-down period. 
-                  You can submit your next booking request starting <strong>{coolDownStatus.eligibleDate}</strong>.
+                  <strong>⏳ Cool-Down Period Active:</strong> Your account is currently in a mandatory cool-down period. 
+                  You can select a computer and schedule your next booking starting on or after <strong>{coolDownStatus.eligibleDate}</strong>.
                 </Typography>
               </Alert>
             )}
@@ -1398,12 +1406,17 @@ const BookingForm: React.FC = (): ReactElement => {
                 label="Start Date"
                 value={startDate}
                 onChange={(newValue) => setStartDate(newValue)}
-                minDate={startOfDay(new Date())}
+                minDate={
+                  coolDownStatus.active && coolDownStatus.eligibleDate
+                    ? parseISO(coolDownStatus.eligibleDate)
+                    : startOfDay(new Date())
+                }
                 maxDate={addDays(new Date(), policy.maxBookingAheadDays)}
                 slotProps={{
                   textField: {
                     fullWidth: true,
                     size: isMobile ? "small" : "medium",
+                    helperText: coolDownStatus.active && coolDownStatus.eligibleDate ? `Earliest booking start date: ${coolDownStatus.eligibleDate}` : undefined,
                   },
                 }}
                 shouldDisableDate={shouldDisableDate}
@@ -1413,7 +1426,9 @@ const BookingForm: React.FC = (): ReactElement => {
                 label="End Date"
                 value={endDate}
                 onChange={(newValue) => setEndDate(newValue)}
-                minDate={startDate || startOfDay(new Date())}
+                minDate={
+                  startDate || (coolDownStatus.active && coolDownStatus.eligibleDate ? parseISO(coolDownStatus.eligibleDate) : startOfDay(new Date()))
+                }
                 maxDate={startDate ? addDays(startDate, policy.maxBookingDays - 1) : addDays(new Date(), policy.maxBookingAheadDays)}
                 slotProps={{
                   textField: {

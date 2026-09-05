@@ -11,6 +11,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   Button,
   Chip,
   Dialog,
@@ -71,6 +72,12 @@ export const AdminCoolDownManagement: React.FC = () => {
 
   const [activeCoolDowns, setActiveCoolDowns] = useState<ActiveCoolDownUser[]>([]);
   const [waiverLogs, setWaiverLogs] = useState<CooldownWaiverLog[]>([]);
+
+  // Pagination states
+  const [activePage, setActivePage] = useState(0);
+  const [activeRowsPerPage, setActiveRowsPerPage] = useState(10);
+  const [logsPage, setLogsPage] = useState(0);
+  const [logsRowsPerPage, setLogsRowsPerPage] = useState(10);
 
   // Waive Dialog State
   const [waiveDialogOpen, setWaiveDialogOpen] = useState(false);
@@ -199,116 +206,148 @@ export const AdminCoolDownManagement: React.FC = () => {
         <>
           {/* TAB 0: Active Cool-Downs */}
           {activeTab === 0 && (
-            <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
-              <Table>
-                <TableHead sx={{ bgcolor: "action.hover" }}>
-                  <TableRow>
-                    <TableCell fontWeight={700}>Student User</TableCell>
-                    <TableCell fontWeight={700}>Cool-Down Tier</TableCell>
-                    <TableCell fontWeight={700}>Last Booking Duration</TableCell>
-                    <TableCell fontWeight={700}>Last Booking Ended</TableCell>
-                    <TableCell fontWeight={700}>Cool-Down Expiry</TableCell>
-                    <TableCell fontWeight={700}>Next Eligible Date</TableCell>
-                    <TableCell align="right" fontWeight={700}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {activeCoolDowns.length === 0 ? (
+            <Paper elevation={2} sx={{ borderRadius: 2 }}>
+              <TableContainer>
+                <Table>
+                  <TableHead sx={{ bgcolor: "action.hover" }}>
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                        <Typography variant="body1" color="text.secondary">
-                          No users are currently in an active cool-down period.
-                        </Typography>
-                      </TableCell>
+                      <TableCell fontWeight={700}>Student User</TableCell>
+                      <TableCell fontWeight={700}>Cool-Down Tier</TableCell>
+                      <TableCell fontWeight={700}>Last Booking Duration</TableCell>
+                      <TableCell fontWeight={700}>Last Booking Ended</TableCell>
+                      <TableCell fontWeight={700}>Cool-Down Expiry</TableCell>
+                      <TableCell fontWeight={700}>Next Eligible Date</TableCell>
+                      <TableCell align="right" fontWeight={700}>Actions</TableCell>
                     </TableRow>
-                  ) : (
-                    activeCoolDowns.map((user) => (
-                      <TableRow key={user.userId} hover>
-                        <TableCell>
-                          <Typography variant="subtitle2" fontWeight={700}>{user.userName}</Typography>
-                          <Typography variant="caption" color="text.secondary">{user.userEmail}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip label={user.tierName} color="warning" size="small" sx={{ fontWeight: 600 }} />
-                        </TableCell>
-                        <TableCell>{user.lastBookingDurationDays} Days</TableCell>
-                        <TableCell>{user.lastBookingEndDate}</TableCell>
-                        <TableCell>{user.coolDownExpiryDate}</TableCell>
-                        <TableCell>
-                          <Chip label={user.eligibleDate} color="primary" variant="outlined" size="small" sx={{ fontWeight: 600 }} />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Button
-                            variant="contained"
-                            color="warning"
-                            size="small"
-                            startIcon={<WaiveIcon />}
-                            onClick={() => handleOpenWaiveDialog(user)}
-                            sx={{ fontWeight: 600 }}
-                          >
-                            Waive Cool-Down
-                          </Button>
+                  </TableHead>
+                  <TableBody>
+                    {activeCoolDowns.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                          <Typography variant="body1" color="text.secondary">
+                            No users are currently in an active cool-down period.
+                          </Typography>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    ) : (
+                      activeCoolDowns
+                        .slice(activePage * activeRowsPerPage, activePage * activeRowsPerPage + activeRowsPerPage)
+                        .map((user) => (
+                          <TableRow key={user.userId} hover>
+                            <TableCell>
+                              <Typography variant="subtitle2" fontWeight={700}>{user.userName}</Typography>
+                              <Typography variant="caption" color="text.secondary">{user.userEmail}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={user.tierName} color="warning" size="small" sx={{ fontWeight: 600 }} />
+                            </TableCell>
+                            <TableCell>{user.lastBookingDurationDays} Days</TableCell>
+                            <TableCell>{user.lastBookingEndDate}</TableCell>
+                            <TableCell>{user.coolDownExpiryDate}</TableCell>
+                            <TableCell>
+                              <Chip label={user.eligibleDate} color="primary" variant="outlined" size="small" sx={{ fontWeight: 600 }} />
+                            </TableCell>
+                            <TableCell align="right">
+                              <Button
+                                variant="contained"
+                                color="warning"
+                                size="small"
+                                startIcon={<WaiveIcon />}
+                                onClick={() => handleOpenWaiveDialog(user)}
+                                sx={{ fontWeight: 600 }}
+                              >
+                                Waive Cool-Down
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                component="div"
+                count={activeCoolDowns.length}
+                rowsPerPage={activeRowsPerPage}
+                page={activePage}
+                onPageChange={(_, newPage) => setActivePage(newPage)}
+                onRowsPerPageChange={(e) => {
+                  setActiveRowsPerPage(parseInt(e.target.value, 10));
+                  setActivePage(0);
+                }}
+              />
+            </Paper>
           )}
 
           {/* TAB 1: Waiver Audit Logs */}
           {activeTab === 1 && (
-            <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
-              <Table>
-                <TableHead sx={{ bgcolor: "action.hover" }}>
-                  <TableRow>
-                    <TableCell fontWeight={700}>Date &amp; Time</TableCell>
-                    <TableCell fontWeight={700}>Target Student</TableCell>
-                    <TableCell fontWeight={700}>Waived By Admin</TableCell>
-                    <TableCell fontWeight={700}>Tier Category</TableCell>
-                    <TableCell fontWeight={700}>Mandatory Reason / Justification</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {waiverLogs.length === 0 ? (
+            <Paper elevation={2} sx={{ borderRadius: 2 }}>
+              <TableContainer>
+                <Table>
+                  <TableHead sx={{ bgcolor: "action.hover" }}>
                     <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                        <Typography variant="body1" color="text.secondary">
-                          No cool-down waivers have been recorded yet.
-                        </Typography>
-                      </TableCell>
+                      <TableCell fontWeight={700}>Date &amp; Time</TableCell>
+                      <TableCell fontWeight={700}>Target Student</TableCell>
+                      <TableCell fontWeight={700}>Waived By Admin</TableCell>
+                      <TableCell fontWeight={700}>Tier Category</TableCell>
+                      <TableCell fontWeight={700}>Mandatory Reason / Justification</TableCell>
                     </TableRow>
-                  ) : (
-                    waiverLogs.map((log) => (
-                      <TableRow key={log._id} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={600}>
-                            {format(parseISO(log.waivedAt), "yyyy-MM-dd HH:mm")}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="subtitle2" fontWeight={700}>{log.userName}</Typography>
-                          <Typography variant="caption" color="text.secondary">{log.userEmail}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="subtitle2" fontWeight={700}>{log.waivedByAdminName}</Typography>
-                          <Typography variant="caption" color="text.secondary">{log.waivedByAdminEmail}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip label={log.tierName || "Waived"} color="secondary" variant="outlined" size="small" />
-                        </TableCell>
-                        <TableCell sx={{ maxWidth: 320 }}>
-                          <Typography variant="body2" color="text.primary">
-                            {log.reason}
+                  </TableHead>
+                  <TableBody>
+                    {waiverLogs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                          <Typography variant="body1" color="text.secondary">
+                            No cool-down waivers have been recorded yet.
                           </Typography>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    ) : (
+                      waiverLogs
+                        .slice(logsPage * logsRowsPerPage, logsPage * logsRowsPerPage + logsRowsPerPage)
+                        .map((log) => (
+                          <TableRow key={log._id} hover>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600}>
+                                {format(parseISO(log.waivedAt), "yyyy-MM-dd HH:mm")}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="subtitle2" fontWeight={700}>{log.userName}</Typography>
+                              <Typography variant="caption" color="text.secondary">{log.userEmail}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="subtitle2" fontWeight={700}>{log.waivedByAdminName}</Typography>
+                              <Typography variant="caption" color="text.secondary">{log.waivedByAdminEmail}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={log.tierName || "Waived"} color="secondary" variant="outlined" size="small" />
+                            </TableCell>
+                            <TableCell sx={{ maxWidth: 320 }}>
+                              <Typography variant="body2" color="text.primary">
+                                {log.reason}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                component="div"
+                count={waiverLogs.length}
+                rowsPerPage={logsRowsPerPage}
+                page={logsPage}
+                onPageChange={(_, newPage) => setLogsPage(newPage)}
+                onRowsPerPageChange={(e) => {
+                  setLogsRowsPerPage(parseInt(e.target.value, 10));
+                  setLogsPage(0);
+                }}
+              />
+            </Paper>
           )}
         </>
       )}
