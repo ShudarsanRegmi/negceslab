@@ -50,6 +50,8 @@ import {
   Wifi as OnlineIcon,
   WifiOff as OfflineIcon,
   Download as DownloadIcon,
+  Warning as WarningIcon,
+  LocalFireDepartment as FireIcon,
 } from "@mui/icons-material";
 import { computersAPI, bookingsAPI } from "../services/api";
 import SystemTelemetryAnalyticsModal from "../components/SystemTelemetryAnalyticsModal";
@@ -337,33 +339,79 @@ const AdminSystemMonitoring: React.FC = () => {
       </Paper>
 
       {/* Main Monitoring Grid */}
-      <Grid container spacing={2.5}>
+      <Grid container spacing={3} sx={{ justifyContent: "center" }}>
         {filteredComputers.map((computer) => {
           const live = computer.liveMetrics;
           const session = computer.agentActiveSession;
           const os = computer.systemDetails?.operatingSystem;
 
+          // Stress condition check: CPU >= 85% OR GPU >= 85% OR Temp >= 80°C
+          const isUnderStress = computer.isOnline && live && (
+            live.cpuUtil >= 85 || live.gpuUtil >= 85 || live.cpuTemp >= 80 || live.gpuTemp >= 80
+          );
+
+          const isCheckedIn = session && session.checkedIn;
+
           return (
-            <Grid item xs={12} sm={6} md={4} key={computer._id}>
+            <Grid item xs={12} sm={6} md={4} key={computer._id} sx={{ display: "flex", justifyContent: "center" }}>
               <Card
                 sx={{
+                  width: "100%",
+                  maxWidth: 380,
                   borderRadius: 3,
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
-                  transition: "transform 0.2s, box-shadow 0.2s",
+                  position: "relative",
+                  bgcolor: "#ffffff",
+                  border: isUnderStress
+                    ? "2px solid #ef4444"
+                    : isCheckedIn
+                    ? "2px solid #10b981"
+                    : "1px solid #e2e8f0",
+                  boxShadow: isUnderStress
+                    ? "0 0 20px rgba(239, 68, 68, 0.25)"
+                    : isCheckedIn
+                    ? "0 0 16px rgba(16, 185, 129, 0.18)"
+                    : "0 4px 12px rgba(0,0,0,0.03)",
+                  animation: isUnderStress ? "stressPulse 2s infinite ease-in-out" : "none",
+                  "@keyframes stressPulse": {
+                    "0%": { transform: "scale(1)", boxShadow: "0 0 10px rgba(239, 68, 68, 0.2)" },
+                    "50%": { transform: "scale(1.02)", boxShadow: "0 0 24px rgba(239, 68, 68, 0.45)" },
+                    "100%": { transform: "scale(1)", boxShadow: "0 0 10px rgba(239, 68, 68, 0.2)" },
+                  },
+                  transition: "transform 0.2s, box-shadow 0.2s, border-color 0.2s",
                   cursor: "pointer",
                   "&:hover": {
-                    transform: "translateY(-3px)",
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.08)",
+                    transform: isUnderStress ? "none" : "translateY(-3px)",
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.1)",
                   },
                 }}
                 onClick={() => setSelectedComp(computer)}
               >
+                {/* Stress Top Banner */}
+                {isUnderStress && (
+                  <Box
+                    sx={{
+                      bgcolor: "#ef4444",
+                      color: "#ffffff",
+                      px: 1.5,
+                      py: 0.25,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 0.5,
+                    }}
+                  >
+                    <FireIcon sx={{ fontSize: "0.85rem", animation: "spin 1s infinite linear" }} />
+                    <Typography variant="caption" fontWeight={800} sx={{ letterSpacing: 0.5, fontSize: "0.65rem", textTransform: "uppercase" }}>
+                      System Under Heavy Stress
+                    </Typography>
+                  </Box>
+                )}
+
                 <CardContent sx={{ p: 2.5 }}>
                   {/* Card Header: Computer Name & Online/OS Status */}
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <ComputerIcon sx={{ color: computer.isOnline ? "#10b981" : "#94a3b8", fontSize: 28 }} />
+                      <ComputerIcon sx={{ color: computer.isOnline ? "#10b981" : "#ef4444", fontSize: 30 }} />
                       <Box>
                         <Typography variant="subtitle1" fontWeight={800} color="#0f172a" lineHeight={1.2}>
                           {computer.name}
@@ -375,14 +423,18 @@ const AdminSystemMonitoring: React.FC = () => {
                     </Box>
 
                     <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0.5 }}>
-                      {/* Online Status Chip */}
+                      {/* Red Offline Status Chip */}
                       <Chip
-                        icon={computer.isOnline ? <OnlineIcon sx={{ fontSize: "0.8rem !important" }} /> : <OfflineIcon sx={{ fontSize: "0.8rem !important" }} />}
+                        icon={computer.isOnline ? <OnlineIcon sx={{ fontSize: "0.8rem !important" }} /> : <OfflineIcon sx={{ fontSize: "0.8rem !important", color: "#fff !important" }} />}
                         label={computer.isOnline ? "Online" : "Offline"}
                         size="small"
-                        color={computer.isOnline ? "success" : "default"}
-                        variant={computer.isOnline ? "filled" : "outlined"}
-                        sx={{ height: 20, fontSize: "0.65rem", fontWeight: 800 }}
+                        sx={{
+                          height: 20,
+                          fontSize: "0.65rem",
+                          fontWeight: 800,
+                          backgroundColor: computer.isOnline ? "#10b981" : "#ef4444",
+                          color: "#ffffff",
+                        }}
                       />
 
                       {/* OS Badge with Formal Icon */}
@@ -423,7 +475,7 @@ const AdminSystemMonitoring: React.FC = () => {
                           <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem", display: "block" }}>
                             CPU
                           </Typography>
-                          <Typography variant="body2" fontWeight={800} color="#0f172a">
+                          <Typography variant="body2" fontWeight={800} color={live.cpuUtil >= 85 ? "error.main" : "#0f172a"}>
                             {Math.round(live.cpuUtil)}%
                           </Typography>
                           <LinearProgress variant="determinate" value={live.cpuUtil} color={getMetricColor(live.cpuUtil)} sx={{ height: 4, borderRadius: 2 }} />
@@ -433,7 +485,7 @@ const AdminSystemMonitoring: React.FC = () => {
                           <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem", display: "block" }}>
                             RAM
                           </Typography>
-                          <Typography variant="body2" fontWeight={800} color="#0f172a">
+                          <Typography variant="body2" fontWeight={800} color={live.ramUtil >= 85 ? "error.main" : "#0f172a"}>
                             {Math.round(live.ramUtil)}%
                           </Typography>
                           <LinearProgress variant="determinate" value={live.ramUtil} color={getMetricColor(live.ramUtil)} sx={{ height: 4, borderRadius: 2 }} />
@@ -443,7 +495,7 @@ const AdminSystemMonitoring: React.FC = () => {
                           <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem", display: "block" }}>
                             GPU
                           </Typography>
-                          <Typography variant="body2" fontWeight={800} color="#0f172a">
+                          <Typography variant="body2" fontWeight={800} color={live.gpuUtil >= 85 ? "error.main" : "#0f172a"}>
                             {Math.round(live.gpuUtil)}%
                           </Typography>
                           <LinearProgress variant="determinate" value={live.gpuUtil} color={getMetricColor(live.gpuUtil)} sx={{ height: 4, borderRadius: 2 }} />
@@ -455,23 +507,23 @@ const AdminSystemMonitoring: React.FC = () => {
                           Net: ↑ {formatBytes(live.netSentSpeed)}/s ↓ {formatBytes(live.netRecvSpeed)}/s
                         </Typography>
                         {live.cpuTemp > 0 && (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
+                          <Typography variant="caption" color={live.cpuTemp >= 80 ? "error.main" : "text.secondary"} fontWeight={live.cpuTemp >= 80 ? 800 : 400} sx={{ fontSize: "0.65rem" }}>
                             Temp: {Math.round(live.cpuTemp)}°C
                           </Typography>
                         )}
                       </Box>
                     </Box>
                   ) : (
-                    <Box sx={{ py: 2, textAlign: "center", bgcolor: "#f8fafc", borderRadius: 2, mb: 2 }}>
-                      <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                        System telemetry offline
+                    <Box sx={{ py: 2, textAlign: "center", bgcolor: "#fef2f2", borderRadius: 2, mb: 2, border: "1px dashed #fca5a5" }}>
+                      <Typography variant="caption" color="error.main" fontWeight={700}>
+                        System offline / Unreachable
                       </Typography>
                     </Box>
                   )}
 
                   {/* Attendance Section */}
                   {session && session.checkedIn ? (
-                    <Paper sx={{ p: 1.25, borderRadius: 2, bgcolor: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                    <Paper sx={{ p: 1.25, borderRadius: 2, bgcolor: "#f0fdf4", border: "1px solid #86efac" }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                           <PersonIcon sx={{ fontSize: 16, color: "#16a34a" }} />
@@ -479,7 +531,7 @@ const AdminSystemMonitoring: React.FC = () => {
                             {session.currentUser}
                           </Typography>
                         </Box>
-                        <Chip label={session.sessionType} size="small" variant="outlined" sx={{ height: 16, fontSize: "0.55rem", fontWeight: 700 }} />
+                        <Chip label={session.sessionType} size="small" color="success" sx={{ height: 16, fontSize: "0.55rem", fontWeight: 800 }} />
                       </Box>
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
                         <strong>Agenda:</strong> {session.agenda}
