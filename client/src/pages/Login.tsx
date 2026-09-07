@@ -109,7 +109,9 @@ const Login = () => {
 
   const handleDevLogin = (email: string) => {
     localStorage.setItem('dev_token', `DEV_TOKEN_${email}`);
-    window.location.href = '/dashboard';
+    const base = import.meta.env.VITE_ROUTER_BASE_CONFIG || '/';
+    const target = base.endsWith('/') ? `${base}dashboard` : `${base}/dashboard`;
+    window.location.href = target;
   };
 
   return (
