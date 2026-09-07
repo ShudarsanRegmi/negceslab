@@ -71,6 +71,7 @@ import { computersAPI, bookingsAPI, temporaryReleaseAPI, agentRegistrationAPI } 
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
 import AdminAnalytics from "../components/AdminAnalytics";
 import BookingUsageExplorer from "../components/BookingUsageExplorer";
+import { ConflictResolutionStudioModal } from "../components/ConflictResolutionStudioModal";
 
 interface Computer {
   _id: string;
@@ -213,6 +214,10 @@ const AdminDashboard: React.FC = () => {
   // Feedback management state
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
+
+  // 2D Conflict Resolution Studio state
+  const [conflictStudioOpen, setConflictStudioOpen] = useState(false);
+  const [selectedConflictGroup, setSelectedConflictGroup] = useState<Booking[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -1522,13 +1527,33 @@ const AdminDashboard: React.FC = () => {
                               Approx. range: {minDate.toLocaleDateString()} to {maxDate.toLocaleDateString()}
                             </Typography>
                           </Box>
-                          <Chip 
-                            label={`${group.length} Conflicting Requests`} 
-                            color="warning" 
-                            variant="outlined" 
-                            size="small"
-                            sx={{ fontWeight: 700, borderColor: "#f59e0b", color: "#d97706" }}
-                          />
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+                            <Chip 
+                              label={`${group.length} Conflicting Requests`} 
+                              color="warning" 
+                              variant="outlined" 
+                              size="small"
+                              sx={{ fontWeight: 700, borderColor: "#f59e0b", color: "#d97706" }}
+                            />
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={() => {
+                                setSelectedConflictGroup(group);
+                                setConflictStudioOpen(true);
+                              }}
+                              sx={{
+                                borderRadius: 2.5,
+                                fontWeight: 800,
+                                textTransform: "none",
+                                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                                boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+                                px: 2
+                              }}
+                            >
+                              ✨ Open 2D Conflict Studio
+                            </Button>
+                          </Box>
                         </Box>
 
                         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: `repeat(${Math.min(group.length, 3)}, 1fr)` }, gap: 2.5 }}>
@@ -2857,6 +2882,13 @@ const AdminDashboard: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConflictResolutionStudioModal
+        open={conflictStudioOpen}
+        onClose={() => setConflictStudioOpen(false)}
+        group={selectedConflictGroup}
+        onSuccess={fetchData}
+      />
 
       {statusUpdateSuccess && (
         <Alert severity="success" sx={{ mt: 2 }}>

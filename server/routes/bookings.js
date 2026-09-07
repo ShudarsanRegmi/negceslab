@@ -622,6 +622,220 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
+// Batch resolve conflicting bookings (admin only)
+router.post('/batch-resolve-conflict', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { resolutions } = req.body;
+    if (!Array.isArray(resolutions) || resolutions.length === 0) {
+      return res.status(400).json({ message: 'Resolutions array is required' });
+    }
+
+    // Helper 2D overlap function
+    const check2DOverlap = (b1, b2) => {
+      const dateOverlap = (b1.startDate <= b2.endDate && b1.endDate >= b2.startDate);
+      if (!dateOverlap) return false;
+      return (b1.startTime < b2.endTime && b1.endTime > b2.startTime);
+    };
+
+    // 1. Fetch all affected bookings
+    const bookingIds = resolutions.map(r => r.bookingId);
+    const bookings = await Booking.find({ _id: { $in: bookingIds } }).populate('computerId');
+
+    const bookingMap = new Map();
+    bookings.forEach(b => bookingMap.set(b._id.toString(), b));
+
+    // Ensure all exist
+    for (const r of resolutions) {
+      if (!bookingMap.has(r.bookingId)) {
+        return res.status(404).json({ message: `Booking ID ${r.bookingId} not found` });
+      }
+    }
+
+    // 2. Validate proposed resolutions against each other
+    const approvedProposals = resolutions.filter(r => r.action !== 'REJECT');
+
+    for (let i = 0; i < approvedProposals.length; i++) {
+      for (let j = i + 1; j < approvedProposals.length; j++) {
+        const p1 = approvedProposals[i];
+        const p2 = approvedProposals[j];
+        
+        const b1 = bookingMap.get(p1.bookingId);
+        const b2 = bookingMap.get(p2.bookingId);
+
+        if (b1.computerId._id.toString() === b2.computerId._id.toString()) {
+          const slot1 = {
+            startDate: p1.startDate || b1.startDate,
+            endDate: p1.endDate || b1.endDate,
+            startTime: p1.startTime || b1.startTime,
+            endTime: p1.endTime || b1.endTime,
+          };
+          const slot2 = {
+            startDate: p2.startDate || b2.startDate,
+            endDate: p2.endDate || b2.endDate,
+            startTime: p2.startTime || b2.startTime,
+            endTime: p2.endTime || b2.endTime,
+          };
+
+          if (check2DOverlap(slot1, slot2)) {
+            return res.status(400).json({ 
+              message: `Conflict between proposed bookings for ${b1.userName || 'Request 1'} and ${b2.userName || 'Request 2'}` 
+            });
+          }
+        }
+      }
+    }
+
+    // 3. Check against existing approved bookings in database
+    for (const p of approvedProposals) {
+      const b = bookingMap.get(p.bookingId);
+      const targetComputerId = b.computerId._id;
+      const targetSlot = {
+        startDate: p.startDate || b.startDate,
+        endDate: p.endDate || b.endDate,
+        startTime: p.startTime || b.startTime,
+        endTime: p.endTime || b.endTime,
+      };
+
+      const existingApproved = await Booking.find({
+        computerId: targetComputerId,
+        status: 'approved',
+        _id: { $nin: bookingIds }
+      });
+
+      for (const existing of existingApproved) {
+        if (check2DOverlap(targetSlot, existing)) {
+          return res.status(400).json({
+            message: `Proposed slot for booking ${b._id.toString().slice(-6)} conflicts with already approved booking ${existing._id.toString().slice(-6)}`
+          });
+        }
+      }
+    }
+
+    // 4. Apply all resolutions
+    const updatedBookings = [];
+    const approvedBookingObjects = [];
+
+    for (const r of resolutions) {
+      const booking = bookingMap.get(r.bookingId);
+      const userBookingId = booking._id.toString().slice(-6).toUpperCase();
+
+      if (r.action === 'REJECT') {
+        booking.status = 'rejected';
+        booking.rejectionReason = r.rejectionReason || 'Rejected during conflict resolution';
+        await booking.save();
+        updatedBookings.push(booking);
+
+        // Notify user
+        const notif = new Notification({
+          userId: booking.userId,
+          title: 'Booking Rejected',
+          message: `Your booking (ID: ${userBookingId}) for computer ${booking.computerId.name} has been rejected. Reason: ${booking.rejectionReason}`,
+          type: 'error',
+          metadata: { bookingId: userBookingId, computerId: booking.computerId._id, computerName: booking.computerId.name }
+        });
+        await notif.save();
+
+        try {
+          const userObj = await User.findOne({ firebaseUid: booking.userId });
+          if (userObj && userObj.email) {
+            await sendBookingRejectedEmail(
+              userObj.email,
+              userObj.name || 'User',
+              booking.computerId.name,
+              new Date(booking.startDate).toLocaleDateString(),
+              new Date(booking.endDate).toLocaleDateString(),
+              booking.startTime,
+              booking.endTime,
+              booking.rejectionReason
+            );
+          }
+        } catch (emailErr) {
+          console.error('Failed to send rejection email:', emailErr);
+        }
+      } else {
+        // Approve original or modified
+        const originalSlotStr = `${booking.startDate} ${booking.startTime} - ${booking.endDate} ${booking.endTime}`;
+        if (r.startDate) booking.startDate = r.startDate;
+        if (r.endDate) booking.endDate = r.endDate;
+        if (r.startTime) booking.startTime = r.startTime;
+        if (r.endTime) booking.endTime = r.endTime;
+
+        booking.status = 'approved';
+        await booking.save();
+        updatedBookings.push(booking);
+        approvedBookingObjects.push(booking);
+
+        const newSlotStr = `${booking.startDate} ${booking.startTime} - ${booking.endDate} ${booking.endTime}`;
+        const isModified = originalSlotStr !== newSlotStr;
+        const msgSuffix = isModified ? ` (Adjusted slot: ${newSlotStr})` : '';
+
+        const notif = new Notification({
+          userId: booking.userId,
+          title: 'Booking Approved',
+          message: `Your booking (ID: ${userBookingId}) for computer ${booking.computerId.name} has been approved.${msgSuffix}`,
+          type: 'success',
+          metadata: { bookingId: userBookingId, computerId: booking.computerId._id, computerName: booking.computerId.name }
+        });
+        await notif.save();
+
+        try {
+          const userObj = await User.findOne({ firebaseUid: booking.userId });
+          if (userObj && userObj.email) {
+            await sendBookingApprovedEmail(
+              userObj.email,
+              userObj.name || 'User',
+              booking.computerId.name,
+              new Date(booking.startDate).toLocaleDateString(),
+              new Date(booking.endDate).toLocaleDateString(),
+              booking.startTime,
+              booking.endTime
+            );
+          }
+        } catch (emailErr) {
+          console.error('Failed to send approval email:', emailErr);
+        }
+      }
+    }
+
+    // 5. Auto-reject any unhandled pending bookings for the same computers that overlap with newly approved ones
+    for (const appBooking of approvedBookingObjects) {
+      const unhandledPending = await Booking.find({
+        computerId: appBooking.computerId._id,
+        status: 'pending',
+        _id: { $nin: bookingIds }
+      });
+
+      for (const pending of unhandledPending) {
+        if (check2DOverlap(appBooking, pending)) {
+          pending.status = 'rejected';
+          pending.rejectionReason = 'Slot allocated during batch conflict resolution.';
+          await pending.save();
+
+          const pendIdShort = pending._id.toString().slice(-6).toUpperCase();
+          const notif = new Notification({
+            userId: pending.userId,
+            title: 'Booking Rejected',
+            message: `Your booking (ID: ${pendIdShort}) for computer ${appBooking.computerId.name} has been rejected due to slot resolution.`,
+            type: 'error',
+            metadata: { bookingId: pendIdShort, computerId: appBooking.computerId._id, computerName: appBooking.computerId.name }
+          });
+          await notif.save();
+        }
+      }
+    }
+
+    res.json({ message: 'Batch conflict resolution applied successfully', updatedBookings });
+  } catch (error) {
+    console.error('Error in batch conflict resolution:', error);
+    res.status(500).json({ message: 'Error resolving conflicts', error: error.message });
+  }
+});
+
 // Update booking status (admin only)
 router.put('/:id/status', verifyToken, async (req, res) => {
   try {
