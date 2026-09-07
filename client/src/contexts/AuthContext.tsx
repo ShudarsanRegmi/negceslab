@@ -67,6 +67,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
+    if (import.meta.env.DEV && localStorage.getItem('dev_token')) {
+      const token = localStorage.getItem('dev_token')!;
+      const email = token.replace('DEV_TOKEN_', '');
+      
+      const mockUser = {
+        uid: `dev_${email}`,
+        email: email,
+        emailVerified: true,
+        displayName: email.split('@')[0],
+        getIdToken: async () => token
+      } as unknown as User;
+
+      setCurrentUser(mockUser);
+      
+      authAPI.getProfile().then(res => {
+        setUserRole(res.data.role);
+        setLoading(false);
+      }).catch(err => {
+        console.error("Dev Auth Profile fetch error:", err);
+        setLoading(false);
+      });
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
@@ -180,6 +204,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const logout = async () => {
+    if (import.meta.env.DEV && localStorage.getItem('dev_token')) {
+      localStorage.removeItem('dev_token');
+      setCurrentUser(null);
+      setUserRole(null);
+      return;
+    }
     await signOut(auth);
   };
 

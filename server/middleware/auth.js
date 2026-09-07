@@ -9,6 +9,34 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({ message: "No token provided" });
     }
 
+    // Dev-only synthetic token bypass (Strictly active in development environment)
+    if (process.env.NODE_ENV === 'development' && token.startsWith('DEV_TOKEN_')) {
+      const email = token.replace('DEV_TOKEN_', '');
+      let userDoc = await User.findOne({ email });
+
+      // Auto-create dev test user in DB if it doesn't exist yet
+      if (!userDoc) {
+        const isAdminEmail = email.includes('admin') || email.startsWith('admin');
+        const nameParts = email.split('@')[0].split('.');
+        const defaultName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        userDoc = new User({
+          firebaseUid: `dev_uid_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          email,
+          name: defaultName,
+          role: isAdminEmail ? 'admin' : 'user'
+        });
+        await userDoc.save();
+      }
+
+      req.user = {
+        ...userDoc.toObject(),
+        firebaseUid: userDoc.firebaseUid,
+        email: userDoc.email,
+      };
+      req.userRole = userDoc.role;
+      return next();
+    }
+
     const decodedToken = await admin.auth().verifyIdToken(token);
 
     // Get user role from MongoDB

@@ -13,9 +13,16 @@ const api = axios.create({
 // Add auth token to requests
 api.interceptors.request.use(async (config) => {
   try {
+    if (import.meta.env.DEV) {
+      const devToken = localStorage.getItem('dev_token');
+      if (devToken) {
+        config.headers.Authorization = `Bearer ${devToken}`;
+        return config;
+      }
+    }
     const user = auth.currentUser;
     if (user) {
-      const token = await user.getIdToken(true); // Force token refresh
+      const token = await user.getIdToken(true);
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;

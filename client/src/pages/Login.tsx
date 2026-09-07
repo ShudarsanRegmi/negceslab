@@ -107,6 +107,11 @@ const Login = () => {
     setPendingSocialLogin(null);
   };
 
+  const handleDevLogin = (email: string) => {
+    localStorage.setItem('dev_token', `DEV_TOKEN_${email}`);
+    window.location.href = '/dashboard';
+  };
+
   return (
     <Container component="main" maxWidth="xs">
       <Box
@@ -131,6 +136,53 @@ const Login = () => {
             Sign in
           </Typography>
           
+          {import.meta.env.DEV && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                mb: 2,
+                width: '100%',
+                background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                border: '1px solid #fde68a',
+                borderRadius: 2
+              }}
+            >
+              <Typography variant="caption" fontWeight={800} color="#92400e" display="block" sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                ⚡ Dev Mode: Quick Multi-User Switcher
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="warning"
+                  onClick={() => handleDevLogin('student1@ch.students.amrita.edu')}
+                  sx={{ fontWeight: 800, textTransform: 'none', py: 0.8 }}
+                >
+                  Login Student 1 (ch.students.amrita.edu)
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="warning"
+                  onClick={() => handleDevLogin('student2@ch.students.amrita.edu')}
+                  sx={{ fontWeight: 800, textTransform: 'none', py: 0.8 }}
+                >
+                  Login Student 2 (ch.students.amrita.edu)
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="info"
+                  onClick={() => handleDevLogin('admin@ch.amrita.edu')}
+                  sx={{ fontWeight: 800, textTransform: 'none', py: 0.8 }}
+                >
+                  Login Admin (ch.amrita.edu)
+                </Button>
+              </Box>
+            </Paper>
+          )}
+
           <Alert severity="info" sx={{ mt: 1, width: '100%' }}>
             <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
               📧 Use your Amrita email to raise booking requests:
