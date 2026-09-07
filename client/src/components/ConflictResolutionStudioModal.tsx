@@ -320,61 +320,56 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth={false}
+      maxWidth="xl"
       fullWidth
       fullScreen={isFullScreen}
       PaperProps={{
         sx: {
-          width: isFullScreen ? '100vw' : '98vw',
-          height: isFullScreen ? '100vh' : '98vh',
-          maxWidth: isFullScreen ? '100vw' : '98vw',
-          maxHeight: isFullScreen ? '100vh' : '98vh',
-          m: isFullScreen ? 0 : 1,
-          borderRadius: isFullScreen ? 0 : 2,
-          background: '#f8fafc',
+          borderRadius: isFullScreen ? 0 : 3,
+          height: isFullScreen ? '100vh' : '94vh',
+          maxHeight: isFullScreen ? '100vh' : '94vh',
+          background: '#fafafa',
           display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
+          flexDirection: 'column'
         }
       }}
     >
-      {/* Ultra-Slim Header Bar (36px min-height) */}
+      {/* Header Bar */}
       <DialogTitle
         sx={{
-          py: 0.6,
-          px: 2,
+          py: 1.5,
+          px: 3,
           background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           color: '#fff',
           display: 'flex',
           justify: 'space-between',
           alignItems: 'center',
-          flexShrink: 0,
-          minHeight: 40
+          flexShrink: 0
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box
             sx={{
-              p: 0.4,
-              borderRadius: 1.2,
+              p: 0.8,
+              borderRadius: 1.5,
               background: 'rgba(56, 189, 248, 0.15)',
               border: '1px solid rgba(56, 189, 248, 0.3)',
               display: 'flex',
               alignItems: 'center'
             }}
           >
-            <Sliders size={16} color="#38bdf8" />
+            <Sliders size={20} color="#38bdf8" />
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="subtitle2" fontWeight={800} color="#f8fafc" sx={{ lineHeight: 1 }}>
+            <Typography variant="h6" fontWeight={800} color="#f8fafc" sx={{ lineHeight: 1 }}>
               2D Visual Conflict Resolution Studio
             </Typography>
             <Chip
               label={`System: ${computerName} • ${drafts.length} Requests`}
               size="small"
               sx={{
-                height: 20,
-                fontSize: '0.68rem',
+                height: 22,
+                fontSize: '0.72rem',
                 fontWeight: 700,
                 background: 'rgba(255,255,255,0.1)',
                 color: '#38bdf8',
@@ -384,95 +379,98 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Tooltip title={isFullScreen ? "Exit Fullscreen" : "Fullscreen Studio"}>
             <IconButton
               size="small"
               onClick={() => setIsFullScreen(!isFullScreen)}
-              sx={{ color: '#94a3b8', p: 0.5, '&:hover': { color: '#fff', background: 'rgba(255,255,255,0.1)' } }}
+              sx={{ color: '#94a3b8', '&:hover': { color: '#fff', background: 'rgba(255,255,255,0.1)' } }}
             >
-              {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              {isFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             </IconButton>
           </Tooltip>
           <IconButton
             size="small"
             onClick={onClose}
-            sx={{ color: '#94a3b8', p: 0.5, '&:hover': { color: '#fff', background: 'rgba(255,255,255,0.1)' } }}
+            sx={{ color: '#94a3b8', '&:hover': { color: '#fff', background: 'rgba(255,255,255,0.1)' } }}
           >
-            <X size={16} />
+            <X size={18} />
           </IconButton>
         </Box>
       </DialogTitle>
 
-      {/* Main Body Content - 100% Available Height Utilization */}
-      <DialogContent sx={{ p: 1, px: 1.5, display: 'flex', flexDirection: 'column', flex: '1 1 0px', minHeight: 0, overflow: 'hidden' }}>
-        {/* Compact Banner & Action Bar Row */}
-        <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
-          {/* Status Alert Banner */}
-          <Box sx={{ flexGrow: 1, minWidth: 280 }}>
-            {collisions.size > 0 ? (
-              <Alert
-                severity="warning"
-                icon={<AlertTriangle size={15} />}
-                sx={{
-                  py: 0.2,
-                  px: 1.2,
-                  borderRadius: 1.5,
-                  fontWeight: 700,
-                  fontSize: '0.75rem',
-                  border: '1px solid #fde68a',
-                  alignItems: 'center'
-                }}
-              >
-                Overlap Collision ({collisions.size} requests)! Click <strong>Auto-Resolve Gaps</strong> or adjust slots.
-              </Alert>
-            ) : (
-              <Alert
-                severity="success"
-                icon={<CheckCircle2 size={15} />}
-                sx={{
-                  py: 0.2,
-                  px: 1.2,
-                  borderRadius: 1.5,
-                  fontWeight: 700,
-                  fontSize: '0.75rem',
-                  border: '1px solid #a7f3d0',
-                  alignItems: 'center'
-                }}
-              >
-                All approved slots are non-overlapping in 2D space! Ready to apply.
-              </Alert>
-            )}
-          </Box>
-
-          {/* Quick Actions & Layout Switcher */}
-          <Paper
-            elevation={0}
+      {/* Main Body Content */}
+      <DialogContent sx={{ p: 2, display: 'flex', flexDirection: 'column', flexGrow: 1, overflowY: 'auto' }}>
+        {/* Status Alert Banner */}
+        {collisions.size > 0 ? (
+          <Alert
+            severity="warning"
+            icon={<AlertTriangle size={18} />}
             sx={{
-              p: 0.4,
-              px: 1,
-              borderRadius: 1.5,
-              border: '1px solid #e2e8f0',
-              background: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.8
+              py: 0.5,
+              px: 2,
+              mb: 1.5,
+              borderRadius: 2,
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              border: '1px solid #fde68a',
+              flexShrink: 0
             }}
           >
+            Overlap Collision Detected ({collisions.size} requests)! Click <strong>Auto-Resolve Gaps</strong> or adjust slots on the right.
+          </Alert>
+        ) : (
+          <Alert
+            severity="success"
+            icon={<CheckCircle2 size={18} />}
+            sx={{
+              py: 0.5,
+              px: 2,
+              mb: 1.5,
+              borderRadius: 2,
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              border: '1px solid #a7f3d0',
+              flexShrink: 0
+            }}
+          >
+            All approved slots are non-overlapping in 2D space! Ready to apply resolution.
+          </Alert>
+        )}
+
+        {/* Toolbar & Layout Switcher */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 1,
+            px: 2,
+            mb: 2,
+            borderRadius: 2,
+            border: '1px solid #e2e8f0',
+            background: '#fff',
+            display: 'flex',
+            justify: 'space-between',
+            alignItems: 'center',
+            flexShrink: 0,
+            flexWrap: 'wrap',
+            gap: 1.5
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
             <Button
               variant="contained"
               color="secondary"
               size="small"
-              startIcon={<Sparkles size={14} />}
+              startIcon={<Sparkles size={16} />}
               onClick={handleAutoResolve}
               sx={{
-                borderRadius: 1.5,
+                borderRadius: 2,
                 fontWeight: 800,
-                fontSize: '0.72rem',
+                fontSize: '0.8rem',
                 textTransform: 'none',
                 background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                py: 0.3,
-                px: 1.2
+                py: 0.6,
+                px: 2
               }}
             >
               Auto-Resolve Gaps
@@ -481,95 +479,97 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
               variant="outlined"
               color="inherit"
               size="small"
-              startIcon={<RotateCcw size={13} />}
+              startIcon={<RotateCcw size={15} />}
               onClick={handleReset}
-              sx={{ borderRadius: 1.5, fontWeight: 700, fontSize: '0.72rem', textTransform: 'none', py: 0.3, px: 1, borderColor: '#cbd5e1' }}
+              sx={{ borderRadius: 2, fontWeight: 700, fontSize: '0.8rem', textTransform: 'none', py: 0.6, px: 1.5, borderColor: '#cbd5e1' }}
             >
-              Reset
+              Reset to Original
             </Button>
+          </Box>
 
-            <Box sx={{ width: '1px', height: 18, background: '#cbd5e1', mx: 0.3 }} />
-
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mr: 0.5 }}>
+              Layout:
+            </Typography>
             <Button
               size="small"
               variant={viewMode === 'split' ? 'contained' : 'outlined'}
-              startIcon={<Columns size={13} />}
+              startIcon={<Columns size={15} />}
               onClick={() => setViewMode('split')}
-              sx={{ borderRadius: 1.2, textTransform: 'none', fontWeight: 700, fontSize: '0.7rem', py: 0.25, px: 0.8 }}
+              sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', py: 0.4 }}
             >
               Split Studio
             </Button>
             <Button
               size="small"
               variant={viewMode === 'canvas' ? 'contained' : 'outlined'}
-              startIcon={<LayoutGrid size={13} />}
+              startIcon={<LayoutGrid size={15} />}
               onClick={() => setViewMode('canvas')}
-              sx={{ borderRadius: 1.2, textTransform: 'none', fontWeight: 700, fontSize: '0.7rem', py: 0.25, px: 0.8 }}
+              sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', py: 0.4 }}
             >
               Full Canvas
             </Button>
             <Button
               size="small"
               variant={viewMode === 'cards' ? 'contained' : 'outlined'}
-              startIcon={<List size={13} />}
+              startIcon={<List size={15} />}
               onClick={() => setViewMode('cards')}
-              sx={{ borderRadius: 1.2, textTransform: 'none', fontWeight: 700, fontSize: '0.7rem', py: 0.25, px: 0.8 }}
+              sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', py: 0.4 }}
             >
               Cards Only
             </Button>
-          </Paper>
-        </Box>
+          </Box>
+        </Paper>
 
         {errorMsg && (
-          <Alert severity="error" sx={{ mb: 1, py: 0.2, px: 1.2, borderRadius: 1.5, fontSize: '0.75rem', flexShrink: 0 }}>
+          <Alert severity="error" sx={{ mb: 1.5, py: 0.5, px: 2, borderRadius: 2, fontSize: '0.8rem', flexShrink: 0 }}>
             {errorMsg}
           </Alert>
         )}
 
-        {/* WORKSPACE AREA (100% VERTICAL FLEX EXTENSION) */}
-        <Box sx={{ flex: '1 1 0px', minHeight: 0, display: 'flex', gap: 1.2 }}>
-          {/* LEFT PANEL: 2D MATRIX CANVAS */}
+        {/* WORKSPACE AREA */}
+        <Box sx={{ display: 'flex', gap: 2, flexGrow: 1, minHeight: 600 }}>
+          {/* LEFT PANEL: 2D MATRIX CANVAS (BIG & SPACIOUS) */}
           {(viewMode === 'split' || viewMode === 'canvas') && (
             <Paper
               elevation={0}
               sx={{
-                flex: viewMode === 'split' ? '1 1 64%' : '1 1 100%',
-                p: 1.2,
-                borderRadius: 2,
+                flex: viewMode === 'split' ? '1 1 60%' : '1 1 100%',
+                p: 2,
+                borderRadius: 2.5,
                 border: '1px solid #cbd5e1',
                 background: '#fff',
                 display: 'flex',
                 flexDirection: 'column',
-                overflow: 'hidden'
+                minHeight: 600
               }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.8, flexShrink: 0 }}>
-                <Typography variant="caption" fontWeight={800} color="#1e293b" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexShrink: 0 }}>
+                <Typography variant="subtitle2" fontWeight={800} color="#1e293b" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                   2D Timeline Matrix (X: Calendar Dates • Y: Hour Slots 08:00 - 18:00)
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                  Hover/Click slot tile to select request
+                <Typography variant="caption" color="text.secondary">
+                  Click tile to select booking request
                 </Typography>
               </Box>
 
-              {/* Matrix Scroll Container taking 100% available height */}
-              <Box sx={{ flex: '1 1 0px', display: 'flex', flexDirection: 'column', overflow: 'auto', pr: 0.5, minHeight: 0 }}>
-                <Box sx={{ minWidth: 600, flex: '1 1 0px', display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ overflowX: 'auto', overflowY: 'visible', flexGrow: 1 }}>
+                <Box sx={{ minWidth: 650 }}>
                   {/* Date Header Row */}
                   <Box
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: `75px repeat(${dateSpan.length}, 1fr)`,
-                      gap: 0.6,
-                      mb: 0.6,
+                      gridTemplateColumns: `85px repeat(${dateSpan.length}, 1fr)`,
+                      gap: 1,
+                      mb: 1,
                       position: 'sticky',
                       top: 0,
                       zIndex: 10,
                       background: '#fff',
-                      pb: 0.4
+                      pb: 0.5
                     }}
                   >
-                    <Box sx={{ p: 0.4, fontWeight: 800, fontSize: '0.65rem', color: '#64748b' }}>
+                    <Box sx={{ p: 1, fontWeight: 800, fontSize: '0.75rem', color: '#64748b' }}>
                       TIME / DATE
                     </Box>
                     {dateSpan.map((d) => {
@@ -581,17 +581,17 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                           key={d}
                           elevation={0}
                           sx={{
-                            p: 0.4,
+                            p: 1,
                             textAlign: 'center',
                             background: '#f1f5f9',
                             border: '1px solid #e2e8f0',
-                            borderRadius: 1.2
+                            borderRadius: 2
                           }}
                         >
-                          <Typography variant="caption" fontWeight={800} color="#1e293b" display="block" sx={{ fontSize: '0.7rem', lineHeight: 1.1 }}>
+                          <Typography variant="caption" fontWeight={800} color="#1e293b" display="block" sx={{ fontSize: '0.8rem' }}>
                             {dayName}
                           </Typography>
-                          <Typography variant="caption" color="#64748b" fontWeight={700} sx={{ fontSize: '0.6rem', lineHeight: 1.1 }}>
+                          <Typography variant="caption" color="#64748b" fontWeight={700} sx={{ fontSize: '0.7rem' }}>
                             {dateNum}
                           </Typography>
                         </Paper>
@@ -599,114 +599,108 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                     })}
                   </Box>
 
-                  {/* 10 Time Rows Stretched Equally to Fill 100% Workspace Height */}
-                  <Box sx={{ flex: '1 1 0px', display: 'flex', flexDirection: 'column', gap: 0.5, minHeight: 0 }}>
-                    {['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map((timeHour) => {
-                      const hourMin = timeToMinutes(timeHour);
-                      const nextHourMin = hourMin + 60;
+                  {/* Spacious Hourly Rows (GENEROUS 64px MIN-HEIGHT!) */}
+                  {['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map((timeHour) => {
+                    const hourMin = timeToMinutes(timeHour);
+                    const nextHourMin = hourMin + 60;
 
-                      return (
+                    return (
+                      <Box
+                        key={timeHour}
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: `85px repeat(${dateSpan.length}, 1fr)`,
+                          gap: 1,
+                          mb: 1,
+                          minHeight: 60 // GENEROUS 60px TALL ROWS!
+                        }}
+                      >
+                        {/* Y-Axis Label */}
                         <Box
-                          key={timeHour}
                           sx={{
-                            display: 'grid',
-                            gridTemplateColumns: `75px repeat(${dateSpan.length}, 1fr)`,
-                            gap: 0.6,
-                            flex: '1 1 0px',
-                            minHeight: 38
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            color: '#475569',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 1.5
                           }}
                         >
-                          {/* Y-Axis Label */}
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '0.68rem',
-                              fontWeight: 800,
-                              color: '#475569',
-                              background: '#f8fafc',
-                              border: '1px solid #f1f5f9',
-                              borderRadius: 1
-                            }}
-                          >
-                            {timeHour}
-                          </Box>
-
-                          {/* Date Columns for this hour */}
-                          {dateSpan.map((d) => {
-                            const occupyingDrafts = drafts.filter((draft) => {
-                              if (draft.action === 'REJECT') return false;
-                              const inDateRange = draft.startDate <= d && draft.endDate >= d;
-                              if (!inDateRange) return false;
-
-                              const draftStartMin = timeToMinutes(draft.startTime);
-                              const draftEndMin = timeToMinutes(draft.endTime);
-
-                              return draftStartMin < nextHourMin && draftEndMin > hourMin;
-                            });
-
-                            return (
-                              <Box
-                                key={d}
-                                sx={{
-                                  border: '1px dashed #cbd5e1',
-                                  borderRadius: 1,
-                                  p: 0.3,
-                                  background: occupyingDrafts.length > 1 ? '#fff1f2' : '#ffffff',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: 0.3,
-                                  position: 'relative',
-                                  height: '100%'
-                                }}
-                              >
-                                {occupyingDrafts.map((draft) => {
-                                  const isColliding = collisions.has(draft.bookingId);
-                                  const isSelected = draft.bookingId === selectedBookingId;
-
-                                  return (
-                                    <Tooltip
-                                      key={draft.bookingId}
-                                      title={`${draft.userLabel} (${draft.startDate} to ${draft.endDate}, ${draft.startTime}-${draft.endTime})`}
-                                      arrow
-                                    >
-                                      <Paper
-                                        onClick={() => setSelectedBookingId(draft.bookingId)}
-                                        elevation={isSelected ? 3 : 0}
-                                        sx={{
-                                          p: 0.4,
-                                          px: 0.6,
-                                          borderRadius: 0.8,
-                                          background: isColliding ? '#ef4444' : draft.color,
-                                          color: '#fff',
-                                          cursor: 'pointer',
-                                          border: isSelected ? '2px solid #000' : 'none',
-                                          flex: '1 1 auto',
-                                          display: 'flex',
-                                          flexDirection: 'column',
-                                          justifyContent: 'center',
-                                          transition: 'all 0.15s',
-                                          '&:hover': { opacity: 0.9, transform: 'scale(1.01)' }
-                                        }}
-                                      >
-                                        <Typography variant="caption" fontWeight={800} display="block" noWrap sx={{ fontSize: '0.68rem', lineHeight: 1.1 }}>
-                                          {draft.userLabel}
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.9, display: 'block', lineHeight: 1.1 }}>
-                                          {draft.startTime} - {draft.endTime}
-                                        </Typography>
-                                      </Paper>
-                                    </Tooltip>
-                                  );
-                                })}
-                              </Box>
-                            );
-                          })}
+                          {timeHour}
                         </Box>
-                      );
-                    })}
-                  </Box>
+
+                        {/* Date Columns for this hour */}
+                        {dateSpan.map((d) => {
+                          const occupyingDrafts = drafts.filter((draft) => {
+                            if (draft.action === 'REJECT') return false;
+                            const inDateRange = draft.startDate <= d && draft.endDate >= d;
+                            if (!inDateRange) return false;
+
+                            const draftStartMin = timeToMinutes(draft.startTime);
+                            const draftEndMin = timeToMinutes(draft.endTime);
+
+                            return draftStartMin < nextHourMin && draftEndMin > hourMin;
+                          });
+
+                          return (
+                            <Box
+                              key={d}
+                              sx={{
+                                border: '1px dashed #cbd5e1',
+                                borderRadius: 1.5,
+                                p: 0.5,
+                                minHeight: 60,
+                                background: occupyingDrafts.length > 1 ? '#fff1f2' : '#ffffff',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.5,
+                                position: 'relative'
+                              }}
+                            >
+                              {occupyingDrafts.map((draft) => {
+                                const isColliding = collisions.has(draft.bookingId);
+                                const isSelected = draft.bookingId === selectedBookingId;
+
+                                return (
+                                  <Tooltip
+                                    key={draft.bookingId}
+                                    title={`${draft.userLabel} (${draft.startDate} to ${draft.endDate}, ${draft.startTime}-${draft.endTime})`}
+                                    arrow
+                                  >
+                                    <Paper
+                                      onClick={() => setSelectedBookingId(draft.bookingId)}
+                                      elevation={isSelected ? 4 : 1}
+                                      sx={{
+                                        p: 1,
+                                        px: 1.2,
+                                        borderRadius: 1.5,
+                                        background: isColliding ? '#ef4444' : draft.color,
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        border: isSelected ? '2.5px solid #000' : 'none',
+                                        transition: 'all 0.15s',
+                                        '&:hover': { opacity: 0.95, transform: 'scale(1.01)' }
+                                      }}
+                                    >
+                                      <Typography variant="body2" fontWeight={800} display="block" noWrap sx={{ fontSize: '0.78rem', lineHeight: 1.2 }}>
+                                        {draft.userLabel}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ fontSize: '0.7rem', opacity: 0.9, display: 'block', fontWeight: 600 }}>
+                                        {draft.startTime} - {draft.endTime}
+                                      </Typography>
+                                    </Paper>
+                                  </Tooltip>
+                                );
+                              })}
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    );
+                  })}
                 </Box>
               </Box>
             </Paper>
@@ -717,21 +711,21 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
             <Paper
               elevation={0}
               sx={{
-                flex: viewMode === 'split' ? '1 1 36%' : '1 1 100%',
-                p: 1.2,
-                borderRadius: 2,
+                flex: viewMode === 'split' ? '1 1 40%' : '1 1 100%',
+                p: 2,
+                borderRadius: 2.5,
                 border: '1px solid #cbd5e1',
                 background: '#fff',
                 display: 'flex',
                 flexDirection: 'column',
-                overflow: 'hidden'
+                minHeight: 600
               }}
             >
-              <Typography variant="caption" fontWeight={800} color="#1e293b" sx={{ mb: 0.8, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem', flexShrink: 0 }}>
+              <Typography variant="subtitle2" fontWeight={800} color="#1e293b" sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 0 }}>
                 Request Adjuster & Decisions ({drafts.length})
               </Typography>
 
-              <Box sx={{ flex: '1 1 0px', overflowY: 'auto', pr: 0.3, display: 'flex', flexDirection: 'column', gap: 1.2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', pr: 0.5 }}>
                 {drafts.map((draft) => {
                   const isColliding = collisions.has(draft.bookingId);
                   const isSelected = draft.bookingId === selectedBookingId;
@@ -747,7 +741,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                       variant="outlined"
                       onClick={() => setSelectedBookingId(draft.bookingId)}
                       sx={{
-                        borderRadius: 2,
+                        borderRadius: 2.5,
                         borderColor: isColliding
                           ? '#ef4444'
                           : isSelected
@@ -755,18 +749,18 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                           : '#e2e8f0',
                         borderWidth: isColliding || isSelected ? '2px' : '1px',
                         boxShadow: isSelected
-                          ? `0 4px 14px ${draft.color}20`
+                          ? `0 6px 16px ${draft.color}25`
                           : '0 2px 6px rgba(0,0,0,0.02)',
                         transition: 'all 0.15s',
                         flexShrink: 0
                       }}
                     >
-                      <CardContent sx={{ p: 1.2, pb: '10px !important' }}>
+                      <CardContent sx={{ p: 2, pb: '16px !important' }}>
                         {/* Card Top */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.8 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', background: draft.color }} />
-                            <Typography variant="subtitle2" fontWeight={800} color="#0f172a" sx={{ fontSize: '0.8rem' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 12, height: 12, borderRadius: '50%', background: draft.color }} />
+                            <Typography variant="subtitle1" fontWeight={800} color="#0f172a">
                               {draft.userLabel}
                             </Typography>
                             {isModified && (
@@ -774,23 +768,23 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                                 label="Modified"
                                 size="small"
                                 color="info"
-                                sx={{ height: 16, fontSize: '0.58rem', fontWeight: 800 }}
+                                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800 }}
                               />
                             )}
                           </Box>
 
                           {/* Action Switcher */}
-                          <Box sx={{ display: 'flex', gap: 0.4 }}>
+                          <Box sx={{ display: 'flex', gap: 0.5 }}>
                             <Button
                               size="small"
                               variant={draft.action === 'APPROVE' ? 'contained' : 'outlined'}
                               color="success"
-                              startIcon={<Check size={11} />}
+                              startIcon={<Check size={13} />}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 updateDraft(draft.bookingId, { action: 'APPROVE' });
                               }}
-                              sx={{ borderRadius: 1.2, textTransform: 'none', fontWeight: 800, fontSize: '0.68rem', py: 0.15, px: 0.8 }}
+                              sx={{ borderRadius: 1.8, textTransform: 'none', fontWeight: 800, fontSize: '0.75rem', py: 0.3 }}
                             >
                               Approve
                             </Button>
@@ -798,12 +792,12 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                               size="small"
                               variant={draft.action === 'REJECT' ? 'contained' : 'outlined'}
                               color="error"
-                              startIcon={<Ban size={11} />}
+                              startIcon={<Ban size={13} />}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 updateDraft(draft.bookingId, { action: 'REJECT' });
                               }}
-                              sx={{ borderRadius: 1.2, textTransform: 'none', fontWeight: 800, fontSize: '0.68rem', py: 0.15, px: 0.8 }}
+                              sx={{ borderRadius: 1.8, textTransform: 'none', fontWeight: 800, fontSize: '0.75rem', py: 0.3 }}
                             >
                               Reject
                             </Button>
@@ -811,15 +805,15 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                         </Box>
 
                         {/* Original Callout */}
-                        <Box sx={{ p: 0.6, px: 0.8, mb: 0.8, borderRadius: 1, background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-                          <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ fontSize: '0.65rem' }}>
+                        <Box sx={{ p: 1, mb: 1.5, borderRadius: 1.5, background: '#f8fafc', border: '1px solid #f1f5f9' }}>
+                          <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ fontSize: '0.72rem' }}>
                             Original: {draft.originalStartDate} to {draft.originalEndDate} ({draft.originalStartTime} - {draft.originalEndTime})
                           </Typography>
                         </Box>
 
                         {draft.action === 'APPROVE' ? (
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8 }}>
-                            <Grid container spacing={0.8}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Grid container spacing={1.5}>
                               <Grid item xs={6}>
                                 <TextField
                                   label="Start Date"
@@ -831,7 +825,6 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                                     updateDraft(draft.bookingId, { startDate: e.target.value })
                                   }
                                   InputLabelProps={{ shrink: true }}
-                                  inputProps={{ style: { fontSize: '0.75rem', padding: '5px 6px' } }}
                                 />
                               </Grid>
                               <Grid item xs={6}>
@@ -845,12 +838,11 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                                     updateDraft(draft.bookingId, { endDate: e.target.value })
                                   }
                                   InputLabelProps={{ shrink: true }}
-                                  inputProps={{ style: { fontSize: '0.75rem', padding: '5px 6px' } }}
                                 />
                               </Grid>
                             </Grid>
 
-                            <Grid container spacing={0.8}>
+                            <Grid container spacing={1.5}>
                               <Grid item xs={6}>
                                 <TextField
                                   label="Start Time"
@@ -862,7 +854,6 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                                     updateDraft(draft.bookingId, { startTime: e.target.value })
                                   }
                                   InputLabelProps={{ shrink: true }}
-                                  inputProps={{ style: { fontSize: '0.75rem', padding: '5px 6px' } }}
                                 />
                               </Grid>
                               <Grid item xs={6}>
@@ -876,7 +867,6 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                                     updateDraft(draft.bookingId, { endTime: e.target.value })
                                   }
                                   InputLabelProps={{ shrink: true }}
-                                  inputProps={{ style: { fontSize: '0.75rem', padding: '5px 6px' } }}
                                 />
                               </Grid>
                             </Grid>
@@ -893,7 +883,6 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                             onChange={(e) =>
                               updateDraft(draft.bookingId, { rejectionReason: e.target.value })
                             }
-                            inputProps={{ style: { fontSize: '0.75rem' } }}
                           />
                         )}
                       </CardContent>
@@ -906,29 +895,27 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
         </Box>
       </DialogContent>
 
-      {/* Ultra-Slim Footer Bar */}
+      {/* Footer Bar */}
       <DialogActions
         sx={{
-          py: 0.6,
-          px: 2,
+          py: 1.5,
+          px: 3,
           background: '#fff',
           borderTop: '1px solid #e2e8f0',
           justify: 'space-between',
-          flexShrink: 0,
-          minHeight: 40
+          flexShrink: 0
         }}
       >
-        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ fontSize: '0.72rem' }}>
+        <Typography variant="body2" color="text.secondary" fontWeight={700}>
           Summary: <span style={{ color: '#059669' }}>{drafts.filter((d) => d.action === 'APPROVE').length} Approvals</span> •{' '}
           <span style={{ color: '#dc2626' }}>{drafts.filter((d) => d.action === 'REJECT').length} Rejections</span>
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Button
-            size="small"
             onClick={onClose}
             disabled={submitting}
-            sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', py: 0.2 }}
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
           >
             Cancel
           </Button>
@@ -936,21 +923,19 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
           <Button
             variant="contained"
             color="primary"
-            size="small"
             disabled={submitting || collisions.size > 0}
             onClick={handleSubmit}
             sx={{
-              borderRadius: 1.5,
+              borderRadius: 2,
               fontWeight: 800,
-              fontSize: '0.75rem',
               textTransform: 'none',
-              px: 2.5,
-              py: 0.3,
+              px: 3.5,
+              py: 0.8,
               background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)'
             }}
           >
-            {submitting ? 'Applying...' : 'Confirm & Save Resolution'}
+            {submitting ? 'Applying Resolutions...' : 'Confirm & Save Resolution'}
           </Button>
         </Box>
       </DialogActions>
