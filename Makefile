@@ -261,15 +261,17 @@ PROD_SERVER_URL ?= https://intranet.ch.amrita.edu/negcesapi
 
 build-agent-dev-linux:
 	@echo "Compiling NegcesLab Desktop App for Linux (DEV)... [Endpoint: $(DEV_SERVER_URL)]"
-	@mkdir -p ./agent/bin/dev/linux
+	@mkdir -p ./agent/bin/dev/linux ./agent/bin/linux
 	cd agent && CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X negceslab-agent/config.DefaultBackendURL=$(DEV_SERVER_URL)" -o ./bin/dev/linux/NegcesLab .
+	@cp -f ./agent/bin/dev/linux/NegcesLab ./agent/bin/linux/NegcesLab 2>/dev/null || true
 	@rm -f ./agent/bin/dev/linux/agent_config.json ./agent/bin/dev/linux/agent_db.json
 	@echo "Dev Linux executable built at ./agent/bin/dev/linux/NegcesLab"
 
 build-agent-dev-windows:
 	@echo "Compiling NegcesLab Desktop App for Windows (DEV)... [Endpoint: $(DEV_SERVER_URL)]"
-	@mkdir -p ./agent/bin/dev/windows
+	@mkdir -p ./agent/bin/dev/windows ./agent/bin/windows
 	cd agent && CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui -X negceslab-agent/config.DefaultBackendURL=$(DEV_SERVER_URL)" -o ./bin/dev/windows/NegcesLab.exe .
+	@cp -f ./agent/bin/dev/windows/NegcesLab.exe ./agent/bin/windows/NegcesLab.exe 2>/dev/null || true
 	@rm -f ./agent/bin/dev/windows/agent_config.json ./agent/bin/dev/windows/agent_db.json
 	@echo "Dev Windows executable built at ./agent/bin/dev/windows/NegcesLab.exe"
 
