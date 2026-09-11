@@ -149,9 +149,32 @@ const AdminSystemMonitoring: React.FC = () => {
   const [attendanceRowsPerPage, setAttendanceRowsPerPage] = useState(5);
 
   const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
+  const [inspectorAttendanceLogs, setInspectorAttendanceLogs] = useState<any[]>([]);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  const fetchInspectorLogs = React.useCallback(async (compId: string) => {
+    if (!compId) return;
+    try {
+      const res = await api.get('/attendance/logs', {
+        params: { computerId: compId, limit: 1000 }
+      });
+      if (res.data?.data) {
+        setInspectorAttendanceLogs(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch inspector attendance logs:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedComp?._id) {
+      fetchInspectorLogs(selectedComp._id);
+    } else {
+      setInspectorAttendanceLogs([]);
+    }
+  }, [selectedComp?._id, fetchInspectorLogs]);
 
   useEffect(() => {
     fetchData();
@@ -176,10 +199,11 @@ const AdminSystemMonitoring: React.FC = () => {
       setBookings(bookList);
       setAttendanceLogs(logsList);
 
-      // Update inspector reference if open
-      if (selectedComp) {
+      // Update inspector reference and refresh its logs if open
+      if (selectedComp?._id) {
         const updated = compList.find((c) => c._id === selectedComp._id);
         if (updated) setSelectedComp(updated);
+        fetchInspectorLogs(selectedComp._id);
       }
       setError(null);
     } catch (err: any) {
@@ -207,9 +231,10 @@ const AdminSystemMonitoring: React.FC = () => {
   const selectedComputerAttendanceHistory = React.useMemo(() => {
     if (!selectedComp) return [];
     const list: any[] = [];
+    const logsToUse = inspectorAttendanceLogs.length > 0 ? inspectorAttendanceLogs : attendanceLogs;
 
     // 1. Logs from AttendanceLog collection for this computer for TODAY
-    attendanceLogs.forEach((log: any) => {
+    logsToUse.forEach((log: any) => {
       const cId = log.computerId?._id || log.computerId;
       if (String(cId) === String(selectedComp._id) && log.checkInTime) {
         const logDateStr = getLocalDateStr(log.checkInTime);
@@ -268,7 +293,7 @@ const AdminSystemMonitoring: React.FC = () => {
 
     // Sort newest check-in first
     return list.sort((a, b) => new Date(b.checkInTime || 0).getTime() - new Date(a.checkInTime || 0).getTime());
-  }, [selectedComp, bookings, attendanceLogs, todayStr]);
+  }, [selectedComp, bookings, attendanceLogs, inspectorAttendanceLogs, todayStr]);
 
   // Filtered Computers
   const filteredComputers = computers.filter((c) => {
