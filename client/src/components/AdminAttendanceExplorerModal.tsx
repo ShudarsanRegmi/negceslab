@@ -501,9 +501,14 @@ export const AdminAttendanceExplorerModal: React.FC<AdminAttendanceExplorerModal
                 <Paper key={idx} variant="outlined" sx={{ p: 1.5, background: '#f8fafc', borderRadius: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Chip label={`Segment ${idx + 1}: ${seg.reason}`} size="small" color="primary" sx={{ fontWeight: 700 }} />
-                    <Chip label={seg.osType.toUpperCase()} size="small" variant="outlined" />
+                    <Chip label={(seg.osType || "UNKNOWN").toUpperCase()} size="small" variant="outlined" />
                   </Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  {seg.agenda && (
+                    <Typography variant="body2" sx={{ mt: 1, color: '#1e293b', fontStyle: 'italic', wordBreak: 'break-word' }}>
+                      <strong>Agenda / Reason:</strong> {seg.agenda}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                     Check-in: {new Date(seg.checkIn).toLocaleString()}
                   </Typography>
                   {seg.checkOut && (
