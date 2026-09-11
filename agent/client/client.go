@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -231,12 +233,16 @@ func (c *Client) AttendanceCheckInOut(studentName, studentEmail, agenda, session
 		action = "checkin"
 	}
 
+	hostname, _ := os.Hostname()
 	payload := map[string]interface{}{
 		"studentName":  studentName,
 		"studentEmail": studentEmail,
 		"agenda":       agenda,
 		"sessionType":  sessionType,
 		"action":       action,
+		"osType":       runtime.GOOS,
+		"osHostname":   hostname,
+		"hardwareUuid": sysinfo.GetHardwareUUID(),
 	}
 
 	body, err := json.Marshal(payload)

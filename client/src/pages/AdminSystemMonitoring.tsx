@@ -52,9 +52,12 @@ import {
   Download as DownloadIcon,
   Warning as WarningIcon,
   LocalFireDepartment as FireIcon,
+  History as HistoryIcon,
+  CalendarMonth as CalendarMonthIcon,
 } from "@mui/icons-material";
-import { computersAPI, bookingsAPI } from "../services/api";
+import api, { computersAPI, bookingsAPI } from "../services/api";
 import SystemTelemetryAnalyticsModal from "../components/SystemTelemetryAnalyticsModal";
+import { AdminAttendanceExplorerModal } from "../components/AdminAttendanceExplorerModal";
 
 interface LiveMetrics {
   cpuUtil: number;
@@ -128,6 +131,9 @@ const AdminSystemMonitoring: React.FC = () => {
   // Selected computer modal inspector
   const [selectedComp, setSelectedComp] = useState<Computer | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+
+  // Dedicated Attendance Explorer modal state
+  const [attendanceExplorerOpen, setAttendanceExplorerOpen] = useState(false);
 
   // Table pagination for inspector attendance log
   const [attendancePage, setAttendancePage] = useState(0);
@@ -240,15 +246,32 @@ const AdminSystemMonitoring: React.FC = () => {
           </Typography>
         </Box>
 
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={fetchData}
-          disabled={loading}
-          sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700 }}
-        >
-          {loading ? "Polling Telemetry..." : "Refresh Status"}
-        </Button>
+        <Box sx={{ display: "flex", gap: 1.5 }}>
+          <Button
+            variant="contained"
+            startIcon={<HistoryIcon />}
+            onClick={() => setAttendanceExplorerOpen(true)}
+            sx={{
+              borderRadius: 2,
+              textTransform: "none",
+              fontWeight: 700,
+              background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+              boxShadow: "0 4px 12px rgba(15, 23, 42, 0.2)"
+            }}
+          >
+            Attendance Logs Explorer
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={fetchData}
+            disabled={loading}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700 }}
+          >
+            {loading ? "Polling Telemetry..." : "Refresh Status"}
+          </Button>
+        </Box>
       </Box>
 
       {/* Summary KPI Badges */}
@@ -781,6 +804,12 @@ const AdminSystemMonitoring: React.FC = () => {
           bookings={selectedComp.bookings || []}
         />
       )}
+
+      {/* Attendance Logs Explorer Modal */}
+      <AdminAttendanceExplorerModal
+        open={attendanceExplorerOpen}
+        onClose={() => setAttendanceExplorerOpen(false)}
+      />
     </Box>
   );
 };

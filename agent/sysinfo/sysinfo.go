@@ -267,3 +267,35 @@ func GetOSAndVersion() (string, string) {
 	}
 	return runtime.GOOS, runtime.GOOS
 }
+
+// GetHardwareUUID returns OS-invariant Motherboard BIOS UUID
+func GetHardwareUUID() string {
+	if runtime.GOOS == "linux" {
+		data, err := os.ReadFile("/sys/class/dmi/id/product_uuid")
+		if err == nil {
+			return strings.ToLower(strings.TrimSpace(string(data)))
+		}
+		data, err = os.ReadFile("/etc/machine-id")
+		if err == nil {
+			return strings.ToLower(strings.TrimSpace(string(data)))
+		}
+	} else if runtime.GOOS == "windows" {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, "wmic", "csproduct", "get", "uuid")
+		hideWindow(cmd)
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		if cmd.Run() == nil {
+			lines := strings.Split(out.String(), "\n")
+			for _, line := range lines {
+				trimmed := strings.TrimSpace(line)
+				if trimmed != "" && !strings.EqualFold(trimmed, "uuid") {
+					return strings.ToLower(trimmed)
+				}
+			}
+		}
+	}
+	return ""
+}
+

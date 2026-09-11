@@ -5,6 +5,7 @@ const router = express.Router();
 const Computer = require("../models/computer");
 const Metric = require("../models/metric");
 const Booking = require("../models/booking");
+const AttendanceLog = require("../models/attendanceLog");
 const { writeMetricPoint, writeMetricPointsBatch, queryMetrics } = require("../services/influxService");
 const logger = require("../utils/logger")("agent");
 
@@ -212,7 +213,7 @@ router.get("/register/status/:requestId", async (req, res) => {
 // 2. Attendance Check-in / Check-out Endpoint
 router.post("/attendance", verifyAgentToken, async (req, res) => {
   try {
-    const { studentName, studentEmail, agenda, sessionType, action } = req.body;
+    const { studentName, studentEmail, agenda, sessionType, action, osType, osHostname, hardwareUuid, macAddress } = req.body;
     const computer = req.computer;
 
     logger.info("Agent Attendance Event Received", {
@@ -221,7 +222,9 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
       action,
       studentName,
       studentEmail,
-      sessionType
+      sessionType,
+      osType,
+      hardwareUuid
     });
 
     const now = new Date();
@@ -230,14 +233,11 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
     const minutes = String(now.getMinutes()).padStart(2, "0");
     const currentTime = `${hours}:${minutes}`;
 
+    const normalizedOsType = (osType || "unknown").toLowerCase();
+
     if (action === "checkin") {
       if (!studentName || !studentEmail) {
         return res.status(400).json({ message: "Student credentials are required for check-in" });
-      }
-
-      // Enforce: Cannot check in if already checked in
-      if (computer.agentActiveSession?.checkedIn) {
-        return res.status(400).json({ message: "This machine already has an active check-in session. Please check out first." });
       }
 
       // Resolve today's booking to map to this attendance session
@@ -254,52 +254,210 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         if (b.startDate === today) return currentTime >= b.startTime;
         if (b.endDate === today) return currentTime <= b.endTime;
         return false;
-      }) || bookings[0];
+      });
 
-      // Enforce: Cannot mark attendance if already marked for today in this slot/booking
+      // Classify Entry Type & Slot Conflict
+      let entryType = 'WALK_IN';
+      let isSlotConflict = false;
       if (activeBooking) {
-        const existingEntry = (activeBooking.attendanceHistory || []).find(h => h.date === today);
-        if (existingEntry) {
-          return res.status(400).json({ message: "Attendance has already been marked for today on this slot." });
+        if (activeBooking.userId === studentEmail || activeBooking.email === studentEmail) {
+          entryType = 'RESERVED_BOOKING';
+        } else {
+          entryType = 'WALK_IN';
+          isSlotConflict = true; // User B walking into User A's reserved slot
         }
       }
+
+      // 1. RE-ENTRY / RESUME CHECK (Accidental Checkout Fix)
+      // Check if student recently checked out (within 15 minutes) on this computer
+      const fifteenMinsAgo = new Date(now.getTime() - 15 * 60 * 1000);
+      const recentClosedSession = await AttendanceLog.findOne({
+        computerId: computer._id,
+        studentEmail,
+        sessionStatus: 'COMPLETED',
+        checkOutTime: { $gte: fifteenMinsAgo }
+      }).sort({ checkOutTime: -1 });
+
+      if (recentClosedSession) {
+        // Resume session & append re-entry segment
+        recentClosedSession.sessionStatus = 'ACTIVE';
+        recentClosedSession.checkOutTime = null;
+        recentClosedSession.lastHeartbeat = now;
+        recentClosedSession.segments.push({
+          checkIn: now,
+          osType: normalizedOsType,
+          reason: 'RE_CHECKIN'
+        });
+        await recentClosedSession.save();
+
+        computer.agentActiveSession = {
+          currentUser: studentName,
+          email: studentEmail,
+          agenda: agenda || recentClosedSession.agenda || "Working",
+          sessionType: sessionType || recentClosedSession.sessionType || "Physical GUI",
+          checkInTime: recentClosedSession.checkInTime,
+          checkedIn: true,
+          activeBookingId: activeBooking ? activeBooking._id : null,
+          sessionId: recentClosedSession.sessionId
+        };
+        computer.status = "reserved";
+        await computer.save();
+
+        const { broadcastSystemStateChange } = require("../services/websocketService");
+        broadcastSystemStateChange(computer._id, { status: computer.status, agentActiveSession: computer.agentActiveSession });
+
+        return res.status(200).json({ 
+          message: "Resumed previous session successfully (Re-entry window)", 
+          session: computer.agentActiveSession 
+        });
+      }
+
+      // 2. CROSS-OS SESSION HANDOVER CHECK (Windows ↔ Ubuntu Linux)
+      const existingActiveLog = await AttendanceLog.findOne({
+        computerId: computer._id,
+        sessionStatus: 'ACTIVE'
+      });
+
+      if (existingActiveLog) {
+        // Case A: Same student booting into another OS (e.g. Windows -> Linux reboot)
+        if (existingActiveLog.studentEmail === studentEmail) {
+          existingActiveLog.osType = normalizedOsType;
+          existingActiveLog.lastHeartbeat = now;
+          existingActiveLog.segments.push({
+            checkIn: now,
+            osType: normalizedOsType,
+            reason: 'OS_SWITCH'
+          });
+          await existingActiveLog.save();
+
+          computer.agentActiveSession = {
+            currentUser: studentName,
+            email: studentEmail,
+            agenda: agenda || existingActiveLog.agenda || "Working",
+            sessionType: sessionType || existingActiveLog.sessionType || "Physical GUI",
+            checkInTime: existingActiveLog.checkInTime,
+            checkedIn: true,
+            activeBookingId: activeBooking ? activeBooking._id : null,
+            sessionId: existingActiveLog.sessionId
+          };
+          computer.status = "reserved";
+          await computer.save();
+
+          const { broadcastSystemStateChange } = require("../services/websocketService");
+          broadcastSystemStateChange(computer._id, { status: computer.status, agentActiveSession: computer.agentActiveSession });
+
+          return res.status(200).json({ 
+            message: `Active session handed over smoothly to ${normalizedOsType}`, 
+            session: computer.agentActiveSession 
+          });
+        }
+
+        // Case B: Machine was rebooted by a different user and previous heartbeat timed out (> 3 mins)
+        const threeMinsAgo = new Date(now.getTime() - 3 * 60 * 1000);
+        if (existingActiveLog.lastHeartbeat < threeMinsAgo) {
+          // Auto-close stale orphan session
+          existingActiveLog.sessionStatus = 'AUTO_CLOSED_REBOOT';
+          existingActiveLog.checkOutTime = existingActiveLog.lastHeartbeat || now;
+          existingActiveLog.durationMinutes = Math.round((existingActiveLog.checkOutTime - existingActiveLog.checkInTime) / 60000);
+          await existingActiveLog.save();
+        } else {
+          // Machine is currently actively checked in by someone else
+          return res.status(400).json({ 
+            message: `This machine currently has an active session checked in by ${existingActiveLog.studentEmail}. Please check out first.` 
+          });
+        }
+      }
+
+      // 3. CREATE BRAND NEW STANDALONE ATTENDANCE LOG
+      const sessionId = crypto.randomBytes(16).toString("hex");
+      const newLog = new AttendanceLog({
+        sessionId,
+        computerId: computer._id,
+        bookingId: activeBooking ? activeBooking._id : null,
+        studentName,
+        studentEmail,
+        agenda: agenda || "Working",
+        sessionType: sessionType || "Physical GUI",
+        entryType,
+        osType: normalizedOsType,
+        osHostname: osHostname || "",
+        hardwareUuid: hardwareUuid || "",
+        macAddress: macAddress || "",
+        checkInTime: now,
+        lastHeartbeat: now,
+        sessionStatus: 'ACTIVE',
+        slotConflict: isSlotConflict,
+        segments: [{ checkIn: now, osType: normalizedOsType, reason: 'INITIAL' }]
+      });
+      await newLog.save();
 
       computer.agentActiveSession = {
         currentUser: studentName,
         email: studentEmail,
         agenda: agenda || "Working",
         sessionType: sessionType || "Physical GUI",
-        checkInTime: new Date(),
+        checkInTime: now,
         checkedIn: true,
-        activeBookingId: activeBooking ? activeBooking._id : null
+        activeBookingId: activeBooking ? activeBooking._id : null,
+        sessionId
       };
       computer.status = "reserved";
 
+      // Also append to activeBooking.attendanceHistory for backward compatibility
       if (activeBooking) {
+        if (!activeBooking.attendanceHistory) activeBooking.attendanceHistory = [];
         activeBooking.attendanceHistory.push({
           date: today,
           currentUser: studentName,
           email: studentEmail,
           agenda: agenda || "Working",
           sessionType: sessionType || "Physical GUI",
-          checkInTime: new Date()
+          checkInTime: now
         });
         await activeBooking.save();
       }
+
       await computer.save();
+
+      const { broadcastSystemStateChange } = require("../services/websocketService");
+      broadcastSystemStateChange(computer._id, { status: computer.status, agentActiveSession: computer.agentActiveSession });
+
       return res.status(200).json({ message: "Check-in successful", session: computer.agentActiveSession });
+
     } else if (action === "checkout") {
-      // Enforce: Cannot check out if not checked in
-      if (!computer.agentActiveSession?.checkedIn) {
+      if (!computer.agentActiveSession?.checkedIn && !computer.agentActiveSession?.sessionId) {
         return res.status(400).json({ message: "This machine does not have an active session to check out from." });
       }
 
-      if (computer.agentActiveSession.activeBookingId) {
+      const activeSessionId = computer.agentActiveSession?.sessionId;
+
+      // Close AttendanceLog session
+      let log = null;
+      if (activeSessionId) {
+        log = await AttendanceLog.findOne({ sessionId: activeSessionId });
+      }
+      if (!log) {
+        log = await AttendanceLog.findOne({ computerId: computer._id, sessionStatus: 'ACTIVE' }).sort({ checkInTime: -1 });
+      }
+
+      if (log) {
+        log.sessionStatus = 'COMPLETED';
+        log.checkOutTime = now;
+        log.durationMinutes = Math.max(1, Math.round((now - log.checkInTime) / 60000));
+        if (log.segments && log.segments.length > 0) {
+          const lastSeg = log.segments[log.segments.length - 1];
+          if (!lastSeg.checkOut) lastSeg.checkOut = now;
+        }
+        await log.save();
+      }
+
+      // Update Booking attendanceHistory checkOutTime (backward compatibility)
+      if (computer.agentActiveSession?.activeBookingId) {
         const bk = await Booking.findById(computer.agentActiveSession.activeBookingId);
         if (bk && bk.attendanceHistory) {
-          const entry = bk.attendanceHistory.find(h => h.date === today);
+          const entry = bk.attendanceHistory.find(h => h.date === today && h.email === computer.agentActiveSession.email);
           if (entry) {
-            entry.checkOutTime = new Date();
+            entry.checkOutTime = now;
             await bk.save();
           }
         }
@@ -312,7 +470,8 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         sessionType: "",
         checkInTime: null,
         checkedIn: false,
-        activeBookingId: null
+        activeBookingId: null,
+        sessionId: null
       };
       computer.status = "available";
       await computer.save();
@@ -321,20 +480,12 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
       broadcastSystemStateChange(computer._id, { status: computer.status, agentActiveSession: computer.agentActiveSession });
 
       return res.status(200).json({ message: "Checkout successful", session: computer.agentActiveSession });
+
     } else {
       return res.status(400).json({ message: "Invalid action. Use checkin or checkout." });
     }
-
-    computer.lastSeen = new Date();
-    computer.isOnline = true;
-    await computer.save();
-
-    res.status(200).json({
-      message: `Successfully executed ${action}`,
-      activeSession: computer.agentActiveSession
-    });
   } catch (error) {
-    console.error("Agent Attendance Error:", error);
+    logger.error("Agent Attendance Error:", { error: error.message, stack: error.stack });
     res.status(500).json({ message: "Attendance processing failed", error: error.message });
   }
 });

@@ -77,6 +77,7 @@ const agentRoutes = require("./routes/agent");
 const logRoutes = require("./routes/logs");
 const policyRoutes = require("./routes/policy");
 const cooldownRoutes = require("./routes/cooldowns");
+const attendanceRoutes = require("./routes/attendance");
 const { setupSwagger } = require("./swagger");
 
 // Use routes
@@ -93,6 +94,7 @@ app.use("/api/agent", agentRoutes);
 app.use("/api/logs", logRoutes);
 app.use("/api/policy", policyRoutes);
 app.use("/api/cooldowns", cooldownRoutes);
+app.use("/api/attendance", attendanceRoutes);
 
 // Setup Swagger UI (only in development/localhost, not in production)
 if (process.env.NODE_ENV !== "production") {
