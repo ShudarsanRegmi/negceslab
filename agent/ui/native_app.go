@@ -58,14 +58,18 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 
 			sessionSelect.OnChanged = func(selected string) {
 				if selected == "Non-Booked Walk-In Usage" {
+					nameEntry.SetText("")
+					emailEntry.SetText("")
+					agendaEntry.SetText("")
 					nameEntry.Enable()
 					emailEntry.Enable()
+					agendaEntry.Enable()
 					if currentBooking != nil && currentBooking.BookingFound {
 						bookingBanner.SetText(fmt.Sprintf("⚠️ Active Reservation Exists (%s - %s), but Walk-In Selected", currentBooking.StartTime, currentBooking.EndTime))
 					} else {
 						bookingBanner.SetText("ℹ️ Non-Booked Walk-In Usage Mode")
 					}
-					statusLabel.SetText("Walk-In Mode: All fields (Name, Email/Roll No, Agenda) are fully editable.")
+					statusLabel.SetText("Walk-In Mode: All fields cleared. Fill in your details and agenda.")
 				} else {
 					if currentBooking != nil && currentBooking.BookingFound {
 						if currentBooking.StudentName != "" {
@@ -76,17 +80,24 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 							emailEntry.SetText(currentBooking.StudentEmail)
 							emailEntry.Disable()
 						}
+						agendaEntry.SetText("")
+						agendaEntry.Enable()
 						bookingBanner.SetText(fmt.Sprintf("🟢 Active Reservation Found (%s - %s)", currentBooking.StartTime, currentBooking.EndTime))
 						statusLabel.SetText("Booking Auto-Detected! Enter what you are doing today and submit.")
 					} else {
+						nameEntry.SetText("")
+						emailEntry.SetText("")
+						agendaEntry.SetText("")
 						nameEntry.Enable()
 						emailEntry.Enable()
+						agendaEntry.Enable()
 						bookingBanner.SetText("ℹ️ No Active Booking Found (Walk-In Mode)")
 						statusLabel.SetText("No active reservation found. Please enter your details and submit.")
 					}
 				}
 				nameEntry.Refresh()
 				emailEntry.Refresh()
+				agendaEntry.Refresh()
 				bookingBanner.Refresh()
 				statusLabel.Refresh()
 			}

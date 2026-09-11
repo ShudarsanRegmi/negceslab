@@ -246,7 +246,17 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         status: "approved",
         startDate: { $lte: today },
         endDate: { $gte: today }
-      });
+      }).populate('user');
+
+      // Helper to check if student email matches a booking
+      const bookingMatchesStudent = (b, email) => {
+        if (!b || !email) return false;
+        const target = email.toLowerCase().trim();
+        const bUserEmail = b.user?.email ? b.user.email.toLowerCase().trim() : "";
+        const bUserId = b.userId ? String(b.userId).toLowerCase().trim() : "";
+        const bEmail = b.email ? String(b.email).toLowerCase().trim() : "";
+        return bUserEmail === target || bUserId === target || bEmail === target;
+      };
 
       // Helper to check if currentTime falls within [startTime - 30m, endTime + 30m]
       const isWithinTimeWindow = (b) => {
@@ -269,9 +279,7 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
       );
 
       // Find booking strictly matching student email on today's date
-      const userBooking = bookings.find(b => 
-        (b.userId === studentEmail || b.email === studentEmail)
-      );
+      const userBooking = bookings.find(b => bookingMatchesStudent(b, studentEmail));
 
       // Find booking matching current active time window on this computer
       const activeTimeWindowBooking = bookings.find(b => isWithinTimeWindow(b));
@@ -290,7 +298,7 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         entryType = 'WALK_IN';
         activeBooking = null;
         // Slot conflict ONLY occurs if another student has an active reservation right now!
-        if (activeTimeWindowBooking && activeTimeWindowBooking.userId !== studentEmail && activeTimeWindowBooking.email !== studentEmail) {
+        if (activeTimeWindowBooking && !bookingMatchesStudent(activeTimeWindowBooking, studentEmail)) {
           isSlotConflict = true;
         } else {
           isSlotConflict = false;

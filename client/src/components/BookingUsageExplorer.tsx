@@ -173,55 +173,72 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
     return { cpu, ram, gpu, maxGpuMem, totalGpuMem, count: selectedDayMetrics.length };
   }, [selectedDayMetrics]);
 
+  // Helper to format date as local YYYY-MM-DD string
+  const getLocalDateStr = (d: any) => {
+    if (!d) return '';
+    const dateObj = new Date(d);
+    if (isNaN(dateObj.getTime())) return '';
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Check-in status resolution for a given date
   const getDayAttendance = (formattedDay: string) => {
     const isToday = formattedDay === todayStr;
+
+    // Filter attendance logs specifically for this target day
+    const dayLogs = (attendanceLogs || []).filter((l) => {
+      if (!l.checkInTime) return false;
+      return getLocalDateStr(l.checkInTime) === formattedDay;
+    });
+
+    const activeLog = dayLogs.find(l => l.sessionStatus === 'ACTIVE');
     const isLive = isToday && (
       booking.attendanceActive?.agentActiveSession?.checkedIn ||
-      attendanceLogs.some(l => l.sessionStatus === 'ACTIVE')
+      Boolean(activeLog)
     );
 
     if (isLive) {
-      const activeLog = attendanceLogs.find(l => l.sessionStatus === 'ACTIVE');
+      const activeSess = activeLog || dayLogs[dayLogs.length - 1];
       return {
         status: 'live',
         label: 'Live Active',
-        session: booking.attendanceActive?.agentActiveSession || (activeLog ? {
-          currentUser: activeLog.studentName,
-          email: activeLog.studentEmail,
-          agenda: activeLog.agenda,
-          sessionType: activeLog.sessionType,
-          checkInTime: activeLog.checkInTime,
+        session: booking.attendanceActive?.agentActiveSession || (activeSess ? {
+          currentUser: activeSess.studentName,
+          email: activeSess.studentEmail,
+          agenda: activeSess.agenda,
+          sessionType: activeSess.sessionType,
+          checkInTime: activeSess.checkInTime,
           checkedIn: true
         } : null),
+        dayLogs
       };
     }
 
     // Check history entry from booking.attendanceHistory or AttendanceLog collection
     const historyEntry = (booking.attendanceHistory || []).find((h) => {
-      if (!h.date) return false;
-      const hDate = h.date.includes('T') ? h.date.split('T')[0] : h.date;
+      if (!h.date && !h.checkInTime) return false;
+      const hDate = h.date ? (h.date.includes('T') ? h.date.split('T')[0] : h.date) : getLocalDateStr(h.checkInTime);
       return hDate === formattedDay;
     });
 
-    const dbLog = attendanceLogs.find((l) => {
-      if (!l.checkInTime) return false;
-      const checkInStr = new Date(l.checkInTime).toISOString().split('T')[0];
-      return checkInStr === formattedDay;
-    });
+    const latestDbLog = dayLogs.length > 0 ? dayLogs[dayLogs.length - 1] : null;
 
-    if (historyEntry || dbLog) {
+    if (historyEntry || latestDbLog) {
       return {
         status: 'attended',
-        label: 'Attended',
-        session: historyEntry || {
-          currentUser: dbLog.studentName,
-          email: dbLog.studentEmail,
-          agenda: dbLog.agenda,
-          sessionType: dbLog.sessionType,
-          checkInTime: dbLog.checkInTime,
-          checkOutTime: dbLog.checkOutTime
-        },
+        label: dayLogs.length > 1 ? `Attended (${dayLogs.length} Check-ins)` : 'Attended',
+        session: latestDbLog ? {
+          currentUser: latestDbLog.studentName,
+          email: latestDbLog.studentEmail,
+          agenda: latestDbLog.agenda,
+          sessionType: latestDbLog.sessionType,
+          checkInTime: latestDbLog.checkInTime,
+          checkOutTime: latestDbLog.checkOutTime
+        } : historyEntry,
+        dayLogs
       };
     }
 
@@ -229,11 +246,11 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
     const todayDate = new Date(`${todayStr}T00:00:00`);
 
     if (dayDate < todayDate) {
-      return { status: 'absent', label: 'Unattended', session: null };
+      return { status: 'absent', label: 'Unattended', session: null, dayLogs: [] };
     } else if (dayDate > todayDate) {
-      return { status: 'future', label: 'Scheduled', session: null };
+      return { status: 'future', label: 'Scheduled', session: null, dayLogs: [] };
     } else {
-      return { status: 'pending_today', label: 'Pending Check-In', session: null };
+      return { status: 'pending_today', label: 'Pending Check-In', session: null, dayLogs: [] };
     }
   };
 
