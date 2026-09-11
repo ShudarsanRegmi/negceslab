@@ -58,3 +58,7 @@ serviceAccountKey.json
 
 # Custom Local Documentation
 /docs/
+
+# Agent binaries
+agent/bin/
+

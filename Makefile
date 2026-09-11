@@ -1,4 +1,4 @@
-.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh build-frontend-new build-frontend-fresh-new prod-services setup-env build-backend up-backend down-backend logs-backend build-mongo up-mongo down-mongo logs-mongo build-agent-linux build-agent-windows build-agent-all up-observability down-observability logs-observability systemd-install systemd-enable systemd-start systemd-stop systemd-restart systemd-status systemd-logs systemd-logs-mongodb systemd-logs-backend systemd-update-backend systemd-uninstall
+.PHONY: help dev prod build-dev build-prod up-dev up-prod down-dev down-prod logs clean build-frontend build-frontend-fresh build-frontend-new build-frontend-fresh-new prod-services setup-env build-backend up-backend down-backend logs-backend build-mongo up-mongo down-mongo logs-mongo build-agent-dev-linux build-agent-dev-windows build-agent-dev-all build-agent-prod-linux build-agent-prod-windows build-agent-prod-all build-agent-linux build-agent-windows build-agent-all up-observability down-observability logs-observability systemd-install systemd-enable systemd-start systemd-stop systemd-restart systemd-status systemd-logs systemd-logs-mongodb systemd-logs-backend systemd-update-backend systemd-uninstall
 
 # Automatic Git Deployment Metadata
 export GIT_COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
@@ -256,20 +256,47 @@ systemd-uninstall:
 
 # ─── NegcesLab Go Agent Build Targets ──────────────────────────────────────────
 
-build-agent-linux:
-	@echo "Compiling Unified NegcesLab Desktop App for Linux..."
-	@mkdir -p ./agent/bin/linux
-	cd agent && CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/linux/NegcesLab .
-	@echo "Linux executable built at ./agent/bin/linux/NegcesLab"
+DEV_SERVER_URL ?= http://localhost:5000
+PROD_SERVER_URL ?= https://intranet.ch.amrita.edu/negcesapi
 
-build-agent-windows:
-	@echo "Compiling Unified NegcesLab Desktop App for Windows..."
-	@mkdir -p ./agent/bin/windows
-	cd agent && CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui" -o ./bin/windows/NegcesLab.exe .
-	@echo "Windows executable built at ./agent/bin/windows/NegcesLab.exe"
+build-agent-dev-linux:
+	@echo "Compiling NegcesLab Desktop App for Linux (DEV)... [Endpoint: $(DEV_SERVER_URL)]"
+	@mkdir -p ./agent/bin/dev/linux
+	cd agent && CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X negceslab-agent/config.DefaultBackendURL=$(DEV_SERVER_URL)" -o ./bin/dev/linux/NegcesLab .
+	@rm -f ./agent/bin/dev/linux/agent_config.json ./agent/bin/dev/linux/agent_db.json
+	@echo "Dev Linux executable built at ./agent/bin/dev/linux/NegcesLab"
 
-build-agent-all: build-agent-linux build-agent-windows
-	@echo "All NegcesLab Desktop Apps compiled successfully!"
+build-agent-dev-windows:
+	@echo "Compiling NegcesLab Desktop App for Windows (DEV)... [Endpoint: $(DEV_SERVER_URL)]"
+	@mkdir -p ./agent/bin/dev/windows
+	cd agent && CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui -X negceslab-agent/config.DefaultBackendURL=$(DEV_SERVER_URL)" -o ./bin/dev/windows/NegcesLab.exe .
+	@rm -f ./agent/bin/dev/windows/agent_config.json ./agent/bin/dev/windows/agent_db.json
+	@echo "Dev Windows executable built at ./agent/bin/dev/windows/NegcesLab.exe"
+
+build-agent-dev-all: build-agent-dev-linux build-agent-dev-windows
+	@echo "All Dev NegcesLab Desktop Apps compiled successfully!"
+
+build-agent-prod-linux:
+	@echo "Compiling NegcesLab Desktop App for Linux (PROD)... [Endpoint: $(PROD_SERVER_URL)]"
+	@mkdir -p ./agent/bin/prod/linux
+	cd agent && CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X negceslab-agent/config.DefaultBackendURL=$(PROD_SERVER_URL)" -o ./bin/prod/linux/NegcesLab .
+	@rm -f ./agent/bin/prod/linux/agent_config.json ./agent/bin/prod/linux/agent_db.json
+	@echo "Prod Linux executable built at ./agent/bin/prod/linux/NegcesLab"
+
+build-agent-prod-windows:
+	@echo "Compiling NegcesLab Desktop App for Windows (PROD)... [Endpoint: $(PROD_SERVER_URL)]"
+	@mkdir -p ./agent/bin/prod/windows
+	cd agent && CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui -X negceslab-agent/config.DefaultBackendURL=$(PROD_SERVER_URL)" -o ./bin/prod/windows/NegcesLab.exe .
+	@rm -f ./agent/bin/prod/windows/agent_config.json ./agent/bin/prod/windows/agent_db.json
+	@echo "Prod Windows executable built at ./agent/bin/prod/windows/NegcesLab.exe"
+
+build-agent-prod-all: build-agent-prod-linux build-agent-prod-windows
+	@echo "All Prod NegcesLab Desktop Apps compiled successfully!"
+
+build-agent-linux: build-agent-dev-linux build-agent-prod-linux
+build-agent-windows: build-agent-dev-windows build-agent-prod-windows
+build-agent-all: build-agent-dev-all build-agent-prod-all
+	@echo "All Dev & Prod NegcesLab Desktop Apps compiled successfully!"
 
 # Observability commands
 up-observability:

@@ -5,6 +5,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
+)
+
+var (
+	// DefaultBackendURL can be overridden at compile time via:
+	// -ldflags "-X negceslab-agent/config.DefaultBackendURL=http://localhost:5000"
+	DefaultBackendURL = "https://intranet.ch.amrita.edu/negcesapi"
+	DefaultWSURL      = ""
 )
 
 type Config struct {
@@ -18,10 +26,29 @@ type Config struct {
 	RegistrationSecret string `json:"registration_secret"`
 }
 
+func getWSURL(backendURL string) string {
+	if strings.HasPrefix(backendURL, "https://") {
+		return strings.Replace(backendURL, "https://", "wss://", 1)
+	}
+	if strings.HasPrefix(backendURL, "http://") {
+		return strings.Replace(backendURL, "http://", "ws://", 1)
+	}
+	return strings.Replace(backendURL, "http", "ws", 1)
+}
+
 func DefaultConfig() *Config {
+	bURL := DefaultBackendURL
+	if bURL == "" {
+		bURL = "https://intranet.ch.amrita.edu/negcesapi"
+	}
+	wURL := DefaultWSURL
+	if wURL == "" {
+		wURL = getWSURL(bURL)
+	}
+
 	return &Config{
-		BackendURL:         "https://intranet.ch.amrita.edu/negcesapi",
-		WSURL:              "wss://intranet.ch.amrita.edu/negcesapi",
+		BackendURL:         bURL,
+		WSURL:              wURL,
 		MonitorInterval:    10,
 		MetricsInterval:    60,
 		LabName:            "Negces Lab",
@@ -59,12 +86,14 @@ func LoadConfig() (*Config, error) {
 		return DefaultConfig(), err
 	}
 
+	def := DefaultConfig()
+
 	// Validate / clean values
 	if cfg.BackendURL == "" {
-		cfg.BackendURL = "https://intranet.ch.amrita.edu/negcesapi"
+		cfg.BackendURL = def.BackendURL
 	}
 	if cfg.WSURL == "" {
-		cfg.WSURL = "wss://intranet.ch.amrita.edu/negcesapi"
+		cfg.WSURL = def.WSURL
 	}
 	if cfg.MonitorInterval <= 0 {
 		cfg.MonitorInterval = 10
