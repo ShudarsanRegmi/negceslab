@@ -113,6 +113,15 @@ const computerSchema = new mongoose.Schema({
     sessionType: { type: String, default: "" },
     checkedIn: { type: Boolean, default: false },
     activeBookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: null },
+    lastSession: {
+      currentUser: { type: String, default: "" },
+      email: { type: String, default: "" },
+      agenda: { type: String, default: "" },
+      sessionType: { type: String, default: "" },
+      checkInTime: { type: Date, default: null },
+      checkOutTime: { type: Date, default: null },
+      totalCheckInsToday: { type: Number, default: 0 },
+    },
   },
   liveMetrics: {
     cpuUtil: { type: Number, default: 0 },

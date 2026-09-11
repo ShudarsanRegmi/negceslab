@@ -140,6 +140,7 @@ router.post("/admin-terminate/:sessionId", verifyToken, isAdmin, async (req, res
     // Release computer if active
     const computer = await Computer.findById(log.computerId);
     if (computer && computer.agentActiveSession?.sessionId === sessionId) {
+      const prevSession = computer.agentActiveSession || {};
       computer.agentActiveSession = {
         currentUser: "",
         email: "",
@@ -148,7 +149,16 @@ router.post("/admin-terminate/:sessionId", verifyToken, isAdmin, async (req, res
         checkInTime: null,
         checkedIn: false,
         activeBookingId: null,
-        sessionId: null
+        sessionId: null,
+        lastSession: {
+          currentUser: prevSession.currentUser || log.studentName || "",
+          email: prevSession.email || log.studentEmail || "",
+          agenda: prevSession.agenda || log.agenda || "",
+          sessionType: prevSession.sessionType || log.sessionType || "",
+          checkInTime: prevSession.checkInTime || log.checkInTime || null,
+          checkOutTime: log.checkOutTime || new Date(),
+          totalCheckInsToday: 1
+        }
       };
       computer.status = "available";
       await computer.save();

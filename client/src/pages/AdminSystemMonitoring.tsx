@@ -79,6 +79,15 @@ interface AgentActiveSession {
   sessionType?: string;
   checkInTime?: string;
   activeBookingId?: string;
+  lastSession?: {
+    currentUser?: string;
+    email?: string;
+    agenda?: string;
+    sessionType?: string;
+    checkInTime?: string;
+    checkOutTime?: string;
+    totalCheckInsToday?: number;
+  };
 }
 
 interface SystemDetails {
@@ -554,16 +563,36 @@ const AdminSystemMonitoring: React.FC = () => {
                             {session.currentUser}
                           </Typography>
                         </Box>
-                        <Chip label={session.sessionType} size="small" color="success" sx={{ height: 16, fontSize: "0.55rem", fontWeight: 800 }} />
+                        <Chip label={session.sessionType || "Live"} size="small" color="success" sx={{ height: 16, fontSize: "0.55rem", fontWeight: 800 }} />
                       </Box>
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
                         <strong>Agenda:</strong> {session.agenda}
                       </Typography>
                     </Paper>
+                  ) : session?.lastSession?.currentUser ? (
+                    <Paper sx={{ p: 1.25, borderRadius: 2, bgcolor: "#f0f9ff", border: "1px solid #93c5fd" }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          <CheckIcon sx={{ fontSize: 16, color: "#2563eb" }} />
+                          <Typography variant="caption" fontWeight={800} color="#1e40af">
+                            {session.lastSession.currentUser}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={`${session.lastSession.totalCheckInsToday || 1} Submitted (Ended)`}
+                          size="small"
+                          color="info"
+                          sx={{ height: 16, fontSize: "0.55rem", fontWeight: 800 }}
+                        />
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                        <strong>Agenda:</strong> {session.lastSession.agenda || "Research"}
+                      </Typography>
+                    </Paper>
                   ) : (
                     <Paper sx={{ p: 1.25, borderRadius: 2, bgcolor: "#f8fafc", border: "1px dashed #cbd5e1", textAlign: "center" }}>
                       <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                        No active attendance check-in
+                        Idle (No check-ins submitted today)
                       </Typography>
                     </Paper>
                   )}
@@ -637,9 +666,32 @@ const AdminSystemMonitoring: React.FC = () => {
                         Check-in Time: {selectedComp.agentActiveSession.checkInTime ? new Date(selectedComp.agentActiveSession.checkInTime).toLocaleString() : "N/A"}
                       </Typography>
                     </Box>
+                  ) : selectedComp.agentActiveSession?.lastSession?.currentUser ? (
+                    <Box>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                        <Typography variant="body2" fontWeight={800} color="#1e40af">
+                          👤 {selectedComp.agentActiveSession.lastSession.currentUser}
+                        </Typography>
+                        <Chip
+                          label={`${selectedComp.agentActiveSession.lastSession.totalCheckInsToday || 1} Check-in(s) Submitted (Ended)`}
+                          size="small"
+                          color="info"
+                        />
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Email: {selectedComp.agentActiveSession.lastSession.email}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        <strong>Last Agenda:</strong> {selectedComp.agentActiveSession.lastSession.agenda}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                        Check-in: {selectedComp.agentActiveSession.lastSession.checkInTime ? new Date(selectedComp.agentActiveSession.lastSession.checkInTime).toLocaleString() : "N/A"}
+                        {selectedComp.agentActiveSession.lastSession.checkOutTime && ` • Check-out: ${new Date(selectedComp.agentActiveSession.lastSession.checkOutTime).toLocaleTimeString()}`}
+                      </Typography>
+                    </Box>
                   ) : (
                     <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                      Computer is currently idle with no active student attendance check-in.
+                      Computer is currently idle with no attendance check-in submitted today.
                     </Typography>
                   )}
                 </Paper>

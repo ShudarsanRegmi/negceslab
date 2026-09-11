@@ -421,6 +421,23 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
       });
       await newLog.save();
 
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayLogsCount = await AttendanceLog.countDocuments({
+        computerId: computer._id,
+        checkInTime: { $gte: todayStart }
+      });
+
+      const lastSessionData = {
+        currentUser: studentName,
+        email: studentEmail,
+        agenda: agenda || "Working",
+        sessionType: sessionType || "Physical GUI",
+        checkInTime: now,
+        checkOutTime: null,
+        totalCheckInsToday: Math.max(1, todayLogsCount)
+      };
+
       computer.agentActiveSession = {
         currentUser: studentName,
         email: studentEmail,
@@ -429,7 +446,8 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         checkInTime: now,
         checkedIn: true,
         activeBookingId: activeBooking ? activeBooking._id : null,
-        sessionId
+        sessionId,
+        lastSession: lastSessionData
       };
       computer.status = "reserved";
 
@@ -493,6 +511,14 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         }
       }
 
+      const prevSession = computer.agentActiveSession || {};
+      const todayStartCheckout = new Date();
+      todayStartCheckout.setHours(0, 0, 0, 0);
+      const totalToday = await AttendanceLog.countDocuments({
+        computerId: computer._id,
+        checkInTime: { $gte: todayStartCheckout }
+      });
+
       computer.agentActiveSession = {
         currentUser: "",
         email: "",
@@ -501,7 +527,16 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         checkInTime: null,
         checkedIn: false,
         activeBookingId: null,
-        sessionId: null
+        sessionId: null,
+        lastSession: {
+          currentUser: prevSession.currentUser || log?.studentName || prevSession.lastSession?.currentUser || "",
+          email: prevSession.email || log?.studentEmail || prevSession.lastSession?.email || "",
+          agenda: prevSession.agenda || log?.agenda || prevSession.lastSession?.agenda || "",
+          sessionType: prevSession.sessionType || log?.sessionType || prevSession.lastSession?.sessionType || "",
+          checkInTime: prevSession.checkInTime || log?.checkInTime || prevSession.lastSession?.checkInTime || null,
+          checkOutTime: now,
+          totalCheckInsToday: Math.max(1, totalToday)
+        }
       };
       computer.status = "available";
       await computer.save();

@@ -3,9 +3,50 @@ const router = express.Router();
 const Computer = require("../models/computer");
 const Booking = require("../models/booking");
 const User = require("../models/user");
+const AttendanceLog = require("../models/attendanceLog");
 const { verifyToken } = require("../middleware/auth");
 const getLogger = require("../utils/logger");
 const logger = getLogger("computers");
+
+async function attachLastSessions(computerObjs) {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const logsToday = await AttendanceLog.find({ checkInTime: { $gte: todayStart } }).sort({ checkInTime: -1 });
+    const logsByComp = {};
+    logsToday.forEach(log => {
+      if (!log.computerId) return;
+      const cid = log.computerId.toString();
+      if (!logsByComp[cid]) logsByComp[cid] = [];
+      logsByComp[cid].push(log);
+    });
+
+    return computerObjs.map(comp => {
+      const compId = comp._id.toString();
+      const compLogs = logsByComp[compId] || [];
+      if (!comp.agentActiveSession?.checkedIn && compLogs.length > 0) {
+        const latest = compLogs[0];
+        comp.agentActiveSession = comp.agentActiveSession || {};
+        if (!comp.agentActiveSession.lastSession || !comp.agentActiveSession.lastSession.currentUser) {
+          comp.agentActiveSession.lastSession = {
+            currentUser: latest.studentName,
+            email: latest.studentEmail,
+            agenda: latest.agenda,
+            sessionType: latest.sessionType,
+            checkInTime: latest.checkInTime,
+            checkOutTime: latest.checkOutTime,
+            totalCheckInsToday: compLogs.length
+          };
+        }
+      }
+      return comp;
+    });
+  } catch (err) {
+    logger.error("Failed to attach last sessions:", { error: err.message });
+    return computerObjs;
+  }
+}
 
 // Get all computers (public access)
 router.get("/public", async (req, res) => {
@@ -19,7 +60,9 @@ router.get("/public", async (req, res) => {
         }
       })
       .sort({ name: 1 });
-    res.json(computers);
+    const compObjs = computers.map(c => c.toObject());
+    const result = await attachLastSessions(compObjs);
+    res.json(result);
   } catch (error) {
     console.error("Error fetching computers:", error);
     res.status(500).json({ message: "Error fetching computers" });
@@ -85,7 +128,8 @@ router.get("/public/with-bookings", async (req, res) => {
       return computerObj;
     });
 
-    res.json(computersWithActiveBookings);
+    const result = await attachLastSessions(computersWithActiveBookings);
+    res.json(result);
   } catch (error) {
     console.error("Error fetching computers with bookings:", error);
     res.status(500).json({
@@ -107,7 +151,9 @@ router.get("/", verifyToken, async (req, res) => {
         }
       })
       .sort({ name: 1 });
-    res.json(computers);
+    const compObjs = computers.map(c => c.toObject());
+    const result = await attachLastSessions(compObjs);
+    res.json(result);
   } catch (error) {
     console.error("Error fetching computers:", error);
     res.status(500).json({ message: "Error fetching computers" });
@@ -173,7 +219,8 @@ router.get("/with-bookings", verifyToken, async (req, res) => {
       return computerObj;
     });
 
-    res.json(computersWithActiveBookings);
+    const result = await attachLastSessions(computersWithActiveBookings);
+    res.json(result);
   } catch (error) {
     console.error("Error fetching computers with bookings:", error);
     res.status(500).json({

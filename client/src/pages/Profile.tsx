@@ -56,7 +56,12 @@ const AdminAttendanceHistory: React.FC = () => {
     return <Typography variant="body2" color="text.secondary">Loading attendance history...</Typography>;
   }
 
-  const attendanceSessions = bookings.filter(b => b.attendanceActive?.agentActiveSession?.checkedIn || b.status === 'completed');
+  const attendanceSessions = bookings.filter(b => 
+    b.attendanceActive?.agentActiveSession?.checkedIn ||
+    b.attendanceActive?.agentActiveSession?.lastSession?.currentUser ||
+    (b.attendanceHistory && b.attendanceHistory.length > 0) ||
+    b.status === 'completed'
+  );
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -80,18 +85,22 @@ const AdminAttendanceHistory: React.FC = () => {
             {attendanceSessions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary" fontStyle="italic">No active attendance logs found.</Typography>
+                  <Typography variant="body2" color="text.secondary" fontStyle="italic">No attendance logs found.</Typography>
                 </TableCell>
               </TableRow>
             ) : (
               attendanceSessions.map((b) => {
                 const session = b.attendanceActive?.agentActiveSession;
-                const studentName = session?.currentUser || b.user?.name || 'Active Student';
-                const studentEmail = session?.email || b.user?.email || '';
+                const lastSess = session?.lastSession;
+                const histEntry = b.attendanceHistory?.[b.attendanceHistory.length - 1];
+
+                const studentName = session?.checkedIn ? session.currentUser : (lastSess?.currentUser || histEntry?.currentUser || b.user?.name || 'Student');
+                const studentEmail = session?.checkedIn ? session.email : (lastSess?.email || histEntry?.email || b.user?.email || '');
                 const systemName = b.computerId?.name || 'System';
-                const agenda = session?.agenda || b.reason;
-                const sessType = session?.sessionType || 'Physical GUI';
-                const checkInTime = session?.checkInTime ? new Date(session.checkInTime).toLocaleString() : 'N/A';
+                const agenda = session?.checkedIn ? session.agenda : (lastSess?.agenda || histEntry?.agenda || b.reason || 'Lab Research');
+                const sessType = session?.checkedIn ? session.sessionType : (lastSess?.sessionType || histEntry?.sessionType || 'Physical GUI');
+                const checkInRaw = session?.checkedIn ? session.checkInTime : (lastSess?.checkInTime || histEntry?.checkInTime);
+                const checkInTime = checkInRaw ? new Date(checkInRaw).toLocaleString() : 'N/A';
 
                 return (
                   <TableRow key={b._id} hover>
@@ -122,7 +131,7 @@ const AdminAttendanceHistory: React.FC = () => {
                       {session?.checkedIn ? (
                         <Chip label="Currently Live" size="small" color="success" sx={{ fontSize: '0.6rem', fontWeight: 800, height: 18 }} />
                       ) : (
-                        <Chip label="Completed" size="small" variant="outlined" sx={{ fontSize: '0.6rem', fontWeight: 700, height: 18 }} />
+                        <Chip label="Submitted (Ended)" size="small" color="info" variant="outlined" sx={{ fontSize: '0.6rem', fontWeight: 700, height: 18 }} />
                       )}
                     </TableCell>
                   </TableRow>

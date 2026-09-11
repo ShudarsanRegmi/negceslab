@@ -1468,13 +1468,22 @@ function RealTimeTab() {
                   </TableCell>
                   
                   <TableCell>
-                    {computer.isOnline && computer.agentActiveSession?.checkedIn ? (
+                    {computer.agentActiveSession?.checkedIn ? (
                       <Box>
                         <Typography variant="body2" fontWeight={700} color="primary.main">
                           {computer.agentActiveSession.currentUser}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           Agenda: {computer.agentActiveSession.agenda}
+                        </Typography>
+                      </Box>
+                    ) : computer.agentActiveSession?.lastSession?.currentUser ? (
+                      <Box>
+                        <Typography variant="body2" fontWeight={700} color="info.main">
+                          {computer.agentActiveSession.lastSession.currentUser}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          Ended (Agenda: {computer.agentActiveSession.lastSession.agenda})
                         </Typography>
                       </Box>
                     ) : (
@@ -1485,10 +1494,19 @@ function RealTimeTab() {
                   </TableCell>
                   
                   <TableCell>
-                    {computer.isOnline && computer.agentActiveSession?.checkedIn ? (
+                    {computer.agentActiveSession?.checkedIn ? (
                       <Chip 
                         label={computer.agentActiveSession.sessionType} 
                         size="small" 
+                        color="success"
+                        variant="outlined" 
+                        sx={{ fontSize: '0.65rem', fontWeight: 700 }} 
+                      />
+                    ) : computer.agentActiveSession?.lastSession?.currentUser ? (
+                      <Chip 
+                        label={`${computer.agentActiveSession.lastSession.totalCheckInsToday || 1} Submitted`} 
+                        size="small" 
+                        color="info"
                         variant="outlined" 
                         sx={{ fontSize: '0.65rem', fontWeight: 700 }} 
                       />
@@ -1604,7 +1622,7 @@ function RealTimeTab() {
               {/* Specs & Active Session */}
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle1" fontWeight="700" sx={{ mb: 1 }}>Live Attendance Session</Typography>
-                <Card variant="outlined" sx={{ p: 2, mb: 3, bgcolor: selectedComp.agentActiveSession?.checkedIn ? "#f0fdf4" : "#f8fafc" }}>
+                <Card variant="outlined" sx={{ p: 2, mb: 3, bgcolor: selectedComp.agentActiveSession?.checkedIn ? "#f0fdf4" : selectedComp.agentActiveSession?.lastSession?.currentUser ? "#f0f9ff" : "#f8fafc" }}>
                   {selectedComp.agentActiveSession?.checkedIn ? (
                     <Box>
                       <Typography variant="body2" fontWeight="700">Student: {selectedComp.agentActiveSession.currentUser}</Typography>
@@ -1614,8 +1632,18 @@ function RealTimeTab() {
                         Check-In: {new Date(selectedComp.agentActiveSession.checkInTime).toLocaleString()}
                       </Typography>
                     </Box>
+                  ) : selectedComp.agentActiveSession?.lastSession?.currentUser ? (
+                    <Box>
+                      <Typography variant="body2" fontWeight="700" color="info.main">Last Student: {selectedComp.agentActiveSession.lastSession.currentUser} (Submitted - Ended)</Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">Email: {selectedComp.agentActiveSession.lastSession.email}</Typography>
+                      <Typography variant="body2" sx={{ mt: 1 }}><strong>Agenda:</strong> {selectedComp.agentActiveSession.lastSession.agenda}</Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                        Check-In: {selectedComp.agentActiveSession.lastSession.checkInTime ? new Date(selectedComp.agentActiveSession.lastSession.checkInTime).toLocaleString() : "N/A"}
+                        {selectedComp.agentActiveSession.lastSession.checkOutTime && ` • Check-Out: ${new Date(selectedComp.agentActiveSession.lastSession.checkOutTime).toLocaleTimeString()}`}
+                      </Typography>
+                    </Box>
                   ) : (
-                    <Typography variant="body2" color="text.secondary" fontStyle="italic">Machine is currently available / idle.</Typography>
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic">Machine is currently available / idle (no check-in submitted today).</Typography>
                   )}
                 </Card>
 
