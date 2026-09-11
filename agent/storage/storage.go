@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -23,15 +24,27 @@ type AttendanceState struct {
 	CheckedIn   bool      `json:"checked_in"`
 }
 
+type LocalAttendanceLog struct {
+	ID           string    `json:"id"`
+	StudentName  string    `json:"student_name"`
+	StudentEmail string    `json:"student_email"`
+	SessionType  string    `json:"session_type"`
+	OSType       string    `json:"os_type"`
+	CheckInTime  time.Time `json:"check_in_time"`
+	CheckOutTime time.Time `json:"check_out_time"`
+	Status       string    `json:"status"`
+}
+
 type MetricRecord struct {
 	Timestamp time.Time              `json:"timestamp"`
 	Data      map[string]interface{} `json:"data"`
 }
 
 type AgentDB struct {
-	Credentials     MachineCredentials `json:"credentials"`
-	Attendance      AttendanceState    `json:"attendance"`
-	OfflineMetrics  []MetricRecord     `json:"offline_metrics"`
+	Credentials       MachineCredentials   `json:"credentials"`
+	Attendance        AttendanceState      `json:"attendance"`
+	AttendanceHistory []LocalAttendanceLog `json:"attendance_history"`
+	OfflineMetrics    []MetricRecord       `json:"offline_metrics"`
 }
 
 type Storage struct {
@@ -66,7 +79,8 @@ func (s *Storage) load() error {
 
 	if _, err := os.Stat(s.filePath); os.IsNotExist(err) {
 		s.db = AgentDB{
-			OfflineMetrics: []MetricRecord{},
+			OfflineMetrics:    []MetricRecord{},
+			AttendanceHistory: []LocalAttendanceLog{},
 		}
 		return s.saveUnlocked()
 	}
@@ -74,7 +88,8 @@ func (s *Storage) load() error {
 	data, err := ioutil.ReadFile(s.filePath)
 	if err != nil {
 		s.db = AgentDB{
-			OfflineMetrics: []MetricRecord{},
+			OfflineMetrics:    []MetricRecord{},
+			AttendanceHistory: []LocalAttendanceLog{},
 		}
 		return s.saveUnlocked()
 	}
@@ -82,13 +97,17 @@ func (s *Storage) load() error {
 	if err := json.Unmarshal(data, &s.db); err != nil {
 		// If unmarshal fails (file corrupt), reset
 		s.db = AgentDB{
-			OfflineMetrics: []MetricRecord{},
+			OfflineMetrics:    []MetricRecord{},
+			AttendanceHistory: []LocalAttendanceLog{},
 		}
 		return s.saveUnlocked()
 	}
 
 	if s.db.OfflineMetrics == nil {
 		s.db.OfflineMetrics = []MetricRecord{}
+	}
+	if s.db.AttendanceHistory == nil {
+		s.db.AttendanceHistory = []LocalAttendanceLog{}
 	}
 
 	return nil
@@ -183,4 +202,59 @@ func (s *Storage) ClearQueuedMetrics(count int) error {
 		s.db.OfflineMetrics = s.db.OfflineMetrics[count:]
 	}
 	return s.saveUnlocked()
+}
+
+func (s *Storage) AddLocalCheckIn(studentName, studentEmail, sessionType, osType string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+	for i := range s.db.AttendanceHistory {
+		if s.db.AttendanceHistory[i].Status == "ACTIVE" {
+			s.db.AttendanceHistory[i].Status = "COMPLETED"
+			s.db.AttendanceHistory[i].CheckOutTime = now
+		}
+	}
+
+	newLog := LocalAttendanceLog{
+		ID:           fmt.Sprintf("%d", now.UnixNano()),
+		StudentName:  studentName,
+		StudentEmail: studentEmail,
+		SessionType:  sessionType,
+		OSType:       osType,
+		CheckInTime:  now,
+		Status:       "ACTIVE",
+	}
+
+	s.db.AttendanceHistory = append(s.db.AttendanceHistory, newLog)
+	return s.saveUnlocked()
+}
+
+func (s *Storage) AddLocalCheckOut() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+	for i := range s.db.AttendanceHistory {
+		if s.db.AttendanceHistory[i].Status == "ACTIVE" {
+			s.db.AttendanceHistory[i].Status = "COMPLETED"
+			s.db.AttendanceHistory[i].CheckOutTime = now
+		}
+	}
+	return s.saveUnlocked()
+}
+
+func (s *Storage) GetLocalAttendanceLogs() []LocalAttendanceLog {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	logs := make([]LocalAttendanceLog, len(s.db.AttendanceHistory))
+	copy(logs, s.db.AttendanceHistory)
+
+	// Return newest check-in first
+	for i, j := 0, len(logs)-1; i < j; i, j = i+1, j-1 {
+		logs[i], logs[j] = logs[j], logs[i]
+	}
+
+	return logs
 }

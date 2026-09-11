@@ -177,48 +177,44 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			}
 		}
 
-		// ─── TAB 2: ATTENDANCE LOGS (METADATA ONLY) ───────────────────────────
-		logsTitle := widget.NewLabelWithStyle("Computer Attendance Logs History", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-		logsSub := widget.NewLabelWithStyle("Metadata log trail for this computer (excluding work agenda)", fyne.TextAlignCenter, fyne.TextStyle{Italic: true})
-		logsContainer := container.NewVBox(widget.NewLabel("Loading attendance logs..."))
+		// ─── TAB 2: LOCAL ATTENDANCE LOGS (METADATA ONLY) ───────────────────
+		logsTitle := widget.NewLabelWithStyle("Local Computer Attendance Logs", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+		logsSub := widget.NewLabelWithStyle("Local metadata confirmation log trail (excluding work agenda)", fyne.TextAlignCenter, fyne.TextStyle{Italic: true})
+		logsContainer := container.NewVBox(widget.NewLabel("Loading local attendance logs..."))
 		logsScroll := container.NewVScroll(logsContainer)
 
 		loadLogs := func() {
-			go func() {
-				logs, err := c.FetchAttendanceLogs()
-				if err != nil || len(logs) == 0 {
-					logsContainer.Objects = []fyne.CanvasObject{
-						widget.NewLabelWithStyle("No attendance logs recorded for this machine.", fyne.TextAlignCenter, fyne.TextStyle{Italic: true}),
-					}
-					logsContainer.Refresh()
-					return
+			logs := s.GetLocalAttendanceLogs()
+			if len(logs) == 0 {
+				logsContainer.Objects = []fyne.CanvasObject{
+					widget.NewLabelWithStyle("No local attendance logs recorded yet for this machine.", fyne.TextAlignCenter, fyne.TextStyle{Italic: true}),
 				}
-
-				var logItems []fyne.CanvasObject
-				for idx, l := range logs {
-					checkInStr := l.CheckInTime.Format("02/01/2006 15:04:05")
-					checkOutStr := "No Check-out (ACTIVE)"
-					if l.CheckOutTime != nil && !l.CheckOutTime.IsZero() {
-						checkOutStr = l.CheckOutTime.Format("02/01/2006 15:04:05")
-					}
-
-					header := widget.NewLabelWithStyle(fmt.Sprintf("#%d %s (%s)", idx+1, l.StudentName, l.StudentEmail), fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-					meta1 := widget.NewLabel(fmt.Sprintf("Type: %s | OS: %s | Status: %s", l.SessionType, l.OSType, l.SessionStatus))
-					meta2 := widget.NewLabel(fmt.Sprintf("Check-in: %s | Check-out: %s", checkInStr, checkOutStr))
-					meta2.TextStyle = fyne.TextStyle{Italic: true}
-
-					cardContent := container.NewVBox(header, meta1, meta2, widget.NewSeparator())
-					logItems = append(logItems, cardContent)
-				}
-				logsContainer.Objects = logItems
 				logsContainer.Refresh()
-			}()
+				return
+			}
+
+			var logItems []fyne.CanvasObject
+			for idx, l := range logs {
+				checkInStr := l.CheckInTime.Format("02/01/2006 15:04:05")
+				checkOutStr := "No Check-out (ACTIVE)"
+				if l.Status == "COMPLETED" && !l.CheckOutTime.IsZero() {
+					checkOutStr = l.CheckOutTime.Format("02/01/2006 15:04:05")
+				}
+
+				header := widget.NewLabelWithStyle(fmt.Sprintf("#%d %s (%s)", idx+1, l.StudentName, l.StudentEmail), fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+				meta1 := widget.NewLabel(fmt.Sprintf("Type: %s | OS: %s | Status: %s", l.SessionType, l.OSType, l.Status))
+				meta2 := widget.NewLabel(fmt.Sprintf("Check-in: %s | Check-out: %s", checkInStr, checkOutStr))
+				meta2.TextStyle = fyne.TextStyle{Italic: true}
+
+				cardContent := container.NewVBox(header, meta1, meta2, widget.NewSeparator())
+				logItems = append(logItems, cardContent)
+			}
+			logsContainer.Objects = logItems
+			logsContainer.Refresh()
 		}
 
-		refreshLogsBtn := widget.NewButton("🔄 Refresh Attendance Logs", loadLogs)
-		if creds.AuthToken != "" {
-			loadLogs()
-		}
+		refreshLogsBtn := widget.NewButton("🔄 Refresh Local Logs", loadLogs)
+		loadLogs()
 
 		tab2Content := container.NewVBox(
 			logsTitle,
