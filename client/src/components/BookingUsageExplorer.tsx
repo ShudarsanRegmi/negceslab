@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { computersAPI } from '../services/api';
+import api from '../services/api';
 import BookingTelemetryAnalyticsModal from './BookingTelemetryAnalyticsModal';
 import { Button } from '@mui/material';
 import { Assessment as AnalyticsIcon } from '@mui/icons-material';
@@ -95,6 +96,24 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
 
   const [metricsLoading, setMetricsLoading] = useState<boolean>(false);
   const [dayMetrics, setDayMetrics] = useState<any[]>([]);
+  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
+
+  // Fetch attendance logs for this computer
+  useEffect(() => {
+    if (!booking.computerId?._id) return;
+    api.get('/attendance/logs', {
+      params: {
+        computerId: booking.computerId._id,
+        limit: 100
+      }
+    }).then((res) => {
+      if (res.data && res.data.success) {
+        setAttendanceLogs(res.data.data || []);
+      }
+    }).catch((err) => {
+      console.error("Failed to load attendance logs in explorer:", err);
+    });
+  }, [booking.computerId?._id]);
 
   // Fetch metrics for selected computer across booking date range
   useEffect(() => {
@@ -157,22 +176,52 @@ export const BookingUsageExplorer: React.FC<BookingExplorerProps> = ({ booking }
   // Check-in status resolution for a given date
   const getDayAttendance = (formattedDay: string) => {
     const isToday = formattedDay === todayStr;
-    const isLive = isToday && booking.attendanceActive?.agentActiveSession?.checkedIn;
+    const isLive = isToday && (
+      booking.attendanceActive?.agentActiveSession?.checkedIn ||
+      attendanceLogs.some(l => l.sessionStatus === 'ACTIVE')
+    );
 
     if (isLive) {
+      const activeLog = attendanceLogs.find(l => l.sessionStatus === 'ACTIVE');
       return {
         status: 'live',
         label: 'Live Active',
-        session: booking.attendanceActive?.agentActiveSession,
+        session: booking.attendanceActive?.agentActiveSession || (activeLog ? {
+          currentUser: activeLog.studentName,
+          email: activeLog.studentEmail,
+          agenda: activeLog.agenda,
+          sessionType: activeLog.sessionType,
+          checkInTime: activeLog.checkInTime,
+          checkedIn: true
+        } : null),
       };
     }
 
-    const historyEntry = (booking.attendanceHistory || []).find((h) => h.date === formattedDay);
-    if (historyEntry) {
+    // Check history entry from booking.attendanceHistory or AttendanceLog collection
+    const historyEntry = (booking.attendanceHistory || []).find((h) => {
+      if (!h.date) return false;
+      const hDate = h.date.includes('T') ? h.date.split('T')[0] : h.date;
+      return hDate === formattedDay;
+    });
+
+    const dbLog = attendanceLogs.find((l) => {
+      if (!l.checkInTime) return false;
+      const checkInStr = new Date(l.checkInTime).toISOString().split('T')[0];
+      return checkInStr === formattedDay;
+    });
+
+    if (historyEntry || dbLog) {
       return {
         status: 'attended',
         label: 'Attended',
-        session: historyEntry,
+        session: historyEntry || {
+          currentUser: dbLog.studentName,
+          email: dbLog.studentEmail,
+          agenda: dbLog.agenda,
+          sessionType: dbLog.sessionType,
+          checkInTime: dbLog.checkInTime,
+          checkOutTime: dbLog.checkOutTime
+        },
       };
     }
 

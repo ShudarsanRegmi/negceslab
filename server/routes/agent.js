@@ -240,7 +240,7 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         return res.status(400).json({ message: "Student credentials are required for check-in" });
       }
 
-      // Resolve today's booking to map to this attendance session
+      // Resolve today's approved bookings for this computer
       const bookings = await Booking.find({
         computerId: computer._id,
         status: "approved",
@@ -248,13 +248,43 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         endDate: { $gte: today }
       });
 
-      const activeBooking = bookings.find(b => {
-        if (b.startDate < today && b.endDate > today) return true;
-        if (b.startDate === today && b.endDate === today) return currentTime >= b.startTime && currentTime <= b.endTime;
-        if (b.startDate === today) return currentTime >= b.startTime;
-        if (b.endDate === today) return currentTime <= b.endTime;
-        return false;
-      });
+      // Helper to check if currentTime falls within [startTime - 30m, endTime + 30m]
+      const isWithinTimeWindow = (b) => {
+        if (!b.startTime || !b.endTime) return true;
+        const [curH, curM] = currentTime.split(":").map(Number);
+        const curMins = curH * 60 + curM;
+
+        const [startH, startM] = b.startTime.split(":").map(Number);
+        const startMins = startH * 60 + startM - 30; // 30 min early check-in buffer
+
+        const [endH, endM] = b.endTime.split(":").map(Number);
+        const endMins = endH * 60 + endM + 30; // 30 min late buffer
+
+        return curMins >= startMins && curMins <= endMins;
+      };
+
+      // Smart Priority Resolution:
+      // Priority 1: Booking matching today + student email + time window (including 30-min early buffer)
+      let activeBooking = bookings.find(b => 
+        (b.userId === studentEmail || b.email === studentEmail) && isWithinTimeWindow(b)
+      );
+
+      // Priority 2: Booking matching student email on today's date
+      if (!activeBooking) {
+        activeBooking = bookings.find(b => 
+          (b.userId === studentEmail || b.email === studentEmail)
+        );
+      }
+
+      // Priority 3: Booking matching current time window on this computer
+      if (!activeBooking) {
+        activeBooking = bookings.find(b => isWithinTimeWindow(b));
+      }
+
+      // Priority 4: Fallback to any booking today for this computer
+      if (!activeBooking && bookings.length > 0) {
+        activeBooking = bookings[0];
+      }
 
       // Classify Entry Type & Slot Conflict
       let entryType = 'WALK_IN';
