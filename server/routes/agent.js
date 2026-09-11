@@ -307,60 +307,17 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
 
 
 
-      // 2. CROSS-OS SESSION HANDOVER CHECK (Windows ↔ Ubuntu Linux)
+      // 2. CLOSE ANY EXISTING ACTIVE SESSION TO LOG THIS NEW SUBMISSION DISTINCTLY
       const existingActiveLog = await AttendanceLog.findOne({
         computerId: computer._id,
         sessionStatus: 'ACTIVE'
       });
 
       if (existingActiveLog) {
-        // Case A: Same student booting into another OS (e.g. Windows -> Linux reboot)
-        if (existingActiveLog.studentEmail === studentEmail) {
-          existingActiveLog.osType = normalizedOsType;
-          existingActiveLog.lastHeartbeat = now;
-          existingActiveLog.segments.push({
-            checkIn: now,
-            osType: normalizedOsType,
-            reason: 'OS_SWITCH'
-          });
-          await existingActiveLog.save();
-
-          computer.agentActiveSession = {
-            currentUser: studentName,
-            email: studentEmail,
-            agenda: agenda || existingActiveLog.agenda || "Working",
-            sessionType: sessionType || existingActiveLog.sessionType || "Physical GUI",
-            checkInTime: existingActiveLog.checkInTime,
-            checkedIn: true,
-            activeBookingId: activeBooking ? activeBooking._id : null,
-            sessionId: existingActiveLog.sessionId
-          };
-          computer.status = "reserved";
-          await computer.save();
-
-          const { broadcastSystemStateChange } = require("../services/websocketService");
-          broadcastSystemStateChange(computer._id, { status: computer.status, agentActiveSession: computer.agentActiveSession });
-
-          return res.status(200).json({ 
-            message: `Active session handed over smoothly to ${normalizedOsType}`, 
-            session: computer.agentActiveSession 
-          });
-        }
-
-        // Case B: Machine was rebooted by a different user and previous heartbeat timed out (> 3 mins)
-        const threeMinsAgo = new Date(now.getTime() - 3 * 60 * 1000);
-        if (existingActiveLog.lastHeartbeat < threeMinsAgo) {
-          // Auto-close stale orphan session
-          existingActiveLog.sessionStatus = 'AUTO_CLOSED_REBOOT';
-          existingActiveLog.checkOutTime = existingActiveLog.lastHeartbeat || now;
-          existingActiveLog.durationMinutes = Math.round((existingActiveLog.checkOutTime - existingActiveLog.checkInTime) / 60000);
-          await existingActiveLog.save();
-        } else {
-          // Machine is currently actively checked in by someone else
-          return res.status(400).json({ 
-            message: `This machine currently has an active session checked in by ${existingActiveLog.studentEmail}. Please check out first.` 
-          });
-        }
+        existingActiveLog.sessionStatus = 'COMPLETED';
+        existingActiveLog.checkOutTime = now;
+        existingActiveLog.durationMinutes = Math.max(1, Math.round((now.getTime() - new Date(existingActiveLog.checkInTime).getTime()) / 60000));
+        await existingActiveLog.save();
       }
 
       // 3. CREATE BRAND NEW STANDALONE ATTENDANCE LOG
