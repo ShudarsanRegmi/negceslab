@@ -42,6 +42,8 @@ import {
   Grid,
   Avatar,
   Tooltip,
+  ButtonGroup,
+  Menu,
 } from "@mui/material";
 import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -65,13 +67,16 @@ import {
   Cancel as RejectedIcon,
   Assignment as TotalBookingsIcon,
   FilterList as FilterIcon,
+  ArrowDropDown as ArrowDropDownIcon,
+  Tune as TuneIcon,
 } from "@mui/icons-material";
 import { format, addDays, isWithinInterval, parseISO } from "date-fns";
 import { computersAPI, bookingsAPI, temporaryReleaseAPI, agentRegistrationAPI } from "../services/api";
 import AdminNotificationPanel from "../components/AdminNotificationPanel";
 import AdminAnalytics from "../components/AdminAnalytics";
-import BookingUsageExplorer from "../components/BookingUsageExplorer";
-import { ConflictResolutionStudioModal } from "../components/ConflictResolutionStudioModal";
+import { DateOnlyConflictStudioModal } from "../components/DateOnlyConflictStudioModal";
+import { BookingStudioV2Modal } from "../components/BookingStudioV2Modal";
+import { BookingUsageExplorer } from "../components/BookingUsageExplorer";
 
 interface Computer {
   _id: string;
@@ -215,9 +220,11 @@ const AdminDashboard: React.FC = () => {
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
 
-  // 2D Conflict Resolution Studio state
+  // Conflict Resolution Studio state
   const [conflictStudioOpen, setConflictStudioOpen] = useState(false);
+  const [studioV2Open, setStudioV2Open] = useState(false);
   const [selectedConflictGroup, setSelectedConflictGroup] = useState<Booking[]>([]);
+  const [conflictMenuAnchor, setConflictMenuAnchor] = useState<{ element: HTMLElement; group: Booking[] } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -1535,24 +1542,49 @@ const AdminDashboard: React.FC = () => {
                               size="small"
                               sx={{ fontWeight: 700, borderColor: "#f59e0b", color: "#d97706" }}
                             />
-                            <Button
+                            <ButtonGroup
                               variant="contained"
                               size="small"
-                              onClick={() => {
-                                setSelectedConflictGroup(group);
-                                setConflictStudioOpen(true);
-                              }}
                               sx={{
-                                borderRadius: 2.5,
-                                fontWeight: 800,
-                                textTransform: "none",
-                                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
-                                boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
-                                px: 2
+                                borderRadius: 2,
+                                boxShadow: "0 4px 12px rgba(15, 23, 42, 0.2)",
+                                overflow: "hidden",
+                                background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
                               }}
                             >
-                              ✨ Open 2D Conflict Studio
-                            </Button>
+                              <Button
+                                onClick={() => {
+                                  setSelectedConflictGroup(group);
+                                  setStudioV2Open(true); // Temporarily using advanced modal only
+                                }}
+                                startIcon={<TuneIcon fontSize="small" />}
+                                sx={{
+                                  fontWeight: 700,
+                                  textTransform: "none",
+                                  color: "#f8fafc",
+                                  px: 2,
+                                  fontSize: "0.82rem",
+                                  "&:hover": { background: "rgba(255,255,255,0.08)" }
+                                }}
+                              >
+                                Conflict Management
+                              </Button>
+                              {/* Dropdown temporarily disabled — simple conflict studio under fix
+                              <Button
+                                size="small"
+                                onClick={(e) => setConflictMenuAnchor({ element: e.currentTarget, group })}
+                                sx={{
+                                  color: "#94a3b8",
+                                  minWidth: 32,
+                                  px: 0.5,
+                                  borderLeft: "1px solid rgba(255,255,255,0.15) !important",
+                                  "&:hover": { color: "#fff", background: "rgba(255,255,255,0.08)" }
+                                }}
+                              >
+                                <ArrowDropDownIcon />
+                              </Button>
+                              */}
+                            </ButtonGroup>
                           </Box>
                         </Box>
 
@@ -2883,9 +2915,47 @@ const AdminDashboard: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <ConflictResolutionStudioModal
+      {/* Dropdown Menu for Advanced Conflict Management */}
+      <Menu
+        anchorEl={conflictMenuAnchor?.element}
+        open={Boolean(conflictMenuAnchor)}
+        onClose={() => setConflictMenuAnchor(null)}
+        PaperProps={{
+          sx: { borderRadius: 2.5, mt: 0.5, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)' }
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            if (conflictMenuAnchor?.group) {
+              setSelectedConflictGroup(conflictMenuAnchor.group);
+              setStudioV2Open(true);
+            }
+            setConflictMenuAnchor(null);
+          }}
+          sx={{ gap: 1.5, py: 1.2, px: 2 }}
+        >
+          <TuneIcon fontSize="small" sx={{ color: '#2563eb' }} />
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="#0f172a">
+              Open Advanced Conflict Management
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Dual-Axis (Date & Time) interactive spatial canvas
+            </Typography>
+          </Box>
+        </MenuItem>
+      </Menu>
+
+      <DateOnlyConflictStudioModal
         open={conflictStudioOpen}
         onClose={() => setConflictStudioOpen(false)}
+        group={selectedConflictGroup}
+        onSuccess={fetchData}
+      />
+
+      <BookingStudioV2Modal
+        open={studioV2Open}
+        onClose={() => setStudioV2Open(false)}
         group={selectedConflictGroup}
         onSuccess={fetchData}
       />

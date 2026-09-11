@@ -30,7 +30,14 @@ import {
   Minimize2,
   LayoutGrid,
   Columns,
-  List
+  List,
+  Film,
+  GripVertical,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Calendar,
+  ArrowLeftRight
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -93,6 +100,18 @@ const minutesToTime = (totalMinutes: number): string => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
+const stepTime = (timeStr: string, deltaMinutes: number): string => {
+  const mins = timeToMinutes(timeStr) + deltaMinutes;
+  const clamped = Math.max(8 * 60, Math.min(18 * 60, mins));
+  return minutesToTime(clamped);
+};
+
+const stepDate = (dateStr: string, deltaDays: number): string => {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + deltaDays);
+  return d.toISOString().split('T')[0];
+};
+
 const check2DOverlap = (
   b1: { startDate: string; endDate: string; startTime: string; endTime: string },
   b2: { startDate: string; endDate: string; startTime: string; endTime: string }
@@ -112,7 +131,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'split' | 'canvas' | 'cards'>('split');
+  const [viewMode, setViewMode] = useState<'split' | 'trimmer' | 'canvas' | 'cards'>('split');
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   useEffect(() => {
@@ -320,38 +339,52 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="xl"
-      fullWidth
       fullScreen={isFullScreen}
+      maxWidth={false}
       PaperProps={{
         sx: {
-          borderRadius: isFullScreen ? 0 : 3,
-          height: isFullScreen ? '100vh' : '94vh',
-          maxHeight: isFullScreen ? '100vh' : '94vh',
+          width: isFullScreen ? '100vw !important' : '95vw',
+          height: isFullScreen ? '100vh !important' : '92vh',
+          maxWidth: isFullScreen ? '100vw !important' : '1800px',
+          maxHeight: isFullScreen ? '100vh !important' : '960px',
+          m: isFullScreen ? '0 !important' : 'auto',
+          borderRadius: isFullScreen ? '0 !important' : 3,
           background: '#fafafa',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          overflow: 'hidden',
+          boxShadow: isFullScreen ? 'none' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          transition: 'all 0.2s ease-in-out'
+        }
+      }}
+      sx={{
+        '& .MuiDialog-container': {
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: isFullScreen ? '0 !important' : '16px !important',
         }
       }}
     >
       {/* Header Bar */}
       <DialogTitle
         sx={{
-          py: 1.5,
+          py: 1,
           px: 3,
           background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           color: '#fff',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          flexShrink: 0
+          flexShrink: 0,
+          minHeight: 0,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box
             sx={{
               p: 0.8,
-              borderRadius: 1.5,
+              borderRadius: 2,
               background: 'rgba(56, 189, 248, 0.15)',
               border: '1px solid rgba(56, 189, 248, 0.3)',
               display: 'flex',
@@ -361,15 +394,15 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
             <Sliders size={20} color="#38bdf8" />
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="h6" fontWeight={800} color="#f8fafc" sx={{ lineHeight: 1 }}>
+            <Typography variant="h6" fontWeight={800} color="#f8fafc" sx={{ lineHeight: 1.2 }}>
               2D Visual Conflict Resolution Studio
             </Typography>
             <Chip
-              label={`System: ${computerName} • ${drafts.length} Requests`}
+              label={`System: ${computerName} • ${drafts.length} Conflicting Requests`}
               size="small"
               sx={{
-                height: 22,
-                fontSize: '0.72rem',
+                height: 24,
+                fontSize: '0.75rem',
                 fontWeight: 700,
                 background: 'rgba(255,255,255,0.1)',
                 color: '#38bdf8',
@@ -384,7 +417,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
             <IconButton
               size="small"
               onClick={() => setIsFullScreen(!isFullScreen)}
-              sx={{ color: '#94a3b8', '&:hover': { color: '#fff', background: 'rgba(255,255,255,0.1)' } }}
+              sx={{ color: '#94a3b8', p: 0.8, '&:hover': { color: '#fff', background: 'rgba(255,255,255,0.1)' } }}
             >
               {isFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             </IconButton>
@@ -392,7 +425,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
           <IconButton
             size="small"
             onClick={onClose}
-            sx={{ color: '#94a3b8', '&:hover': { color: '#fff', background: 'rgba(255,255,255,0.1)' } }}
+            sx={{ color: '#94a3b8', p: 0.8, '&:hover': { color: '#fff', background: 'rgba(255,255,255,0.1)' } }}
           >
             <X size={18} />
           </IconButton>
@@ -400,16 +433,16 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
       </DialogTitle>
 
       {/* Main Body Content */}
-      <DialogContent sx={{ p: 2, display: 'flex', flexDirection: 'column', flexGrow: 1, overflowY: 'auto' }}>
+      <DialogContent sx={{ p: 1.5, px: 2.5, display: 'flex', flexDirection: 'column', flexGrow: 1, overflow: 'hidden', minHeight: 0 }}>
         {/* Status Alert Banner */}
         {collisions.size > 0 ? (
           <Alert
             severity="warning"
-            icon={<AlertTriangle size={18} />}
+            icon={<AlertTriangle size={16} />}
             sx={{
-              py: 0.5,
-              px: 2,
-              mb: 1.5,
+              py: 0.4,
+              px: 1.5,
+              mb: 1,
               borderRadius: 2,
               fontWeight: 700,
               fontSize: '0.82rem',
@@ -417,16 +450,16 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
               flexShrink: 0
             }}
           >
-            Overlap Collision Detected ({collisions.size} requests)! Click <strong>Auto-Resolve Gaps</strong> or adjust slots on the right.
+            Overlap Collision Detected ({collisions.size} requests)! Click <strong>Auto-Resolve Gaps</strong> or adjust start/end slots on the right panel.
           </Alert>
         ) : (
           <Alert
             severity="success"
-            icon={<CheckCircle2 size={18} />}
+            icon={<CheckCircle2 size={16} />}
             sx={{
-              py: 0.5,
-              px: 2,
-              mb: 1.5,
+              py: 0.4,
+              px: 1.5,
+              mb: 1,
               borderRadius: 2,
               fontWeight: 700,
               fontSize: '0.82rem',
@@ -442,18 +475,18 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
         <Paper
           elevation={0}
           sx={{
-            p: 1,
-            px: 2,
-            mb: 2,
+            p: 0.8,
+            px: 1.5,
+            mb: 1,
             borderRadius: 2,
             border: '1px solid #e2e8f0',
             background: '#fff',
             display: 'flex',
-            justify: 'space-between',
+            justifyContent: 'space-between',
             alignItems: 'center',
             flexShrink: 0,
             flexWrap: 'wrap',
-            gap: 1.5
+            gap: 1
           }}
         >
           <Box sx={{ display: 'flex', gap: 1.5 }}>
@@ -466,11 +499,12 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
               sx={{
                 borderRadius: 2,
                 fontWeight: 800,
-                fontSize: '0.8rem',
+                fontSize: '0.82rem',
                 textTransform: 'none',
                 background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
                 py: 0.6,
-                px: 2
+                px: 2.5,
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.25)'
               }}
             >
               Auto-Resolve Gaps
@@ -481,22 +515,22 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
               size="small"
               startIcon={<RotateCcw size={15} />}
               onClick={handleReset}
-              sx={{ borderRadius: 2, fontWeight: 700, fontSize: '0.8rem', textTransform: 'none', py: 0.6, px: 1.5, borderColor: '#cbd5e1' }}
+              sx={{ borderRadius: 2, fontWeight: 700, fontSize: '0.82rem', textTransform: 'none', py: 0.6, px: 2, borderColor: '#cbd5e1' }}
             >
               Reset to Original
             </Button>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mr: 0.5 }}>
-              Layout:
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mr: 0.5, fontSize: '0.78rem' }}>
+              View Mode:
             </Typography>
             <Button
               size="small"
               variant={viewMode === 'split' ? 'contained' : 'outlined'}
               startIcon={<Columns size={15} />}
               onClick={() => setViewMode('split')}
-              sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', py: 0.4 }}
+              sx={{ borderRadius: 1.8, textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', py: 0.4, px: 1.5 }}
             >
               Split Studio
             </Button>
@@ -505,7 +539,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
               variant={viewMode === 'canvas' ? 'contained' : 'outlined'}
               startIcon={<LayoutGrid size={15} />}
               onClick={() => setViewMode('canvas')}
-              sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', py: 0.4 }}
+              sx={{ borderRadius: 1.8, textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', py: 0.4, px: 1.5 }}
             >
               Full Canvas
             </Button>
@@ -514,7 +548,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
               variant={viewMode === 'cards' ? 'contained' : 'outlined'}
               startIcon={<List size={15} />}
               onClick={() => setViewMode('cards')}
-              sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', py: 0.4 }}
+              sx={{ borderRadius: 1.8, textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', py: 0.4, px: 1.5 }}
             >
               Cards Only
             </Button>
@@ -522,54 +556,57 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
         </Paper>
 
         {errorMsg && (
-          <Alert severity="error" sx={{ mb: 1.5, py: 0.5, px: 2, borderRadius: 2, fontSize: '0.8rem', flexShrink: 0 }}>
+          <Alert severity="error" sx={{ mb: 1.5, py: 0.5, px: 2, borderRadius: 2, fontSize: '0.82rem', flexShrink: 0 }}>
             {errorMsg}
           </Alert>
         )}
 
-        {/* WORKSPACE AREA */}
-        <Box sx={{ display: 'flex', gap: 2, flexGrow: 1, minHeight: 600 }}>
-          {/* LEFT PANEL: 2D MATRIX CANVAS (BIG & SPACIOUS) */}
+        {/* WORKSPACE AREA - SPACIOUS SPLIT VIEW */}
+        <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', gap: 2.5, width: '100%', overflow: 'hidden' }}>
+          {/* LEFT PANEL: 2D MATRIX CANVAS (SPACIOUS GOOGLE-CALENDAR STYLE) */}
           {(viewMode === 'split' || viewMode === 'canvas') && (
             <Paper
               elevation={0}
               sx={{
-                flex: viewMode === 'split' ? '1 1 60%' : '1 1 100%',
+                flex: viewMode === 'split' ? '1 1 65%' : '1 1 100%',
                 p: 2,
-                borderRadius: 2.5,
+                borderRadius: 3,
                 border: '1px solid #cbd5e1',
                 background: '#fff',
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: 600
+                overflow: 'hidden',
+                width: '100%'
               }}
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexShrink: 0 }}>
-                <Typography variant="subtitle2" fontWeight={800} color="#1e293b" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  2D Timeline Matrix (X: Calendar Dates • Y: Hour Slots 08:00 - 18:00)
+                <Typography variant="subtitle2" fontWeight={800} color="#1e293b" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.8rem' }}>
+                  2D TIMELINE MATRIX (X: Calendar Dates • Y: Hour Slots 08:00 - 18:00)
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Click tile to select booking request
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  Hover/Click slot tile to select request
                 </Typography>
               </Box>
 
-              <Box sx={{ overflowX: 'auto', overflowY: 'visible', flexGrow: 1 }}>
-                <Box sx={{ minWidth: 650 }}>
+              {/* Scrollable Timeline Grid */}
+              <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden', width: '100%', pr: 0.5 }}>
+                <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
                   {/* Date Header Row */}
                   <Box
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: `85px repeat(${dateSpan.length}, 1fr)`,
+                      gridTemplateColumns: `80px repeat(${dateSpan.length}, 1fr)`,
                       gap: 1,
                       mb: 1,
                       position: 'sticky',
                       top: 0,
                       zIndex: 10,
                       background: '#fff',
-                      pb: 0.5
+                      pb: 0.5,
+                      width: '100%'
                     }}
                   >
-                    <Box sx={{ p: 1, fontWeight: 800, fontSize: '0.75rem', color: '#64748b' }}>
+                    <Box sx={{ p: 1, fontWeight: 800, fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       TIME / DATE
                     </Box>
                     {dateSpan.map((d) => {
@@ -588,10 +625,10 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                             borderRadius: 2
                           }}
                         >
-                          <Typography variant="caption" fontWeight={800} color="#1e293b" display="block" sx={{ fontSize: '0.8rem' }}>
+                          <Typography variant="caption" fontWeight={800} color="#1e293b" display="block" sx={{ fontSize: '0.82rem' }}>
                             {dayName}
                           </Typography>
-                          <Typography variant="caption" color="#64748b" fontWeight={700} sx={{ fontSize: '0.7rem' }}>
+                          <Typography variant="caption" color="#64748b" fontWeight={700} sx={{ fontSize: '0.72rem' }}>
                             {dateNum}
                           </Typography>
                         </Paper>
@@ -599,7 +636,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                     })}
                   </Box>
 
-                  {/* Spacious Hourly Rows (GENEROUS 64px MIN-HEIGHT!) */}
+                  {/* Hourly Rows (GENEROUS 56px MIN-HEIGHT PER HOUR!) */}
                   {['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map((timeHour) => {
                     const hourMin = timeToMinutes(timeHour);
                     const nextHourMin = hourMin + 60;
@@ -609,10 +646,11 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                         key={timeHour}
                         sx={{
                           display: 'grid',
-                          gridTemplateColumns: `85px repeat(${dateSpan.length}, 1fr)`,
+                          gridTemplateColumns: `80px repeat(${dateSpan.length}, 1fr)`,
                           gap: 1,
                           mb: 1,
-                          minHeight: 60 // GENEROUS 60px TALL ROWS!
+                          minHeight: 56, // GENEROUS 56px HEIGHT FOR COMFORTABLE EVENT CARDS!
+                          width: '100%'
                         }}
                       >
                         {/* Y-Axis Label */}
@@ -626,7 +664,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                             color: '#475569',
                             background: '#f8fafc',
                             border: '1px solid #e2e8f0',
-                            borderRadius: 1.5
+                            borderRadius: 1.8
                           }}
                         >
                           {timeHour}
@@ -650,9 +688,9 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                               key={d}
                               sx={{
                                 border: '1px dashed #cbd5e1',
-                                borderRadius: 1.5,
+                                borderRadius: 1.8,
                                 p: 0.5,
-                                minHeight: 60,
+                                minHeight: 56,
                                 background: occupyingDrafts.length > 1 ? '#fff1f2' : '#ffffff',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -674,7 +712,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                                       onClick={() => setSelectedBookingId(draft.bookingId)}
                                       elevation={isSelected ? 4 : 1}
                                       sx={{
-                                        p: 1,
+                                        p: 0.8,
                                         px: 1.2,
                                         borderRadius: 1.5,
                                         background: isColliding ? '#ef4444' : draft.color,
@@ -685,10 +723,10 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                                         '&:hover': { opacity: 0.95, transform: 'scale(1.01)' }
                                       }}
                                     >
-                                      <Typography variant="body2" fontWeight={800} display="block" noWrap sx={{ fontSize: '0.78rem', lineHeight: 1.2 }}>
+                                      <Typography variant="body2" fontWeight={800} display="block" noWrap sx={{ fontSize: '0.8rem', lineHeight: 1.2 }}>
                                         {draft.userLabel}
                                       </Typography>
-                                      <Typography variant="caption" sx={{ fontSize: '0.7rem', opacity: 0.9, display: 'block', fontWeight: 600 }}>
+                                      <Typography variant="caption" sx={{ fontSize: '0.7rem', opacity: 0.95, display: 'block', fontWeight: 600 }}>
                                         {draft.startTime} - {draft.endTime}
                                       </Typography>
                                     </Paper>
@@ -706,26 +744,27 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
             </Paper>
           )}
 
-          {/* RIGHT PANEL: REQUEST ADJUSTMENT CARDS */}
+          {/* RIGHT PANEL: REQUEST ADJUSTMENT CARDS (SPACIOUS 380px SIDEBAR) */}
           {(viewMode === 'split' || viewMode === 'cards') && (
             <Paper
               elevation={0}
               sx={{
-                flex: viewMode === 'split' ? '1 1 40%' : '1 1 100%',
+                flex: viewMode === 'split' ? '0 0 380px' : '1 1 100%',
+                maxWidth: viewMode === 'split' ? '380px' : '100%',
                 p: 2,
-                borderRadius: 2.5,
+                borderRadius: 3,
                 border: '1px solid #cbd5e1',
                 background: '#fff',
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: 600
+                overflow: 'hidden'
               }}
             >
-              <Typography variant="subtitle2" fontWeight={800} color="#1e293b" sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 0 }}>
+              <Typography variant="subtitle2" fontWeight={800} color="#1e293b" sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.8rem', flexShrink: 0 }}>
                 Request Adjuster & Decisions ({drafts.length})
               </Typography>
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', pr: 0.5 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', pr: 0.5, flexGrow: 1 }}>
                 {drafts.map((draft) => {
                   const isColliding = collisions.has(draft.bookingId);
                   const isSelected = draft.bookingId === selectedBookingId;
@@ -741,7 +780,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                       variant="outlined"
                       onClick={() => setSelectedBookingId(draft.bookingId)}
                       sx={{
-                        borderRadius: 2.5,
+                        borderRadius: 3,
                         borderColor: isColliding
                           ? '#ef4444'
                           : isSelected
@@ -760,7 +799,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.2 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Box sx={{ width: 12, height: 12, borderRadius: '50%', background: draft.color }} />
-                            <Typography variant="subtitle1" fontWeight={800} color="#0f172a">
+                            <Typography variant="subtitle1" fontWeight={800} color="#0f172a" sx={{ fontSize: '0.9rem' }}>
                               {draft.userLabel}
                             </Typography>
                             {isModified && (
@@ -805,8 +844,8 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
                         </Box>
 
                         {/* Original Callout */}
-                        <Box sx={{ p: 1, mb: 1.5, borderRadius: 1.5, background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-                          <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ fontSize: '0.72rem' }}>
+                        <Box sx={{ p: 1, px: 1.2, mb: 1.5, borderRadius: 1.5, background: '#f8fafc', border: '1px solid #f1f5f9' }}>
+                          <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ fontSize: '0.75rem' }}>
                             Original: {draft.originalStartDate} to {draft.originalEndDate} ({draft.originalStartTime} - {draft.originalEndTime})
                           </Typography>
                         </Box>
@@ -898,15 +937,16 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
       {/* Footer Bar */}
       <DialogActions
         sx={{
-          py: 1.5,
+          py: 1,
           px: 3,
           background: '#fff',
           borderTop: '1px solid #e2e8f0',
-          justify: 'space-between',
-          flexShrink: 0
+          justifyContent: 'space-between',
+          flexShrink: 0,
+          minHeight: 0,
         }}
       >
-        <Typography variant="body2" color="text.secondary" fontWeight={700}>
+        <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ fontSize: '0.85rem' }}>
           Summary: <span style={{ color: '#059669' }}>{drafts.filter((d) => d.action === 'APPROVE').length} Approvals</span> •{' '}
           <span style={{ color: '#dc2626' }}>{drafts.filter((d) => d.action === 'REJECT').length} Rejections</span>
         </Typography>
@@ -928,6 +968,7 @@ export const ConflictResolutionStudioModal: React.FC<ConflictResolutionStudioMod
             sx={{
               borderRadius: 2,
               fontWeight: 800,
+              fontSize: '0.875rem',
               textTransform: 'none',
               px: 3.5,
               py: 0.8,
