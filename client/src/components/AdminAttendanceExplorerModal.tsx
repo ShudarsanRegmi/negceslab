@@ -142,16 +142,6 @@ export const AdminAttendanceExplorerModal: React.FC<AdminAttendanceExplorerModal
     fetchAttendanceLogs();
   };
 
-  const handleTerminateSession = async (sessionId: string) => {
-    if (!window.confirm('Are you sure you want to force terminate this active attendance session?')) return;
-    try {
-      await api.post(`/attendance/admin-terminate/${sessionId}`);
-      fetchAttendanceLogs();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to terminate session');
-    }
-  };
-
   const exportToCSV = () => {
     if (logs.length === 0) return;
     const headers = ['Session ID', 'Date/Time', 'Student Name', 'Email', 'Computer', 'Entry Type', 'OS', 'Duration (min)', 'Status'];
@@ -440,18 +430,11 @@ export const AdminAttendanceExplorerModal: React.FC<AdminAttendanceExplorerModal
 
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                        <Tooltip title="View Session Details & Segments">
+                        <Tooltip title="View Session Details & Agenda">
                           <IconButton size="small" onClick={() => setSelectedLog(log)}>
                             <Layers size={16} color="#3b82f6" />
                           </IconButton>
                         </Tooltip>
-                        {log.sessionStatus === 'ACTIVE' && (
-                          <Tooltip title="Force Terminate Active Session">
-                            <IconButton size="small" onClick={() => handleTerminateSession(log.sessionId)}>
-                              <Ban size={16} color="#ef4444" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -498,6 +481,15 @@ export const AdminAttendanceExplorerModal: React.FC<AdminAttendanceExplorerModal
               <Typography variant="subtitle2" color="text.secondary">
                 Hardware BIOS UUID: <code>{selectedLog.hardwareUuid || 'N/A'}</code>
               </Typography>
+
+              <Paper variant="outlined" sx={{ p: 1.5, mt: 1.5, bgcolor: '#f0f9ff', borderColor: '#bae6fd', borderRadius: 2 }}>
+                <Typography variant="caption" fontWeight={800} color="#0369a1" display="block" gutterBottom>
+                  WORK AGENDA / SUBMITTED PURPOSE
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#0c4a6e', wordBreak: 'break-word', whiteSpace: 'pre-wrap', maxHeight: 150, overflowY: 'auto' }}>
+                  {selectedLog.agenda || 'General Work Agenda'}
+                </Typography>
+              </Paper>
             </Box>
 
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>

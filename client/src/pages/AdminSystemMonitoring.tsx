@@ -619,7 +619,7 @@ const AdminSystemMonitoring: React.FC = () => {
                         </Box>
                         <Chip label={session.sessionType || "Live"} size="small" color="success" sx={{ height: 16, fontSize: "0.55rem", fontWeight: 800 }} />
                       </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", wordBreak: "break-word", whiteSpace: "normal", maxHeight: 60, overflowY: "auto" }}>
                         <strong>Agenda:</strong> {session.agenda}
                       </Typography>
                     </Paper>
@@ -639,7 +639,7 @@ const AdminSystemMonitoring: React.FC = () => {
                           sx={{ height: 16, fontSize: "0.55rem", fontWeight: 800 }}
                         />
                       </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", wordBreak: "break-word", whiteSpace: "normal", maxHeight: 60, overflowY: "auto" }}>
                         <strong>Agenda:</strong> {session.lastSession.agenda || "Research"}
                       </Typography>
                     </Paper>
@@ -713,7 +713,7 @@ const AdminSystemMonitoring: React.FC = () => {
                       <Typography variant="caption" color="text.secondary" display="block">
                         Email: {selectedComp.agentActiveSession.email}
                       </Typography>
-                      <Typography variant="body2" sx={{ mt: 1 }}>
+                      <Typography variant="body2" sx={{ mt: 1, wordBreak: "break-word", whiteSpace: "normal", maxHeight: 100, overflowY: "auto" }}>
                         <strong>Agenda Purpose:</strong> {selectedComp.agentActiveSession.agenda}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
@@ -735,7 +735,7 @@ const AdminSystemMonitoring: React.FC = () => {
                       <Typography variant="caption" color="text.secondary" display="block">
                         Email: {selectedComp.agentActiveSession.lastSession.email}
                       </Typography>
-                      <Typography variant="body2" sx={{ mt: 1 }}>
+                      <Typography variant="body2" sx={{ mt: 1, wordBreak: "break-word", whiteSpace: "normal", maxHeight: 100, overflowY: "auto" }}>
                         <strong>Last Agenda:</strong> {selectedComp.agentActiveSession.lastSession.agenda}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>

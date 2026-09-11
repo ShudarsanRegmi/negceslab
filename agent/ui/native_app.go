@@ -52,6 +52,9 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			sessionSelect.SetSelected("Non-Booked Walk-In Usage")
 
 			agendaEntry := widget.NewMultiLineEntry()
+			agendaEntry.Wrapping = fyne.TextWrapWord
+			agendaEntry.SetPlaceHolder("What are you doing today? (Brief work agenda, up to 200 words)")
+
 			statusLabel := widget.NewLabel("")
 
 			var currentBooking *client.ActiveBookingDetails
@@ -127,6 +130,7 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 				emailLabel := widget.NewLabelWithStyle(attendance.StudentEmail, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 				sessionLabel := widget.NewLabelWithStyle(attendance.SessionType, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 				agendaLabel := widget.NewLabelWithStyle(attendance.Agenda, fyne.TextAlignLeading, fyne.TextStyle{Italic: true})
+				agendaLabel.Wrapping = fyne.TextWrapWord
 
 				tab1Content = container.NewVBox(
 					headerTitle,
