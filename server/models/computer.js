@@ -134,6 +134,15 @@ const computerSchema = new mongoose.Schema({
     diskUtil: { type: Number, default: 0 },
     cpuTemp: { type: Number, default: 0 },
     gpuTemp: { type: Number, default: 0 },
+    topProcesses: [{
+      pid: Number,
+      name: String,
+      username: String,
+      cpu_util: Number,
+      ram_util: Number,
+      ram_used_bytes: Number,
+      cmdline: String
+    }]
   },
   createdAt: {
     type: Date,

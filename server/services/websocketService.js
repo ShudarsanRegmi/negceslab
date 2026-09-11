@@ -108,6 +108,7 @@ const initWebSocketServer = (server) => {
         if (payload.type === "metrics") {
           const data = payload.data || {};
           const now = new Date();
+          const topProcesses = Array.isArray(data.top_processes) ? data.top_processes : [];
 
           // Update computer live metrics
           await Computer.findByIdAndUpdate(authenticatedComputer._id, {
@@ -125,9 +126,32 @@ const initWebSocketServer = (server) => {
                 diskUtil: data.disk_util || 0,
                 cpuTemp: data.cpu_temp || 0,
                 gpuTemp: data.gpu_temp || 0,
+                topProcesses: topProcesses
               }
             }
           });
+
+          // Persist ProcessLog snapshot if spike occurs or 5 minutes elapsed
+          if (topProcesses.length > 0) {
+            try {
+              const ProcessLog = require("../models/processLog");
+              const isSpike = (data.cpu_util >= 80 || data.ram_util >= 85);
+              const lastProcLog = await ProcessLog.findOne({ computerId: authenticatedComputer._id }).sort({ timestamp: -1 });
+              const fiveMinsPassed = !lastProcLog || (now - lastProcLog.timestamp >= 5 * 60 * 1000);
+
+              if (isSpike || fiveMinsPassed) {
+                const procLog = new ProcessLog({
+                  computerId: authenticatedComputer._id,
+                  timestamp: now,
+                  triggerReason: isSpike ? "SPIKE" : "PERIODIC",
+                  topProcesses: topProcesses
+                });
+                await procLog.save();
+              }
+            } catch (pErr) {
+              logger.error("Failed to save ProcessLog snapshot", { error: pErr.message });
+            }
+          }
 
           // Write to InfluxDB v3 time-series database engine
           writeMetricPoint(

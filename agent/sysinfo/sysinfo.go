@@ -30,17 +30,18 @@ type StaticInfo struct {
 }
 
 type DynamicMetrics struct {
-	CPUUtil       float64 `json:"cpu_util"`       // %
-	RAMUtil       float64 `json:"ram_util"`       // %
-	RAMUsed       uint64  `json:"ram_used"`       // Bytes
-	GPUUtil       float64 `json:"gpu_util"`       // %
-	GPUMemUsed    uint64  `json:"gpu_mem_used"`   // Bytes
-	GPUMemTotal   uint64  `json:"gpu_mem_total"`  // Bytes
-	NetSentSpeed  float64 `json:"net_sent_speed"` // Bytes/sec
-	NetRecvSpeed  float64 `json:"net_recv_speed"` // Bytes/sec
-	DiskUtil      float64 `json:"disk_util"`      // %
-	CPUTemp       float64 `json:"cpu_temp"`       // °C
-	GPUTemp       float64 `json:"gpu_temp"`       // °C
+	CPUUtil       float64       `json:"cpu_util"`       // %
+	RAMUtil       float64       `json:"ram_util"`       // %
+	RAMUsed       uint64        `json:"ram_used"`       // Bytes
+	GPUUtil       float64       `json:"gpu_util"`       // %
+	GPUMemUsed    uint64        `json:"gpu_mem_used"`   // Bytes
+	GPUMemTotal   uint64        `json:"gpu_mem_total"`  // Bytes
+	NetSentSpeed  float64       `json:"net_sent_speed"` // Bytes/sec
+	NetRecvSpeed  float64       `json:"net_recv_speed"` // Bytes/sec
+	DiskUtil      float64       `json:"disk_util"`      // %
+	CPUTemp       float64       `json:"cpu_temp"`       // °C
+	GPUTemp       float64       `json:"gpu_temp"`       // °C
+	TopProcesses  []ProcessInfo `json:"top_processes,omitempty"`
 }
 
 // Track previous network metrics to compute speed
@@ -147,6 +148,12 @@ func CollectDynamicMetrics() (*DynamicMetrics, error) {
 	metrics.GPUMemUsed = gpuMemUsed
 	metrics.GPUMemTotal = gpuMemTotal
 	metrics.GPUTemp = gpuTemp
+
+	// 7. Top 7 Resource Consuming Processes
+	topProcs, err := CollectTopProcesses(7)
+	if err == nil {
+		metrics.TopProcesses = topProcs
+	}
 
 	return metrics, nil
 }

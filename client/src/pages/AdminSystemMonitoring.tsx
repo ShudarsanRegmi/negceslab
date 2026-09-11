@@ -837,6 +837,56 @@ const AdminSystemMonitoring: React.FC = () => {
                 )}
               </Grid>
 
+              {/* Top Resource Consuming Processes (Live Top 7) */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
+                  🔥 Top Resource Consuming Processes ({selectedComp.liveMetrics?.topProcesses?.length || 0})
+                </Typography>
+                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 220 }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead sx={{ bgcolor: "#f8fafc" }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 800 }}>PID</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>Process Name</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>User</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>CPU %</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>RAM (MB)</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>Command Line</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {!selectedComp.liveMetrics?.topProcesses || selectedComp.liveMetrics.topProcesses.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} align="center" sx={{ py: 2, color: "text.secondary" }}>
+                            No active process telemetry feed available for this machine.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        selectedComp.liveMetrics.topProcesses.map((proc: any, pIdx: number) => (
+                          <TableRow key={pIdx} hover>
+                            <TableCell><Typography variant="caption" fontFamily="monospace"><code>{proc.pid}</code></Typography></TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{proc.name}</TableCell>
+                            <TableCell>{proc.username || "system"}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={`${(proc.cpu_util || 0).toFixed(1)}%`}
+                                size="small"
+                                color={proc.cpu_util > 50 ? "error" : proc.cpu_util > 20 ? "warning" : "default"}
+                                sx={{ fontWeight: 700, height: 20, fontSize: "0.65rem" }}
+                              />
+                            </TableCell>
+                            <TableCell>{proc.ram_used_bytes ? `${Math.round(proc.ram_used_bytes / (1024 * 1024))} MB` : "-"}</TableCell>
+                            <TableCell sx={{ fontSize: "0.75rem", fontFamily: "monospace", color: "text.secondary", wordBreak: "break-word" }}>
+                              {proc.cmdline || "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+
               {/* Browseable Historical Attendance Log */}
               <Grid item xs={12}>
                 <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
