@@ -635,4 +635,30 @@ router.get("/current-booking", verifyAgentToken, async (req, res) => {
   }
 });
 
+// 6. Get attendance logs metadata for this computer (excluding reason/agenda)
+router.get("/attendance-logs", verifyAgentToken, async (req, res) => {
+  try {
+    const computer = req.computer;
+    const logs = await AttendanceLog.find({ computerId: computer._id })
+      .sort({ checkInTime: -1 })
+      .limit(50);
+
+    const data = logs.map((log) => ({
+      id: log._id,
+      studentName: log.studentName || "Unknown",
+      studentEmail: log.studentEmail || "-",
+      sessionType: log.entryType === "RESERVED_BOOKING" ? "Scheduled Lab Booking" : (log.sessionType || "Walk-In"),
+      osType: log.osType || "unknown",
+      checkInTime: log.checkInTime,
+      checkOutTime: log.checkOutTime,
+      sessionStatus: log.sessionStatus || (log.checkOutTime ? "COMPLETED" : "ACTIVE")
+    }));
+
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error("Failed to fetch agent attendance logs", { error: error.message });
+    res.status(500).json({ message: "Failed to fetch attendance logs", error: error.message });
+  }
+});
+
 module.exports = router;

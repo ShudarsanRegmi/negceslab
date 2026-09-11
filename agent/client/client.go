@@ -505,3 +505,49 @@ func (c *Client) GetCurrentBooking() (*CurrentBookingResponse, error) {
 
 	return &res, nil
 }
+
+type AgentAttendanceLog struct {
+	ID            string     `json:"id"`
+	StudentName   string     `json:"studentName"`
+	StudentEmail  string     `json:"studentEmail"`
+	SessionType   string     `json:"sessionType"`
+	OSType        string     `json:"osType"`
+	CheckInTime   time.Time  `json:"checkInTime"`
+	CheckOutTime  *time.Time `json:"checkOutTime"`
+	SessionStatus string     `json:"sessionStatus"`
+}
+
+func (c *Client) FetchAttendanceLogs() ([]AgentAttendanceLog, error) {
+	creds := c.store.GetCredentials()
+	if creds.AuthToken == "" {
+		return nil, fmt.Errorf("agent not registered")
+	}
+
+	url := fmt.Sprintf("%s/api/agent/attendance-logs", c.cfg.BackendURL)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", creds.AuthToken))
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server returned status: %d", resp.StatusCode)
+	}
+
+	var res struct {
+		Success bool                 `json:"success"`
+		Data    []AgentAttendanceLog `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+
+	return res.Data, nil
+}

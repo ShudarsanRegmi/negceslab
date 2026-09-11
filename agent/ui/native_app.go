@@ -177,7 +177,58 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			}
 		}
 
-		// ─── TAB 2: SYSTEM REGISTRATION ───────────────────────────────────────
+		// ─── TAB 2: ATTENDANCE LOGS (METADATA ONLY) ───────────────────────────
+		logsTitle := widget.NewLabelWithStyle("Computer Attendance Logs History", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+		logsSub := widget.NewLabelWithStyle("Metadata log trail for this computer (excluding work agenda)", fyne.TextAlignCenter, fyne.TextStyle{Italic: true})
+		logsContainer := container.NewVBox(widget.NewLabel("Loading attendance logs..."))
+		logsScroll := container.NewVScroll(logsContainer)
+
+		loadLogs := func() {
+			go func() {
+				logs, err := c.FetchAttendanceLogs()
+				if err != nil || len(logs) == 0 {
+					logsContainer.Objects = []fyne.CanvasObject{
+						widget.NewLabelWithStyle("No attendance logs recorded for this machine.", fyne.TextAlignCenter, fyne.TextStyle{Italic: true}),
+					}
+					logsContainer.Refresh()
+					return
+				}
+
+				var logItems []fyne.CanvasObject
+				for idx, l := range logs {
+					checkInStr := l.CheckInTime.Format("02/01/2006 15:04:05")
+					checkOutStr := "No Check-out (ACTIVE)"
+					if l.CheckOutTime != nil && !l.CheckOutTime.IsZero() {
+						checkOutStr = l.CheckOutTime.Format("02/01/2006 15:04:05")
+					}
+
+					header := widget.NewLabelWithStyle(fmt.Sprintf("#%d %s (%s)", idx+1, l.StudentName, l.StudentEmail), fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+					meta1 := widget.NewLabel(fmt.Sprintf("Type: %s | OS: %s | Status: %s", l.SessionType, l.OSType, l.SessionStatus))
+					meta2 := widget.NewLabel(fmt.Sprintf("Check-in: %s | Check-out: %s", checkInStr, checkOutStr))
+					meta2.TextStyle = fyne.TextStyle{Italic: true}
+
+					cardContent := container.NewVBox(header, meta1, meta2, widget.NewSeparator())
+					logItems = append(logItems, cardContent)
+				}
+				logsContainer.Objects = logItems
+				logsContainer.Refresh()
+			}()
+		}
+
+		refreshLogsBtn := widget.NewButton("🔄 Refresh Attendance Logs", loadLogs)
+		if creds.AuthToken != "" {
+			loadLogs()
+		}
+
+		tab2Content := container.NewVBox(
+			logsTitle,
+			logsSub,
+			refreshLogsBtn,
+			widget.NewSeparator(),
+			logsScroll,
+		)
+
+		// ─── TAB 3: SYSTEM REGISTRATION ───────────────────────────────────────
 		regTitle := widget.NewLabelWithStyle("System Registration & Settings", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
 		urlLabel := widget.NewLabelWithStyle(c.GetConfig().BackendURL, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
@@ -256,7 +307,7 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			regBtn.Enable()
 		}()
 
-		tab2Content := container.NewVBox(
+		tab3Content := container.NewVBox(
 			regTitle,
 			widget.NewLabel("Server API Endpoint (Locked):"),
 			urlLabel,
@@ -270,12 +321,13 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 
 		// Create Tabs
 		tab1 := container.NewTabItem("📝 Attendance & Session", tab1Content)
-		tab2 := container.NewTabItem("⚙️ System Registration", tab2Content)
+		tab2 := container.NewTabItem("📋 Attendance Logs", tab2Content)
+		tab3 := container.NewTabItem("⚙️ System Registration", tab3Content)
 
-		tabs := container.NewAppTabs(tab1, tab2)
+		tabs := container.NewAppTabs(tab1, tab2, tab3)
 
 		if creds.AuthToken == "" {
-			tabs.Select(tab2)
+			tabs.Select(tab3)
 		} else {
 			tabs.Select(tab1)
 		}
