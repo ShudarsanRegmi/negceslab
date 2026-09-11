@@ -263,38 +263,37 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         return curMins >= startMins && curMins <= endMins;
       };
 
-      // Smart Priority Resolution:
-      // Priority 1: Booking matching today + student email + time window (including 30-min early buffer)
-      let activeBooking = bookings.find(b => 
-        (b.userId === studentEmail || b.email === studentEmail) && isWithinTimeWindow(b)
+      // Check if user explicitly submitted as Walk-In
+      const isExplicitWalkIn = Boolean(
+        sessionType && (sessionType.toLowerCase().includes('walk-in') || sessionType.toLowerCase().includes('walkin'))
       );
 
-      // Priority 2: Booking matching student email on today's date
-      if (!activeBooking) {
-        activeBooking = bookings.find(b => 
-          (b.userId === studentEmail || b.email === studentEmail)
-        );
-      }
+      // Find booking strictly matching student email on today's date
+      const userBooking = bookings.find(b => 
+        (b.userId === studentEmail || b.email === studentEmail)
+      );
 
-      // Priority 3: Booking matching current time window on this computer
-      if (!activeBooking) {
-        activeBooking = bookings.find(b => isWithinTimeWindow(b));
-      }
+      // Find booking matching current active time window on this computer
+      const activeTimeWindowBooking = bookings.find(b => isWithinTimeWindow(b));
 
-      // Priority 4: Fallback to any booking today for this computer
-      if (!activeBooking && bookings.length > 0) {
-        activeBooking = bookings[0];
-      }
-
-      // Classify Entry Type & Slot Conflict
+      let activeBooking = null;
       let entryType = 'WALK_IN';
       let isSlotConflict = false;
-      if (activeBooking) {
-        if (activeBooking.userId === studentEmail || activeBooking.email === studentEmail) {
-          entryType = 'RESERVED_BOOKING';
+
+      if (!isExplicitWalkIn && userBooking) {
+        // Genuine Reserved Booking for this student
+        activeBooking = userBooking;
+        entryType = 'RESERVED_BOOKING';
+        isSlotConflict = false;
+      } else {
+        // Walk-In Usage mode (or student has no reservation for themselves)
+        entryType = 'WALK_IN';
+        activeBooking = null;
+        // Slot conflict ONLY occurs if another student has an active reservation right now!
+        if (activeTimeWindowBooking && activeTimeWindowBooking.userId !== studentEmail && activeTimeWindowBooking.email !== studentEmail) {
+          isSlotConflict = true;
         } else {
-          entryType = 'WALK_IN';
-          isSlotConflict = true; // User B walking into User A's reserved slot
+          isSlotConflict = false;
         }
       }
 

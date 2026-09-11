@@ -52,9 +52,44 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			sessionSelect.SetSelected("Non-Booked Walk-In Usage")
 
 			agendaEntry := widget.NewMultiLineEntry()
-			agendaEntry.SetPlaceHolder("What are you doing today? (Brief work agenda)")
-
 			statusLabel := widget.NewLabel("")
+
+			var currentBooking *client.ActiveBookingDetails
+
+			sessionSelect.OnChanged = func(selected string) {
+				if selected == "Non-Booked Walk-In Usage" {
+					nameEntry.Enable()
+					emailEntry.Enable()
+					if currentBooking != nil && currentBooking.BookingFound {
+						bookingBanner.SetText(fmt.Sprintf("⚠️ Active Reservation Exists (%s - %s), but Walk-In Selected", currentBooking.StartTime, currentBooking.EndTime))
+					} else {
+						bookingBanner.SetText("ℹ️ Non-Booked Walk-In Usage Mode")
+					}
+					statusLabel.SetText("Walk-In Mode: All fields (Name, Email/Roll No, Agenda) are fully editable.")
+				} else {
+					if currentBooking != nil && currentBooking.BookingFound {
+						if currentBooking.StudentName != "" {
+							nameEntry.SetText(currentBooking.StudentName)
+							nameEntry.Disable()
+						}
+						if currentBooking.StudentEmail != "" {
+							emailEntry.SetText(currentBooking.StudentEmail)
+							emailEntry.Disable()
+						}
+						bookingBanner.SetText(fmt.Sprintf("🟢 Active Reservation Found (%s - %s)", currentBooking.StartTime, currentBooking.EndTime))
+						statusLabel.SetText("Booking Auto-Detected! Enter what you are doing today and submit.")
+					} else {
+						nameEntry.Enable()
+						emailEntry.Enable()
+						bookingBanner.SetText("ℹ️ No Active Booking Found (Walk-In Mode)")
+						statusLabel.SetText("No active reservation found. Please enter your details and submit.")
+					}
+				}
+				nameEntry.Refresh()
+				emailEntry.Refresh()
+				bookingBanner.Refresh()
+				statusLabel.Refresh()
+			}
 
 			if attendance.CheckedIn {
 				bookingBanner.SetText("🟢 Active Checked-In Session")
@@ -132,32 +167,12 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 				// Asynchronously fetch current active booking from backend
 				go func() {
 					bk, err := c.FetchCurrentBooking()
+					currentBooking = bk
 					if err == nil && bk != nil && bk.BookingFound {
-						bookingBanner.SetText(fmt.Sprintf("🟢 Active Reservation Found (%s - %s)", bk.StartTime, bk.EndTime))
-						
-						if bk.StudentName != "" {
-							nameEntry.SetText(bk.StudentName)
-							nameEntry.Disable()
-						}
-						if bk.StudentEmail != "" {
-							emailEntry.SetText(bk.StudentEmail)
-							emailEntry.Disable()
-						}
-						// Keep "What are you doing today?" (Agenda) EMPTY as requested
-						agendaEntry.SetText("")
 						sessionSelect.SetSelected("Scheduled Lab Booking")
-						statusLabel.SetText("Booking auto-detected! Enter what you are doing today and submit.")
 					} else {
-						bookingBanner.SetText("ℹ️ No Active Booking Found (Walk-In Mode)")
 						sessionSelect.SetSelected("Non-Booked Walk-In Usage")
-						statusLabel.SetText("Fill in your details and work agenda to check in.")
 					}
-					bookingBanner.Refresh()
-					nameEntry.Refresh()
-					emailEntry.Refresh()
-					agendaEntry.Refresh()
-					sessionSelect.Refresh()
-					statusLabel.Refresh()
 				}()
 
 				tab1Content = container.NewVBox(
