@@ -731,8 +731,8 @@ const AdminSystemMonitoring: React.FC = () => {
                   {selectedComp.agentActiveSession?.checkedIn ? (
                     <Box>
                       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                        <Typography variant="body2" fontWeight={800} color="#15803d">
-                          👤 {selectedComp.agentActiveSession.currentUser}
+                        <Typography variant="body2" fontWeight={800} color="#15803d" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          <PersonIcon fontSize="small" /> {selectedComp.agentActiveSession.currentUser}
                         </Typography>
                         <Chip label={selectedComp.agentActiveSession.sessionType} size="small" color="success" />
                       </Box>
@@ -749,8 +749,8 @@ const AdminSystemMonitoring: React.FC = () => {
                   ) : selectedComp.agentActiveSession?.lastSession?.currentUser ? (
                     <Box>
                       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                        <Typography variant="body2" fontWeight={800} color="#1e40af">
-                          👤 {selectedComp.agentActiveSession.lastSession.currentUser}
+                        <Typography variant="body2" fontWeight={800} color="#1e40af" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          <PersonIcon fontSize="small" /> {selectedComp.agentActiveSession.lastSession.currentUser}
                         </Typography>
                         <Chip
                           label={`${selectedComp.agentActiveSession.lastSession.totalCheckInsToday || 1} Check-in(s) Submitted (Ended)`}
@@ -770,15 +770,12 @@ const AdminSystemMonitoring: React.FC = () => {
                       </Typography>
                     </Box>
                   ) : (
-                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                      Computer is currently idle with no attendance check-in submitted today.
+                    <Typography variant="body2" color="text.secondary">
+                      No active attendance check-in logged today.
                     </Typography>
                   )}
                 </Paper>
 
-                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
-                  System Specifications
-                </Typography>
                 <Paper sx={{ p: 2, borderRadius: 2, border: "1px solid #e2e8f0" }}>
                   <Typography variant="body2"><strong>Hardware Specs:</strong> {selectedComp.specifications}</Typography>
                   <Typography variant="body2" sx={{ mt: 0.5 }}><strong>IP Address:</strong> {selectedComp.systemDetails?.ipAddress || "N/A"}</Typography>
@@ -786,7 +783,7 @@ const AdminSystemMonitoring: React.FC = () => {
                 </Paper>
               </Grid>
 
-              {/* Live Telemetry Resource Load */}
+              {/* Real-time Telemetry Load */}
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
                   Real-time Telemetry Load
@@ -839,8 +836,8 @@ const AdminSystemMonitoring: React.FC = () => {
 
               {/* Top Resource Consuming Processes (Live Top 7) */}
               <Grid item xs={12}>
-                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
-                  🔥 Top Resource Consuming Processes ({selectedComp.liveMetrics?.topProcesses?.length || 0})
+                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <CpuIcon color="primary" fontSize="small" /> Top Resource Consuming Processes ({selectedComp.liveMetrics?.topProcesses?.length || 0})
                 </Typography>
                 <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 220 }}>
                   <Table size="small" stickyHeader>
