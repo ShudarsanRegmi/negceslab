@@ -1,9 +1,10 @@
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const admin = require("firebase-admin");
-const path = require("path");
 const getLogger = require("./utils/logger");
 const logger = getLogger("system");
 

@@ -77,7 +77,7 @@ const winstonLogger = winston.createLogger({
 // Namespace logger helper
 const getLogger = (category) => {
   return {
-    fatal: (msg, meta) => winstonLogger.log('crit', msg, { category, ...meta }),
+    fatal: (msg, meta) => winstonLogger.error(msg, { category, isFatal: true, ...meta }),
     error: (msg, meta) => winstonLogger.error(msg, { category, ...meta }),
     warn: (msg, meta) => winstonLogger.warn(msg, { category, ...meta }),
     info: (msg, meta) => winstonLogger.info(msg, { category, ...meta }),

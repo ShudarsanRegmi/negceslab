@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const AttendanceLog = require("../models/attendanceLog");
 const Computer = require("../models/computer");
-const { verifyToken, verifyAdmin } = require("../middleware/auth");
+const { verifyToken, isAdmin } = require("../middleware/auth");
 const getLogger = require("../utils/logger");
 const logger = getLogger("attendance");
 
@@ -123,7 +123,7 @@ router.get("/logs/:sessionId", verifyToken, async (req, res) => {
 });
 
 // 3. POST /api/attendance/admin-terminate/:sessionId - Admin force-end stuck session
-router.post("/admin-terminate/:sessionId", verifyToken, verifyAdmin, async (req, res) => {
+router.post("/admin-terminate/:sessionId", verifyToken, isAdmin, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const log = await AttendanceLog.findOne({ sessionId });
