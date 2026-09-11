@@ -305,49 +305,7 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         }
       }
 
-      // 1. RE-ENTRY / RESUME CHECK (Accidental Checkout Fix)
-      // Check if student recently checked out (within 15 minutes) on this computer
-      const fifteenMinsAgo = new Date(now.getTime() - 15 * 60 * 1000);
-      const recentClosedSession = await AttendanceLog.findOne({
-        computerId: computer._id,
-        studentEmail,
-        sessionStatus: 'COMPLETED',
-        checkOutTime: { $gte: fifteenMinsAgo }
-      }).sort({ checkOutTime: -1 });
 
-      if (recentClosedSession) {
-        // Resume session & append re-entry segment
-        recentClosedSession.sessionStatus = 'ACTIVE';
-        recentClosedSession.checkOutTime = null;
-        recentClosedSession.lastHeartbeat = now;
-        recentClosedSession.segments.push({
-          checkIn: now,
-          osType: normalizedOsType,
-          reason: 'RE_CHECKIN'
-        });
-        await recentClosedSession.save();
-
-        computer.agentActiveSession = {
-          currentUser: studentName,
-          email: studentEmail,
-          agenda: agenda || recentClosedSession.agenda || "Working",
-          sessionType: sessionType || recentClosedSession.sessionType || "Physical GUI",
-          checkInTime: recentClosedSession.checkInTime,
-          checkedIn: true,
-          activeBookingId: activeBooking ? activeBooking._id : null,
-          sessionId: recentClosedSession.sessionId
-        };
-        computer.status = "reserved";
-        await computer.save();
-
-        const { broadcastSystemStateChange } = require("../services/websocketService");
-        broadcastSystemStateChange(computer._id, { status: computer.status, agentActiveSession: computer.agentActiveSession });
-
-        return res.status(200).json({ 
-          message: "Resumed previous session successfully (Re-entry window)", 
-          session: computer.agentActiveSession 
-        });
-      }
 
       // 2. CROSS-OS SESSION HANDOVER CHECK (Windows ↔ Ubuntu Linux)
       const existingActiveLog = await AttendanceLog.findOne({

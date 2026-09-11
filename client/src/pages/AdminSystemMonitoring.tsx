@@ -231,7 +231,7 @@ const AdminSystemMonitoring: React.FC = () => {
       }
     });
 
-    // 2. Legacy attendanceHistory from bookings for TODAY (deduplicated by checkInTime/user)
+    // 2. Legacy attendanceHistory from bookings for TODAY
     const compBookings = bookings.filter(
       (b) => String(b.computerId?._id || b.computerId) === String(selectedComp._id)
     );
@@ -243,7 +243,8 @@ const AdminSystemMonitoring: React.FC = () => {
           if (hDate === todayStr) {
             const exists = list.some(existing => 
               existing.email === (h.email || b.user?.email) && 
-              Math.abs(new Date(existing.checkInTime).getTime() - new Date(h.checkInTime).getTime()) < 60000
+              h.checkInTime && existing.checkInTime &&
+              Math.abs(new Date(existing.checkInTime).getTime() - new Date(h.checkInTime).getTime()) < 1000
             );
             if (!exists) {
               list.push({
