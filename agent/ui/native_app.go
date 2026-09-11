@@ -335,13 +335,13 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 	myWindow.Resize(fyne.NewSize(480, 580))
 	myWindow.CenterOnScreen()
 
-	// 1. Window Close Intercept: Prevent quitting app on window close (X). Minimize/hide window to background telemetry service instead.
+	// 1. Window Close Intercept: Prevent quitting app on window close (X). Minimize window to OS taskbar instead.
 	myWindow.SetCloseIntercept(func() {
 		attendance := s.GetAttendance()
 		if !attendance.CheckedIn {
-			fmt.Println("[WINDOW] Close attempt intercepted. Attendance check-in is pending; hiding to background until nag trigger...")
+			fmt.Println("[WINDOW] Close attempt intercepted. Attendance check-in is pending; minimizing to taskbar until nag trigger...")
 		} else {
-			fmt.Println("[WINDOW] Close attempt intercepted. Hiding window to background telemetry service.")
+			fmt.Println("[WINDOW] Close attempt intercepted. Minimizing window to taskbar (background telemetry service active).")
 		}
 		myWindow.Hide()
 	})
