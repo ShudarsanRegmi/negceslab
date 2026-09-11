@@ -119,7 +119,7 @@ export const AdminAttendanceExplorerModal: React.FC<AdminAttendanceExplorerModal
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
-      const res = await api.get('/api/attendance/logs', { params });
+      const res = await api.get('/attendance/logs', { params });
       if (res.data && res.data.success) {
         setLogs(res.data.data || []);
         setTotalCount(res.data.pagination?.total || 0);
@@ -145,7 +145,7 @@ export const AdminAttendanceExplorerModal: React.FC<AdminAttendanceExplorerModal
   const handleTerminateSession = async (sessionId: string) => {
     if (!window.confirm('Are you sure you want to force terminate this active attendance session?')) return;
     try {
-      await api.post(`/api/attendance/admin-terminate/${sessionId}`);
+      await api.post(`/attendance/admin-terminate/${sessionId}`);
       fetchAttendanceLogs();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to terminate session');
