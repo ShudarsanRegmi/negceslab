@@ -22,7 +22,7 @@ func EnsureAutostart() error {
 	}
 	defer key.Close()
 
-	err = key.SetStringValue("NegcesLabAgent", exePath)
+	err = key.SetStringValue("NegcesLabAgent", fmt.Sprintf(`"%s"`, exePath))
 	if err != nil {
 		return fmt.Errorf("failed to set registry run value: %w", err)
 	}

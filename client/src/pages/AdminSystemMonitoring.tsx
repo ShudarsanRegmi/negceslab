@@ -32,6 +32,8 @@ import {
   useTheme,
   useMediaQuery,
   Alert,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import {
   Computer as ComputerIcon,
@@ -139,6 +141,7 @@ const AdminSystemMonitoring: React.FC = () => {
 
   // Selected computer modal inspector
   const [selectedComp, setSelectedComp] = useState<Computer | null>(null);
+  const [inspectorTab, setInspectorTab] = useState(0);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   // Dedicated Attendance Explorer modal state
@@ -686,8 +689,8 @@ const AdminSystemMonitoring: React.FC = () => {
       {/* Inspector Modal Dialog */}
       {selectedComp && (
         <Dialog open={Boolean(selectedComp)} onClose={() => setSelectedComp(null)} maxWidth="md" fullWidth>
-          <DialogTitle sx={{ borderBottom: 1, borderColor: "divider" }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <DialogTitle sx={{ borderBottom: 1, borderColor: "divider", pb: 0 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                 <ComputerIcon color="primary" fontSize="large" />
                 <Box>
@@ -718,242 +721,277 @@ const AdminSystemMonitoring: React.FC = () => {
                 />
               )}
             </Box>
+
+            <Tabs
+              value={inspectorTab}
+              onChange={(_, val) => setInspectorTab(val)}
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{ minHeight: 40 }}
+            >
+              <Tab
+                icon={<BarChartIcon fontSize="small" />}
+                iconPosition="start"
+                label="Telemetry & System Data"
+                sx={{ fontWeight: 700, minHeight: 40, textTransform: "none" }}
+              />
+              <Tab
+                icon={<ScheduleIcon fontSize="small" />}
+                iconPosition="start"
+                label={`Attendance Logs (${selectedComputerAttendanceHistory.length})`}
+                sx={{ fontWeight: 700, minHeight: 40, textTransform: "none" }}
+              />
+            </Tabs>
           </DialogTitle>
 
-          <DialogContent dividers>
-            <Grid container spacing={3}>
-              {/* Active Attendance Session */}
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
-                  Active Attendance Check-in
-                </Typography>
-                <Paper sx={{ p: 2, mb: 3, bgcolor: selectedComp.agentActiveSession?.checkedIn ? "#f0fdf4" : "#f8fafc", border: "1px solid", borderColor: selectedComp.agentActiveSession?.checkedIn ? "#bbf7d0" : "#e2e8f0", borderRadius: 2 }}>
-                  {selectedComp.agentActiveSession?.checkedIn ? (
-                    <Box>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                        <Typography variant="body2" fontWeight={800} color="#15803d" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          <PersonIcon fontSize="small" /> {selectedComp.agentActiveSession.currentUser}
-                        </Typography>
-                        <Chip label={selectedComp.agentActiveSession.sessionType} size="small" color="success" />
+          <DialogContent dividers sx={{ bgcolor: "#fafafa" }}>
+            {inspectorTab === 0 && (
+              <Grid container spacing={3}>
+                {/* Real-time Telemetry Load */}
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
+                    Real-time Telemetry Load
+                  </Typography>
+                  {selectedComp.isOnline && selectedComp.liveMetrics ? (
+                    <Paper sx={{ p: 2, borderRadius: 2, border: "1px solid #e2e8f0" }}>
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                          <Typography variant="body2" fontWeight={700}>CPU Core Load</Typography>
+                          <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.cpuUtil)}%</Typography>
+                        </Box>
+                        <LinearProgress variant="determinate" value={selectedComp.liveMetrics.cpuUtil} color={getMetricColor(selectedComp.liveMetrics.cpuUtil)} sx={{ height: 6, borderRadius: 3 }} />
                       </Box>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Email: {selectedComp.agentActiveSession.email}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 1, wordBreak: "break-word", whiteSpace: "normal", maxHeight: 100, overflowY: "auto" }}>
-                        <strong>Agenda Purpose:</strong> {selectedComp.agentActiveSession.agenda}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                        Check-in Time: {selectedComp.agentActiveSession.checkInTime ? new Date(selectedComp.agentActiveSession.checkInTime).toLocaleString() : "N/A"}
-                      </Typography>
-                    </Box>
-                  ) : selectedComp.agentActiveSession?.lastSession?.currentUser ? (
-                    <Box>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                        <Typography variant="body2" fontWeight={800} color="#1e40af" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          <PersonIcon fontSize="small" /> {selectedComp.agentActiveSession.lastSession.currentUser}
-                        </Typography>
-                        <Chip
-                          label={`${selectedComp.agentActiveSession.lastSession.totalCheckInsToday || 1} Check-in(s) Submitted (Ended)`}
-                          size="small"
-                          color="info"
-                        />
+
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                          <Typography variant="body2" fontWeight={700}>RAM Occupied</Typography>
+                          <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.ramUtil)}%</Typography>
+                        </Box>
+                        <LinearProgress variant="determinate" value={selectedComp.liveMetrics.ramUtil} color={getMetricColor(selectedComp.liveMetrics.ramUtil)} sx={{ height: 6, borderRadius: 3 }} />
                       </Box>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Email: {selectedComp.agentActiveSession.lastSession.email}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 1, wordBreak: "break-word", whiteSpace: "normal", maxHeight: 100, overflowY: "auto" }}>
-                        <strong>Last Agenda:</strong> {selectedComp.agentActiveSession.lastSession.agenda}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                        Check-in: {selectedComp.agentActiveSession.lastSession.checkInTime ? new Date(selectedComp.agentActiveSession.lastSession.checkInTime).toLocaleString() : "N/A"}
-                        {selectedComp.agentActiveSession.lastSession.checkOutTime && ` • Check-out: ${new Date(selectedComp.agentActiveSession.lastSession.checkOutTime).toLocaleTimeString()}`}
-                      </Typography>
-                    </Box>
+
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                          <Typography variant="body2" fontWeight={700}>GPU Core Load</Typography>
+                          <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.gpuUtil)}%</Typography>
+                        </Box>
+                        <LinearProgress variant="determinate" value={selectedComp.liveMetrics.gpuUtil} color={getMetricColor(selectedComp.liveMetrics.gpuUtil)} sx={{ height: 6, borderRadius: 3 }} />
+                      </Box>
+
+                      {selectedComp.liveMetrics.gpuMemTotal > 0 && (
+                        <Typography variant="body2">
+                          <strong>VRAM Memory:</strong> {Math.round(selectedComp.liveMetrics.gpuMemUsed)} / {Math.round(selectedComp.liveMetrics.gpuMemTotal)} MB
+                        </Typography>
+                      )}
+
+                      <Box sx={{ display: "flex", gap: 3, mt: 1.5 }}>
+                        <Typography variant="caption"><strong>CPU Temp:</strong> {selectedComp.liveMetrics.cpuTemp}°C</Typography>
+                        <Typography variant="caption"><strong>GPU Temp:</strong> {selectedComp.liveMetrics.gpuTemp}°C</Typography>
+                      </Box>
+                    </Paper>
                   ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No active attendance check-in logged today.
-                    </Typography>
-                  )}
-                </Paper>
-
-                <Paper sx={{ p: 2, borderRadius: 2, border: "1px solid #e2e8f0" }}>
-                  <Typography variant="body2"><strong>Hardware Specs:</strong> {selectedComp.specifications}</Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}><strong>IP Address:</strong> {selectedComp.systemDetails?.ipAddress || "N/A"}</Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}><strong>Last Seen:</strong> {selectedComp.lastSeen ? new Date(selectedComp.lastSeen).toLocaleString() : "Never"}</Typography>
-                </Paper>
-              </Grid>
-
-              {/* Real-time Telemetry Load */}
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
-                  Real-time Telemetry Load
-                </Typography>
-                {selectedComp.isOnline && selectedComp.liveMetrics ? (
-                  <Paper sx={{ p: 2, borderRadius: 2, border: "1px solid #e2e8f0" }}>
-                    <Box sx={{ mb: 2 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                        <Typography variant="body2" fontWeight={700}>CPU Core Load</Typography>
-                        <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.cpuUtil)}%</Typography>
-                      </Box>
-                      <LinearProgress variant="determinate" value={selectedComp.liveMetrics.cpuUtil} color={getMetricColor(selectedComp.liveMetrics.cpuUtil)} sx={{ height: 6, borderRadius: 3 }} />
-                    </Box>
-
-                    <Box sx={{ mb: 2 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                        <Typography variant="body2" fontWeight={700}>RAM Occupied</Typography>
-                        <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.ramUtil)}%</Typography>
-                      </Box>
-                      <LinearProgress variant="determinate" value={selectedComp.liveMetrics.ramUtil} color={getMetricColor(selectedComp.liveMetrics.ramUtil)} sx={{ height: 6, borderRadius: 3 }} />
-                    </Box>
-
-                    <Box sx={{ mb: 2 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                        <Typography variant="body2" fontWeight={700}>GPU Core Load</Typography>
-                        <Typography variant="body2" fontWeight={700}>{Math.round(selectedComp.liveMetrics.gpuUtil)}%</Typography>
-                      </Box>
-                      <LinearProgress variant="determinate" value={selectedComp.liveMetrics.gpuUtil} color={getMetricColor(selectedComp.liveMetrics.gpuUtil)} sx={{ height: 6, borderRadius: 3 }} />
-                    </Box>
-
-                    {selectedComp.liveMetrics.gpuMemTotal > 0 && (
-                      <Typography variant="body2">
-                        <strong>VRAM Memory:</strong> {Math.round(selectedComp.liveMetrics.gpuMemUsed)} / {Math.round(selectedComp.liveMetrics.gpuMemTotal)} MB
+                    <Paper sx={{ p: 2, borderRadius: 2, border: "1px dashed #cbd5e1", textAlign: "center", bgcolor: "#f8fafc" }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No live telemetry packet feed. System is offline.
                       </Typography>
-                    )}
+                    </Paper>
+                  )}
+                </Grid>
 
-                    <Box sx={{ display: "flex", gap: 3, mt: 1.5 }}>
-                      <Typography variant="caption"><strong>CPU Temp:</strong> {selectedComp.liveMetrics.cpuTemp}°C</Typography>
-                      <Typography variant="caption"><strong>GPU Temp:</strong> {selectedComp.liveMetrics.gpuTemp}°C</Typography>
-                    </Box>
+                {/* System Specs Card */}
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
+                    System Specifications
+                  </Typography>
+                  <Paper sx={{ p: 2, borderRadius: 2, border: "1px solid #e2e8f0" }}>
+                    <Typography variant="body2"><strong>Hardware Specs:</strong> {selectedComp.specifications}</Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}><strong>IP Address:</strong> {selectedComp.systemDetails?.ipAddress || "N/A"}</Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}><strong>Hostname:</strong> {selectedComp.systemDetails?.hostname || "N/A"}</Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}><strong>OS Version:</strong> {selectedComp.systemDetails?.osVersion || selectedComp.systemDetails?.operatingSystem || "N/A"}</Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}><strong>Last Telemetry Heartbeat:</strong> {selectedComp.lastSeen ? new Date(selectedComp.lastSeen).toLocaleString() : "Never"}</Typography>
                   </Paper>
-                ) : (
-                  <Paper sx={{ p: 2, borderRadius: 2, border: "1px dashed #cbd5e1", textAlign: "center", bgcolor: "#f8fafc" }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No live telemetry packet feed. System is offline.
-                    </Typography>
-                  </Paper>
-                )}
-              </Grid>
+                </Grid>
 
-              {/* Top Resource Consuming Processes (Live Top 7) */}
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <CpuIcon color="primary" fontSize="small" /> Top Resource Consuming Processes ({selectedComp.liveMetrics?.topProcesses?.length || 0})
-                </Typography>
-                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 220 }}>
-                  <Table size="small" stickyHeader>
-                    <TableHead sx={{ bgcolor: "#f8fafc" }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 800 }}>PID</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Process Name</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>User</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>CPU %</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>RAM (MB)</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Command Line</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {!selectedComp.liveMetrics?.topProcesses || selectedComp.liveMetrics.topProcesses.length === 0 ? (
+                {/* Top Resource Consuming Processes (Live Top 7) */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <CpuIcon color="primary" fontSize="small" /> Top Resource Consuming Processes ({selectedComp.liveMetrics?.topProcesses?.length || 0})
+                  </Typography>
+                  <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 260 }}>
+                    <Table size="small" stickyHeader>
+                      <TableHead sx={{ bgcolor: "#f8fafc" }}>
                         <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 2, color: "text.secondary" }}>
-                            No active process telemetry feed available for this machine.
-                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>PID</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Process Name</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>User</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>CPU %</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>RAM (MB)</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Command Line</TableCell>
                         </TableRow>
-                      ) : (
-                        selectedComp.liveMetrics.topProcesses.map((proc: any, pIdx: number) => (
-                          <TableRow key={pIdx} hover>
-                            <TableCell><Typography variant="caption" fontFamily="monospace"><code>{proc.pid}</code></Typography></TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{proc.name}</TableCell>
-                            <TableCell>{proc.username || "system"}</TableCell>
-                            <TableCell>
-                              <Chip
-                                label={`${(proc.cpu_util || 0).toFixed(1)}%`}
-                                size="small"
-                                color={proc.cpu_util > 50 ? "error" : proc.cpu_util > 20 ? "warning" : "default"}
-                                sx={{ fontWeight: 700, height: 20, fontSize: "0.65rem" }}
-                              />
-                            </TableCell>
-                            <TableCell>{proc.ram_used_bytes ? `${Math.round(proc.ram_used_bytes / (1024 * 1024))} MB` : "-"}</TableCell>
-                            <TableCell sx={{ fontSize: "0.75rem", fontFamily: "monospace", color: "text.secondary", wordBreak: "break-word" }}>
-                              {proc.cmdline || "-"}
+                      </TableHead>
+                      <TableBody>
+                        {!selectedComp.liveMetrics?.topProcesses || selectedComp.liveMetrics.topProcesses.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                              No active process telemetry feed available for this machine.
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Grid>
-
-              {/* Browseable Historical Attendance Log */}
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
-                  Today's Attendance Logs ({selectedComputerAttendanceHistory.length} Sessions)
-                </Typography>
-                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 300 }}>
-                  <Table size="small" stickyHeader>
-                    <TableHead sx={{ bgcolor: "#f8fafc" }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Student User</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Agenda Purpose</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Session Type</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Check-in</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Check-out</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedComputerAttendanceHistory.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
-                            No attendance check-ins logged for this computer today.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        selectedComputerAttendanceHistory
-                          .slice(attendancePage * attendanceRowsPerPage, attendancePage * attendanceRowsPerPage + attendanceRowsPerPage)
-                          .map((hist, idx) => (
-                            <TableRow key={idx} hover>
-                              <TableCell sx={{ fontWeight: 700 }}>{hist.date}</TableCell>
+                        ) : (
+                          selectedComp.liveMetrics.topProcesses.map((proc: any, pIdx: number) => (
+                            <TableRow key={pIdx} hover>
+                              <TableCell><Typography variant="caption" fontFamily="monospace"><code>{proc.pid}</code></Typography></TableCell>
+                              <TableCell sx={{ fontWeight: 700 }}>{proc.name}</TableCell>
+                              <TableCell>{proc.username || "system"}</TableCell>
                               <TableCell>
-                                <Typography variant="body2" fontWeight={700}>{hist.user}</Typography>
-                                <Typography variant="caption" color="text.secondary">{hist.email}</Typography>
+                                <Chip
+                                  label={`${(proc.cpu_util || 0).toFixed(1)}%`}
+                                  size="small"
+                                  color={proc.cpu_util > 50 ? "error" : proc.cpu_util > 20 ? "warning" : "default"}
+                                  sx={{ fontWeight: 700, height: 20, fontSize: "0.65rem" }}
+                                />
                               </TableCell>
-                              <TableCell>{hist.agenda}</TableCell>
-                              <TableCell>
-                                <Chip label={hist.sessionType} size="small" variant="outlined" sx={{ fontWeight: 700, fontSize: "0.6rem" }} />
-                              </TableCell>
-                              <TableCell>
-                                {hist.checkInTime ? new Date(hist.checkInTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "-"}
-                              </TableCell>
-                              <TableCell>
-                                {hist.checkOutTime ? (
-                                  new Date(hist.checkOutTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
-                                ) : (
-                                  <Chip label="No Check-out" size="small" color="warning" sx={{ height: 16, fontSize: "0.55rem" }} />
-                                )}
+                              <TableCell>{proc.ram_used_bytes ? `${Math.round(proc.ram_used_bytes / (1024 * 1024))} MB` : "-"}</TableCell>
+                              <TableCell sx={{ fontSize: "0.75rem", fontFamily: "monospace", color: "text.secondary", wordBreak: "break-word" }}>
+                                {proc.cmdline || "-"}
                               </TableCell>
                             </TableRow>
                           ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                {selectedComputerAttendanceHistory.length > 0 && (
-                  <TablePagination
-                    component="div"
-                    count={selectedComputerAttendanceHistory.length}
-                    page={attendancePage}
-                    onPageChange={(_, p) => setAttendancePage(p)}
-                    rowsPerPage={attendanceRowsPerPage}
-                    onRowsPerPageChange={(e) => {
-                      setAttendanceRowsPerPage(parseInt(e.target.value, 10));
-                      setAttendancePage(0);
-                    }}
-                    rowsPerPageOptions={[5, 10, 25]}
-                  />
-                )}
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Grid>
               </Grid>
-            </Grid>
+            )}
+
+            {inspectorTab === 1 && (
+              <Grid container spacing={3}>
+                {/* Active Attendance Session Summary */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
+                    Active Session Status
+                  </Typography>
+                  <Paper sx={{ p: 2, bgcolor: selectedComp.agentActiveSession?.checkedIn ? "#f0fdf4" : "#f8fafc", border: "1px solid", borderColor: selectedComp.agentActiveSession?.checkedIn ? "#bbf7d0" : "#e2e8f0", borderRadius: 2 }}>
+                    {selectedComp.agentActiveSession?.checkedIn ? (
+                      <Box>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                          <Typography variant="body2" fontWeight={800} color="#15803d" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                            <PersonIcon fontSize="small" /> {selectedComp.agentActiveSession.currentUser}
+                          </Typography>
+                          <Chip label={selectedComp.agentActiveSession.sessionType} size="small" color="success" />
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Email: {selectedComp.agentActiveSession.email}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 1, wordBreak: "break-word", whiteSpace: "normal", maxHeight: 100, overflowY: "auto" }}>
+                          <strong>Agenda Purpose:</strong> {selectedComp.agentActiveSession.agenda}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                          Check-in Time: {selectedComp.agentActiveSession.checkInTime ? new Date(selectedComp.agentActiveSession.checkInTime).toLocaleString() : "N/A"}
+                        </Typography>
+                      </Box>
+                    ) : selectedComp.agentActiveSession?.lastSession?.currentUser ? (
+                      <Box>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                          <Typography variant="body2" fontWeight={800} color="#1e40af" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                            <PersonIcon fontSize="small" /> {selectedComp.agentActiveSession.lastSession.currentUser}
+                          </Typography>
+                          <Chip
+                            label={`${selectedComp.agentActiveSession.lastSession.totalCheckInsToday || 1} Check-in(s) Submitted (Ended)`}
+                            size="small"
+                            color="info"
+                          />
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Email: {selectedComp.agentActiveSession.lastSession.email}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 1, wordBreak: "break-word", whiteSpace: "normal", maxHeight: 100, overflowY: "auto" }}>
+                          <strong>Last Agenda:</strong> {selectedComp.agentActiveSession.lastSession.agenda}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                          Check-in: {selectedComp.agentActiveSession.lastSession.checkInTime ? new Date(selectedComp.agentActiveSession.lastSession.checkInTime).toLocaleString() : "N/A"}
+                          {selectedComp.agentActiveSession.lastSession.checkOutTime && ` • Check-out: ${new Date(selectedComp.agentActiveSession.lastSession.checkOutTime).toLocaleTimeString()}`}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No active attendance check-in logged today.
+                      </Typography>
+                    )}
+                  </Paper>
+                </Grid>
+
+                {/* Browseable Historical Attendance Log */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
+                    Today's Attendance Logs ({selectedComputerAttendanceHistory.length} Sessions)
+                  </Typography>
+                  <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 300 }}>
+                    <Table size="small" stickyHeader>
+                      <TableHead sx={{ bgcolor: "#f8fafc" }}>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Student User</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Agenda Purpose</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Session Type</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Check-in</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Check-out</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedComputerAttendanceHistory.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                              No attendance check-ins logged for this computer today.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          selectedComputerAttendanceHistory
+                            .slice(attendancePage * attendanceRowsPerPage, attendancePage * attendanceRowsPerPage + attendanceRowsPerPage)
+                            .map((hist, idx) => (
+                              <TableRow key={idx} hover>
+                                <TableCell sx={{ fontWeight: 700 }}>{hist.date}</TableCell>
+                                <TableCell>
+                                  <Typography variant="body2" fontWeight={700}>{hist.user}</Typography>
+                                  <Typography variant="caption" color="text.secondary">{hist.email}</Typography>
+                                </TableCell>
+                                <TableCell>{hist.agenda}</TableCell>
+                                <TableCell>
+                                  <Chip label={hist.sessionType} size="small" variant="outlined" sx={{ fontWeight: 700, fontSize: "0.6rem" }} />
+                                </TableCell>
+                                <TableCell>
+                                  {hist.checkInTime ? new Date(hist.checkInTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {hist.checkOutTime ? (
+                                    new Date(hist.checkOutTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+                                  ) : (
+                                    <Chip label="No Check-out" size="small" color="warning" sx={{ height: 16, fontSize: "0.55rem" }} />
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  {selectedComputerAttendanceHistory.length > 0 && (
+                    <TablePagination
+                      component="div"
+                      count={selectedComputerAttendanceHistory.length}
+                      page={attendancePage}
+                      onPageChange={(_, p) => setAttendancePage(p)}
+                      rowsPerPage={attendanceRowsPerPage}
+                      onRowsPerPageChange={(e) => {
+                        setAttendanceRowsPerPage(parseInt(e.target.value, 10));
+                        setAttendancePage(0);
+                      }}
+                      rowsPerPageOptions={[5, 10, 25]}
+                    />
+                  )}
+                </Grid>
+              </Grid>
+            )}
           </DialogContent>
 
           <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2 }}>

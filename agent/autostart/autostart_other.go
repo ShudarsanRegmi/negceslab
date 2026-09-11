@@ -29,7 +29,9 @@ func EnsureAutostart() error {
 	content := fmt.Sprintf(`[Desktop Entry]
 Type=Application
 Name=NegcesLab Agent
-Exec=%s
+Comment=NegcesLab Telemetry and Attendance Agent
+Exec="%s"
+Terminal=false
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
