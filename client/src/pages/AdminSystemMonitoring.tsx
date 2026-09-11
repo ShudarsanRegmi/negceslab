@@ -148,6 +148,8 @@ const AdminSystemMonitoring: React.FC = () => {
   const [attendancePage, setAttendancePage] = useState(0);
   const [attendanceRowsPerPage, setAttendanceRowsPerPage] = useState(5);
 
+  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -160,16 +162,19 @@ const AdminSystemMonitoring: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [compRes, bookRes] = await Promise.all([
+      const [compRes, bookRes, logsRes] = await Promise.all([
         computersAPI.getComputersWithBookings(),
         bookingsAPI.getAllBookings(),
+        api.get('/attendance/logs?limit=300').catch(() => ({ data: { data: [] } }))
       ]);
 
       const compList: Computer[] = Array.isArray(compRes.data) ? compRes.data : [];
       const bookList: any[] = Array.isArray(bookRes.data) ? bookRes.data : [];
+      const logsList: any[] = Array.isArray(logsRes.data?.data) ? logsRes.data.data : [];
 
       setComputers(compList);
       setBookings(bookList);
+      setAttendanceLogs(logsList);
 
       // Update inspector reference if open
       if (selectedComp) {
@@ -184,6 +189,85 @@ const AdminSystemMonitoring: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Helper to format date as local YYYY-MM-DD string
+  const getLocalDateStr = (d: any) => {
+    if (!d) return "";
+    const dateObj = new Date(d);
+    if (isNaN(dateObj.getTime())) return "";
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getLocalDateStr(new Date());
+
+  // Extract combined attendance history for selected computer (TODAY ONLY)
+  const selectedComputerAttendanceHistory = React.useMemo(() => {
+    if (!selectedComp) return [];
+    const list: any[] = [];
+
+    // 1. Logs from AttendanceLog collection for this computer for TODAY
+    attendanceLogs.forEach((log: any) => {
+      const cId = log.computerId?._id || log.computerId;
+      if (String(cId) === String(selectedComp._id) && log.checkInTime) {
+        const logDateStr = getLocalDateStr(log.checkInTime);
+        if (logDateStr === todayStr) {
+          list.push({
+            id: log._id || log.sessionId,
+            date: logDateStr,
+            user: log.studentName || "Unknown",
+            email: log.studentEmail || "-",
+            agenda: log.agenda || "General Usage",
+            sessionType: log.sessionType || (log.entryType === "RESERVED_BOOKING" ? "Scheduled Lab Booking" : "Walk-In"),
+            checkInTime: log.checkInTime,
+            checkOutTime: log.checkOutTime,
+            sessionStatus: log.sessionStatus || "COMPLETED",
+            entryType: log.entryType,
+            slotConflict: log.slotConflict
+          });
+        }
+      }
+    });
+
+    // 2. Legacy attendanceHistory from bookings for TODAY (deduplicated by checkInTime/user)
+    const compBookings = bookings.filter(
+      (b) => String(b.computerId?._id || b.computerId) === String(selectedComp._id)
+    );
+
+    compBookings.forEach((b) => {
+      if (Array.isArray(b.attendanceHistory)) {
+        b.attendanceHistory.forEach((h: any) => {
+          const hDate = h.date || getLocalDateStr(h.checkInTime);
+          if (hDate === todayStr) {
+            const exists = list.some(existing => 
+              existing.email === (h.email || b.user?.email) && 
+              Math.abs(new Date(existing.checkInTime).getTime() - new Date(h.checkInTime).getTime()) < 60000
+            );
+            if (!exists) {
+              list.push({
+                id: h._id || Math.random().toString(),
+                date: hDate,
+                user: h.currentUser || b.user?.name || b.userInfo?.name || "Unknown",
+                email: h.email || b.user?.email || b.userInfo?.email || "-",
+                agenda: h.agenda || b.reason || "General Usage",
+                sessionType: h.sessionType || "Scheduled Lab Booking",
+                checkInTime: h.checkInTime,
+                checkOutTime: h.checkOutTime,
+                sessionStatus: h.checkOutTime ? "COMPLETED" : "ACTIVE",
+                entryType: "RESERVED_BOOKING",
+                slotConflict: false
+              });
+            }
+          }
+        });
+      }
+    });
+
+    // Sort newest check-in first
+    return list.sort((a, b) => new Date(b.checkInTime || 0).getTime() - new Date(a.checkInTime || 0).getTime());
+  }, [selectedComp, bookings, attendanceLogs, todayStr]);
 
   // Filtered Computers
   const filteredComputers = computers.filter((c) => {
@@ -211,36 +295,6 @@ const AdminSystemMonitoring: React.FC = () => {
 
     return matchesSearch && matchesStatus && matchesOS;
   });
-
-  // Extract combined attendance history for selected computer
-  const selectedComputerAttendanceHistory = React.useMemo(() => {
-    if (!selectedComp) return [];
-    const list: any[] = [];
-
-    // Find all bookings for this computer across system bookings
-    const compBookings = bookings.filter(
-      (b) => (b.computerId?._id || b.computerId) === selectedComp._id
-    );
-
-    compBookings.forEach((b) => {
-      if (Array.isArray(b.attendanceHistory)) {
-        b.attendanceHistory.forEach((h: any) => {
-          list.push({
-            date: h.date,
-            user: h.currentUser || b.user?.name || b.userInfo?.name || "Unknown",
-            email: h.email || b.user?.email || b.userInfo?.email || "-",
-            agenda: h.agenda || b.reason || "General Usage",
-            sessionType: h.sessionType || "Scheduled Lab Booking",
-            checkInTime: h.checkInTime,
-            checkOutTime: h.checkOutTime,
-          });
-        });
-      }
-    });
-
-    // Sort newest first
-    return list.sort((a, b) => new Date(b.checkInTime || 0).getTime() - new Date(a.checkInTime || 0).getTime());
-  }, [selectedComp, bookings]);
 
   return (
     <Box sx={{ pb: 6 }}>
@@ -760,7 +814,7 @@ const AdminSystemMonitoring: React.FC = () => {
               {/* Browseable Historical Attendance Log */}
               <Grid item xs={12}>
                 <Typography variant="subtitle2" fontWeight={800} gutterBottom color="#0f172a">
-                  Historical Attendance Log ({selectedComputerAttendanceHistory.length} Sessions)
+                  Today's Attendance Logs ({selectedComputerAttendanceHistory.length} Sessions)
                 </Typography>
                 <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 300 }}>
                   <Table size="small" stickyHeader>
@@ -778,7 +832,7 @@ const AdminSystemMonitoring: React.FC = () => {
                       {selectedComputerAttendanceHistory.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} align="center" sx={{ py: 3, color: "text.secondary" }}>
-                            No attendance history logged for this computer yet.
+                            No attendance check-ins logged for this computer today.
                           </TableCell>
                         </TableRow>
                       ) : (
