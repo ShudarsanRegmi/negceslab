@@ -335,29 +335,28 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 	myWindow.Resize(fyne.NewSize(480, 580))
 	myWindow.CenterOnScreen()
 
-	// 1. Window Close Intercept: Prevent quitting app on window close (X). Minimize window to OS taskbar instead.
+	// 1. Unclosable Window Intercept: Pressing (X) sends app to background instead of closing/exiting.
 	myWindow.SetCloseIntercept(func() {
 		attendance := s.GetAttendance()
 		if !attendance.CheckedIn {
-			fmt.Println("[WINDOW] Close attempt intercepted. Attendance check-in is pending; minimizing to taskbar until nag trigger...")
+			fmt.Println("[WINDOW] Close (X) pressed. Attendance not marked; sending to background (will pop up every 2 minutes).")
 		} else {
-			fmt.Println("[WINDOW] Close attempt intercepted. Minimizing window to taskbar (background telemetry service active).")
+			fmt.Println("[WINDOW] Close (X) pressed. Attendance checked in; running quietly in background telemetry service.")
 		}
 		myWindow.Hide()
 	})
 
-	// 2. Periodic Attendance Nag Routine: If user is active but has not checked in, pop window to front every 2 minutes.
+	// 2. Periodic Attendance Nag Routine: Every 2 minutes, pop window to front if attendance is NOT given.
 	go func() {
 		nagTicker := time.NewTicker(2 * time.Minute)
 		defer nagTicker.Stop()
 
 		for range nagTicker.C {
-			creds := s.GetCredentials()
 			attendance := s.GetAttendance()
 
-			// Nag user if system is registered and attendance is not checked in
-			if creds.AuthToken != "" && !attendance.CheckedIn {
-				fmt.Println("[NAG] Active user session without check-in. Popping NegcesLab agent window to front...")
+			// If attendance is NOT given, pop window back up every 2 minutes
+			if !attendance.CheckedIn {
+				fmt.Println("[NAG] Attendance pending. Popping agent window to front...")
 				myWindow.Show()
 				myWindow.RequestFocus()
 			}
