@@ -15,8 +15,7 @@ $InstallDir = "C:\Program Files\NegcesLab-Agent"
 $BinaryName = "NegcesLab.exe"
 $BinaryPath = Join-Path $InstallDir $BinaryName
 
-# Prompt for Backend Server URL if not provided
-$BackendUrl = Read-Host "Enter NegcesLab Backend Server URL [http://localhost:5000]"
+# Internal Backend Server URL
 if ([string]::IsNullOrEmpty($BackendUrl)) {
     $BackendUrl = "http://localhost:5000"
 }

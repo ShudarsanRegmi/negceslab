@@ -227,8 +227,6 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 		// ─── TAB 3: SYSTEM REGISTRATION ───────────────────────────────────────
 		regTitle := widget.NewLabelWithStyle("System Registration & Settings", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
-		urlLabel := widget.NewLabelWithStyle(c.GetConfig().BackendURL, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-
 		sysSelect := widget.NewSelect([]string{"Fetching lab systems..."}, nil)
 		sysMap := make(map[string]string)
 
@@ -305,8 +303,6 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 
 		tab3Content := container.NewVBox(
 			regTitle,
-			widget.NewLabel("Server API Endpoint (Locked):"),
-			urlLabel,
 			widget.NewLabel("Select Lab Computer:"),
 			sysSelect,
 			widget.NewLabel("Registration Secret:"),

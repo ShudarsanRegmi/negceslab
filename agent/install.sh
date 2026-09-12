@@ -14,10 +14,9 @@ fi
 INSTALL_DIR="/opt/negceslab-agent"
 SERVICE_PATH="/etc/systemd/system/negceslab-agent.service"
 
-# Prompt for Backend Server URL if not passed as env
+# Internal Backend Server URL
 if [ -z "$BACKEND_URL" ]; then
-  read -p "Enter NegcesLab Backend Server URL [http://localhost:5000]: " BACKEND_URL
-  BACKEND_URL=${BACKEND_URL:-http://localhost:5000}
+  BACKEND_URL="http://localhost:5000"
 fi
 
 # Prompt for Target System ID (MongoDB _id) or Hostname

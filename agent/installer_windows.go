@@ -41,13 +41,7 @@ func main() {
 	fmt.Println("========================================================")
 	fmt.Println()
 
-	// 2. Prompt for parameters
-	fmt.Print("Enter NegcesLab Backend Server URL [http://localhost:5000]: ")
-	backendUrl, _ := reader.ReadString('\n')
-	backendUrl = strings.TrimSpace(backendUrl)
-	if backendUrl == "" {
-		backendUrl = "http://localhost:5000"
-	}
+	backendUrl := "http://localhost:5000"
 
 	fmt.Print("Enter Target System ID (Optional MongoDB _id) [leave empty to use OS hostname]: ")
 	systemId, _ := reader.ReadString('\n')
