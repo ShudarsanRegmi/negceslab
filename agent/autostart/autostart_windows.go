@@ -9,23 +9,29 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// EnsureAutostart adds NegcesLab.exe to the Windows Registry CurrentUser Run key
+// EnsureAutostart adds NegcesLab.exe to HKLM (All Users) if admin, else HKCU (Current User)
 func EnsureAutostart() error {
 	exePath, err := os.Executable()
 	if err != nil {
 		return err
 	}
 
-	key, _, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
-	if err != nil {
-		return fmt.Errorf("failed to open registry key: %w", err)
-	}
-	defer key.Close()
+	val := fmt.Sprintf(`"%s"`, exePath)
 
-	err = key.SetStringValue("NegcesLabAgent", fmt.Sprintf(`"%s"`, exePath))
-	if err != nil {
-		return fmt.Errorf("failed to set registry run value: %w", err)
+	// Try HKEY_LOCAL_MACHINE first (Machine-wide for all student user accounts)
+	hklmKey, _, err := registry.CreateKey(registry.LOCAL_MACHINE, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
+	if err == nil {
+		_ = hklmKey.SetStringValue("NegcesLabAgent", val)
+		hklmKey.Close()
+		return nil
 	}
 
-	return nil
+	// Fallback to HKEY_CURRENT_USER if not running with elevated admin rights
+	hkcuKey, _, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
+	if err != nil {
+		return fmt.Errorf("failed to open registry run key: %w", err)
+	}
+	defer hkcuKey.Close()
+
+	return hkcuKey.SetStringValue("NegcesLabAgent", val)
 }
