@@ -37,16 +37,22 @@ mkdir -p "$INSTALL_DIR"
 
 # Copy Agent Binary & Configuration
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-if [ -f "$SCRIPT_DIR/bin/negceslab-agent-linux" ]; then
-  cp "$SCRIPT_DIR/bin/negceslab-agent-linux" "$INSTALL_DIR/"
-elif [ -f "$SCRIPT_DIR/negceslab-agent-linux" ]; then
-  cp "$SCRIPT_DIR/negceslab-agent-linux" "$INSTALL_DIR/"
+if [ -f "$SCRIPT_DIR/bin/prod/linux/NegcesLab" ]; then
+  cp "$SCRIPT_DIR/bin/prod/linux/NegcesLab" "$INSTALL_DIR/NegcesLab"
+elif [ -f "$SCRIPT_DIR/bin/dev/linux/NegcesLab" ]; then
+  cp "$SCRIPT_DIR/bin/dev/linux/NegcesLab" "$INSTALL_DIR/NegcesLab"
+elif [ -f "$SCRIPT_DIR/bin/linux/NegcesLab" ]; then
+  cp "$SCRIPT_DIR/bin/linux/NegcesLab" "$INSTALL_DIR/NegcesLab"
+elif [ -f "$SCRIPT_DIR/NegcesLab" ]; then
+  cp "$SCRIPT_DIR/NegcesLab" "$INSTALL_DIR/NegcesLab"
+elif [ -f "$SCRIPT_DIR/bin/negceslab-agent-linux" ]; then
+  cp "$SCRIPT_DIR/bin/negceslab-agent-linux" "$INSTALL_DIR/NegcesLab"
 else
-  echo "[ERROR] Could not find 'negceslab-agent-linux' binary."
+  echo "[ERROR] Could not find 'NegcesLab' binary."
   exit 1
 fi
 
-chmod +x "$INSTALL_DIR/negceslab-agent-linux"
+chmod +x "$INSTALL_DIR/NegcesLab"
 
 # Write agent_config.json
 WS_URL=$(echo "$BACKEND_URL" | sed 's/http/ws/')
@@ -64,10 +70,10 @@ EOF
 echo "[2/4] Registering Machine with Backend Server..."
 if [ -n "$SYSTEM_ID" ]; then
   echo "Registering with Target System ID: $SYSTEM_ID..."
-  "$INSTALL_DIR/negceslab-agent-linux" --systemid="$SYSTEM_ID" --secret="$REG_SECRET"
+  "$INSTALL_DIR/NegcesLab" --systemid="$SYSTEM_ID" --secret="$REG_SECRET"
 else
   echo "Registering using OS Hostname..."
-  "$INSTALL_DIR/negceslab-agent-linux" --register --secret="$REG_SECRET"
+  "$INSTALL_DIR/NegcesLab" --register --secret="$REG_SECRET"
 fi
 
 echo ""
@@ -82,7 +88,7 @@ Wants=network-online.target
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$INSTALL_DIR/negceslab-agent-linux
+ExecStart=$INSTALL_DIR/NegcesLab
 Restart=always
 RestartSec=5
 
