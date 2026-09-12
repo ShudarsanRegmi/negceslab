@@ -12,7 +12,7 @@ if (-not $isAdmin) {
 }
 
 $InstallDir = "C:\Program Files\NegcesLab-Agent"
-$BinaryName = "negceslab-agent-windows.exe"
+$BinaryName = "NegcesLab.exe"
 $BinaryPath = Join-Path $InstallDir $BinaryName
 
 # Prompt for Backend Server URL if not provided
@@ -36,13 +36,22 @@ if (-not (Test-Path $InstallDir)) {
 
 # Copy Agent Binary & Config template from current folder
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$SourceBinary = Join-Path $ScriptDir "bin\$BinaryName"
+$SourceBinary = Join-Path $ScriptDir "bin\prod\windows\NegcesLab.exe"
 if (-not (Test-Path $SourceBinary)) {
-    $SourceBinary = Join-Path $ScriptDir $BinaryName
+    $SourceBinary = Join-Path $ScriptDir "bin\dev\windows\NegcesLab.exe"
+}
+if (-not (Test-Path $SourceBinary)) {
+    $SourceBinary = Join-Path $ScriptDir "bin\windows\NegcesLab.exe"
+}
+if (-not (Test-Path $SourceBinary)) {
+    $SourceBinary = Join-Path $ScriptDir "NegcesLab.exe"
+}
+if (-not (Test-Path $SourceBinary)) {
+    $SourceBinary = Join-Path $ScriptDir "negceslab-agent-windows.exe"
 }
 
 if (-not (Test-Path $SourceBinary)) {
-    Write-Error "Could not find $BinaryName binary in $ScriptDir."
+    Write-Error "Could not find NegcesLab.exe binary in $ScriptDir."
     Exit
 }
 
@@ -74,27 +83,22 @@ if (-not [string]::IsNullOrEmpty($SystemId)) {
 }
 
 Write-Host ""
-Write-Host "[3/4] Registering Windows Service Startup Registry..."
+Write-Host "[3/4] Configuring Machine-Wide HKLM Autostart for All Student Logins..."
 
-# Register service using PowerShell cmdlet or sc.exe command
-$ServiceName = "NegcesLabAgent"
-$ServiceExists = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+# Set HKLM Registry Run Key for all user accounts on this Windows computer
+$HklmPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run"
+Set-ItemProperty -Path $HklmPath -Name "NegcesLabAgent" -Value "`"$BinaryPath`"" -Force
 
-if ($ServiceExists) {
-    Write-Host "Removing pre-existing service..."
-    Remove-Service -Name $ServiceName -Confirm:$false
-}
-
-# Windows service binary path config setup
-New-Service -Name $ServiceName -BinaryPathName "`"$BinaryPath`"" -DisplayName "Negces Lab Agent Telemetry" -StartupType Automatic | Out-Null
+# Configure Task Scheduler ONLOGON task for Authenticated Users
+schtasks /Create /TN "NegcesLabAgent" /TR "`"$BinaryPath`"" /SC ONLOGON /RU "Authenticated Users" /RL HIGHEST /F | Out-Null
 
 Write-Host ""
-Write-Host "[4/4] Starting NegcesLab Agent Windows Service..."
-Start-Service -Name $ServiceName
+Write-Host "[4/4] Launching Interactive Agent App..."
+Start-Process -FilePath $BinaryPath
 
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host " [SUCCESS] NegcesLab Agent Installed Successfully!" -ForegroundColor Green
-Write-Host " Windows Service is running and configured on Startup" -ForegroundColor Green
+Write-Host " Autostart is configured for ALL USER ACCOUNTS on startup" -ForegroundColor Green
 Write-Host " Installation Location: $InstallDir" -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
