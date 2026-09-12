@@ -286,13 +286,15 @@ build-agent-prod-linux:
 	@echo "Prod Linux executable built at ./agent/bin/prod/linux/NegcesLab"
 
 build-agent-prod-windows:
-	@echo "Compiling NegcesLab Desktop App for Windows (PROD)... [Endpoint: $(PROD_SERVER_URL)]"
+	@echo "Compiling NegcesLab Desktop App & Updater for Windows (PROD)... [Endpoint: $(PROD_SERVER_URL)]"
 	@mkdir -p ./agent/bin/prod/windows
 	cd agent && CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui -X negceslab-agent/config.DefaultBackendURL=$(PROD_SERVER_URL)" -o ./bin/prod/windows/NegcesLab.exe .
+	cd agent && CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui" -o ./bin/prod/windows/updater.exe ./updater/main.go
 	@echo "Compiling Standalone NegcesLabSetup.exe Installer for Windows (PROD)..."
-	cd agent && CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix GOOS=windows GOARCH=amd64 go build -tags windows_installer -ldflags="-s -w" -o ./bin/prod/windows/NegcesLabSetup.exe installer_windows_prod.go
+	cd agent && CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix GOOS=windows GOARCH=amd64 go build -tags windows_installer -ldflags="-s -w -H=windowsgui" -o ./bin/prod/windows/NegcesLabSetup.exe installer_windows_prod.go
 	@rm -f ./agent/bin/prod/windows/agent_config.json ./agent/bin/prod/windows/agent_db.json
 	@echo "Prod Windows executable built at ./agent/bin/prod/windows/NegcesLab.exe"
+	@echo "Prod Windows Updater built at ./agent/bin/prod/windows/updater.exe"
 	@echo "Prod Standalone Installer built at ./agent/bin/prod/windows/NegcesLabSetup.exe"
 
 build-agent-prod-all: build-agent-prod-linux build-agent-prod-windows

@@ -4,7 +4,6 @@ package main
 
 import (
 	_ "embed"
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -19,73 +18,43 @@ import (
 //go:embed bin/prod/windows/NegcesLab.exe
 var agentBinary []byte
 
+//go:embed bin/prod/windows/updater.exe
+var updaterBinary []byte
+
 const (
 	InstallDir = `C:\Program Files\NegcesLab-Agent`
 	BinaryName = "NegcesLab.exe"
-	BackendUrl = "https://intranet.ch.amrita.edu/negcesapi/"
+	BackendUrl = "https://intranet.ch.amrita.edu/negcesapi"
 )
 
 func main() {
 	// 1. Require Administrator Permissions / Self-elevate
 	if !isAdmin() {
-		fmt.Println("Requesting Administrator privileges...")
 		runAsAdmin()
 		return
 	}
 
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Println("========================================================")
-	fmt.Println("   Negces Lab Agent Production Installer (Windows)     ")
-	fmt.Println("========================================================")
-	fmt.Printf("Backend API Target: %s\n\n", BackendUrl)
-
-	// 2. Prompt for System ID (Required)
-	var systemId string
-	for {
-		fmt.Print("Enter Target System ID (MongoDB _id from Admin Panel) [REQUIRED]: ")
-		systemId, _ = reader.ReadString('\n')
-		systemId = strings.TrimSpace(systemId)
-		if systemId != "" {
-			break
-		}
-		fmt.Println("Error: System ID is required for production installation.")
-		fmt.Println()
-	}
-
-	// 3. Prompt for Registration Secret (Required)
-	var regSecret string
-	for {
-		fmt.Print("Enter Server Registration Secret Passcode [REQUIRED]: ")
-		regSecret, _ = reader.ReadString('\n')
-		regSecret = strings.TrimSpace(regSecret)
-		if regSecret != "" {
-			break
-		}
-		fmt.Println("Error: Registration Secret is required.")
-		fmt.Println()
-	}
-
-	fmt.Println()
-	fmt.Printf("[1/4] Creating installation directory at %s...\n", InstallDir)
+	// 2. Create Installation Directory
 	if err := os.MkdirAll(InstallDir, 0755); err != nil {
-		fmt.Printf("Error creating installation directory: %v\n", err)
-		pressEnterToExit(reader)
+		showMessageBox("Installation Error", fmt.Sprintf("Error creating installation directory: %v", err), 0x10)
 		return
 	}
 
-	// Extract binary
+	// 3. Extract Embedded Agent Binary & Updater Binary
 	binaryPath := filepath.Join(InstallDir, BinaryName)
-	fmt.Printf("Extracting embedded agent binary to %s...\n", binaryPath)
+	_ = exec.Command("taskkill.exe", "/F", "/IM", BinaryName).Run()
 
 	if err := ioutil.WriteFile(binaryPath, agentBinary, 0755); err != nil {
-		fmt.Printf("Error extracting agent binary: %v\n", err)
-		pressEnterToExit(reader)
+		showMessageBox("Extraction Error", fmt.Sprintf("Error extracting NegcesLab.exe: %v", err), 0x10)
 		return
 	}
 
-	// Generate config with production URL
-	fmt.Println("Generating agent_config.json...")
+	updaterPath := filepath.Join(InstallDir, "updater.exe")
+	if len(updaterBinary) > 0 {
+		_ = ioutil.WriteFile(updaterPath, updaterBinary, 0755)
+	}
+
+	// 4. Generate Default Configuration
 	wsUrl := strings.Replace(BackendUrl, "http", "ws", 1)
 	configData := map[string]interface{}{
 		"backend_url":               BackendUrl,
@@ -93,74 +62,36 @@ func main() {
 		"poll_interval_sec":         10,
 		"offline_sync_interval_sec": 60,
 		"retry_attempts":            5,
-		"registration_secret":       regSecret,
 	}
 
-	configBytes, err := json.MarshalIndent(configData, "", "  ")
-	if err != nil {
-		fmt.Printf("Error serializing config: %v\n", err)
-		pressEnterToExit(reader)
-		return
-	}
-
+	configBytes, _ := json.MarshalIndent(configData, "", "  ")
 	configPath := filepath.Join(InstallDir, "agent_config.json")
-	if err := ioutil.WriteFile(configPath, configBytes, 0644); err != nil {
-		fmt.Printf("Error writing config: %v\n", err)
-		pressEnterToExit(reader)
-		return
-	}
+	_ = ioutil.WriteFile(configPath, configBytes, 0644)
 
-	// 3. Register Machine with Backend
-	fmt.Println()
-	fmt.Println("[2/4] Registering Machine with Backend Server...")
-	fmt.Printf("Registering with target system ID: %s...\n", systemId)
-
-	registerCmd := exec.Command(binaryPath, "--systemid="+systemId, "--secret="+regSecret)
-	registerCmd.Dir = InstallDir
-	registerCmd.Stdout = os.Stdout
-	registerCmd.Stderr = os.Stderr
-
-	if err := registerCmd.Run(); err != nil {
-		fmt.Println()
-		fmt.Println("======================================================================")
-		fmt.Printf(" [FATAL ERROR] Registration Failed: %v\n", err)
-		fmt.Println(" Could not fetch system details or authorize with the server.")
-		fmt.Println(" The installation has been aborted. Please verify the System ID")
-		fmt.Println(" and the Registration Secret, then run this installer again.")
-		fmt.Println("======================================================================")
-		pressEnterToExit(reader)
-		return
-	}
-
-	// 4. Configure Machine-Wide HKLM Autostart for All Student Accounts
-	fmt.Println()
-	fmt.Println("[3/4] Configuring Machine-Wide Autostart for All Student User Accounts...")
-
-	// Open HKLM Registry Run Key
+	// 5. Configure Machine-Wide HKLM Autostart & Task Scheduler for All Student User Accounts
 	regCmd := exec.Command("reg.exe", "add", `HKLM\Software\Microsoft\Windows\CurrentVersion\Run`, "/v", "NegcesLabAgent", "/t", "REG_SZ", "/d", fmt.Sprintf(`"%s"`, binaryPath), "/f")
-	if err := regCmd.Run(); err != nil {
-		fmt.Printf("Warning: Failed to set HKLM registry autostart: %v\n", err)
-	}
+	_ = regCmd.Run()
 
-	// Add Task Scheduler ONLOGON task for Authenticated Users
 	taskCmd := exec.Command("schtasks.exe", "/Create", "/TN", "NegcesLabAgent", "/TR", fmt.Sprintf(`"%s"`, binaryPath), "/SC", "ONLOGON", "/RU", "Authenticated Users", "/RL", "HIGHEST", "/F")
 	_ = taskCmd.Run()
 
-	// 5. Launch Interactive Agent Application
-	fmt.Println()
-	fmt.Println("[4/4] Launching NegcesLab Agent Interactive Application...")
+	// 6. Launch NegcesLab Agent Interactive Application
 	launchCmd := exec.Command(binaryPath)
 	launchCmd.Dir = InstallDir
 	_ = launchCmd.Start()
 
-	fmt.Println()
-	fmt.Println("========================================================")
-	fmt.Println(" [SUCCESS] NegcesLab Agent Installed Successfully!")
-	fmt.Println(" Autostart configured for ALL USER ACCOUNTS on Startup")
-	fmt.Println(" Installation Location: " + InstallDir)
-	fmt.Println("========================================================")
+	showMessageBox("NegcesLab Setup", "NegcesLab Agent installed successfully!\n\nAutostart is configured for ALL USER ACCOUNTS on this computer.", 0x40)
+}
 
-	pressEnterToExit(reader)
+func showMessageBox(title, msg string, style uintptr) {
+	user32 := syscall.NewLazyDLL("user32.dll")
+	messageBoxW := user32.NewProc("MessageBoxW")
+	messageBoxW.Call(
+		0,
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(msg))),
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(title))),
+		style,
+	)
 }
 
 func isAdmin() bool {
@@ -175,28 +106,16 @@ func runAsAdmin() {
 	exe, _ := os.Executable()
 	cwd, _ := os.Getwd()
 
-	args := strings.Join(os.Args[1:], " ")
-
 	shell32 := syscall.NewLazyDLL("shell32.dll")
 	shellExecuteW := shell32.NewProc("ShellExecuteW")
 
-	_, _, err := shellExecuteW.Call(
+	shellExecuteW.Call(
 		0,
 		uintptr(unsafe.Pointer(verb)),
 		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(exe))),
-		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(args))),
+		0,
 		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(cwd))),
-		1, // SW_SHOWNORMAL
+		1,
 	)
-
-	if err != nil && err.Error() != "The operation completed successfully." {
-		fmt.Printf("Error launching as admin: %v\n", err)
-	}
 	os.Exit(0)
-}
-
-func pressEnterToExit(reader *bufio.Reader) {
-	fmt.Println()
-	fmt.Print("Press Enter to exit...")
-	_, _ = reader.ReadString('\n')
 }
