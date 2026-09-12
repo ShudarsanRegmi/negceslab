@@ -499,7 +499,10 @@ const AdminSystemMonitoring: React.FC = () => {
                     boxShadow: "0 10px 24px rgba(0,0,0,0.1)",
                   },
                 }}
-                onClick={() => setSelectedComp(computer)}
+                onClick={() => {
+                  setSelectedComp(computer);
+                  setInspectorTab(0);
+                }}
               >
                 {/* Stress Top Banner */}
                 {isUnderStress && (
