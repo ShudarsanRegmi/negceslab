@@ -371,7 +371,11 @@ router.post("/attendance", verifyAgentToken, async (req, res) => {
         sessionId,
         lastSession: lastSessionData
       };
-      computer.status = "reserved";
+      if (activeBooking) {
+        computer.status = "reserved";
+      } else if (computer.status !== "maintenance") {
+        computer.status = "available";
+      }
 
       // Also append to activeBooking.attendanceHistory for backward compatibility
       if (activeBooking) {
