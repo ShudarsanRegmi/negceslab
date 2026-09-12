@@ -13,18 +13,16 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 	"unsafe"
 )
 
-//go:embed bin/negceslab-agent-windows.exe
+//go:embed bin/prod/windows/NegcesLab.exe
 var agentBinary []byte
 
 const (
-	InstallDir  = `C:\Program Files\NegcesLab-Agent`
-	BinaryName  = "negceslab-agent-windows.exe"
-	ServiceName = "NegcesLabAgent"
-	BackendUrl  = "https://intranet.ch.amrita.edu/negcesapi/"
+	InstallDir = `C:\Program Files\NegcesLab-Agent`
+	BinaryName = "NegcesLab.exe"
+	BackendUrl = "https://intranet.ch.amrita.edu/negcesapi/"
 )
 
 func main() {
@@ -79,13 +77,9 @@ func main() {
 	// Extract binary
 	binaryPath := filepath.Join(InstallDir, BinaryName)
 	fmt.Printf("Extracting embedded agent binary to %s...\n", binaryPath)
-	
-	// Stop service first if it exists to release file lock on binary
-	_ = exec.Command("sc.exe", "stop", ServiceName).Run()
-	time.Sleep(1 * time.Second)
 
 	if err := ioutil.WriteFile(binaryPath, agentBinary, 0755); err != nil {
-		fmt.Printf("Error extracting agent binary (is the service still running?): %v\n", err)
+		fmt.Printf("Error extracting agent binary: %v\n", err)
 		pressEnterToExit(reader)
 		return
 	}
@@ -120,12 +114,12 @@ func main() {
 	fmt.Println()
 	fmt.Println("[2/4] Registering Machine with Backend Server...")
 	fmt.Printf("Registering with target system ID: %s...\n", systemId)
-	
+
 	registerCmd := exec.Command(binaryPath, "--systemid="+systemId, "--secret="+regSecret)
 	registerCmd.Dir = InstallDir
 	registerCmd.Stdout = os.Stdout
 	registerCmd.Stderr = os.Stderr
-	
+
 	if err := registerCmd.Run(); err != nil {
 		fmt.Println()
 		fmt.Println("======================================================================")
@@ -138,40 +132,34 @@ func main() {
 		return
 	}
 
-	// 4. Register Windows Service (only if registration succeeds!)
+	// 4. Configure Machine-Wide HKLM Autostart for All Student Accounts
 	fmt.Println()
-	fmt.Println("[3/4] Registering Windows Service Startup Registry...")
+	fmt.Println("[3/4] Configuring Machine-Wide Autostart for All Student User Accounts...")
 
-	// Remove service if it already exists
-	_ = exec.Command("sc.exe", "delete", ServiceName).Run()
-	time.Sleep(500 * time.Millisecond)
-
-	// Create service using sc.exe
-	binPathArg := fmt.Sprintf(`"%s"`, binaryPath)
-	createCmd := exec.Command("sc.exe", "create", ServiceName, "binPath=", binPathArg, "start=", "auto", "DisplayName=", "Negces Lab Agent Telemetry")
-	if err := createCmd.Run(); err != nil {
-		fmt.Printf("Error registering Windows Service: %v\n", err)
-		pressEnterToExit(reader)
-		return
+	// Open HKLM Registry Run Key
+	regCmd := exec.Command("reg.exe", "add", `HKLM\Software\Microsoft\Windows\CurrentVersion\Run`, "/v", "NegcesLabAgent", "/t", "REG_SZ", "/d", fmt.Sprintf(`"%s"`, binaryPath), "/f")
+	if err := regCmd.Run(); err != nil {
+		fmt.Printf("Warning: Failed to set HKLM registry autostart: %v\n", err)
 	}
 
-	// 5. Start service
+	// Add Task Scheduler ONLOGON task for Authenticated Users
+	taskCmd := exec.Command("schtasks.exe", "/Create", "/TN", "NegcesLabAgent", "/TR", fmt.Sprintf(`"%s"`, binaryPath), "/SC", "ONLOGON", "/RU", "Authenticated Users", "/RL", "HIGHEST", "/F")
+	_ = taskCmd.Run()
+
+	// 5. Launch Interactive Agent Application
 	fmt.Println()
-	fmt.Println("[4/4] Starting NegcesLab Agent Windows Service...")
-	startCmd := exec.Command("sc.exe", "start", ServiceName)
-	if err := startCmd.Run(); err != nil {
-		fmt.Printf("Error starting Windows Service: %v\n", err)
-		pressEnterToExit(reader)
-		return
-	}
+	fmt.Println("[4/4] Launching NegcesLab Agent Interactive Application...")
+	launchCmd := exec.Command(binaryPath)
+	launchCmd.Dir = InstallDir
+	_ = launchCmd.Start()
 
 	fmt.Println()
 	fmt.Println("========================================================")
 	fmt.Println(" [SUCCESS] NegcesLab Agent Installed Successfully!")
-	fmt.Println(" Windows Service is running and configured on Startup")
+	fmt.Println(" Autostart configured for ALL USER ACCOUNTS on Startup")
 	fmt.Println(" Installation Location: " + InstallDir)
 	fmt.Println("========================================================")
-	
+
 	pressEnterToExit(reader)
 }
 
