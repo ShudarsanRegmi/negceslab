@@ -1,10 +1,31 @@
 const nodemailer = require('nodemailer');
 
-const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'your-email@gmail.com';
-const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'your-app-password';
+const outlookMail = process.env.OUTLOOK_MAIL;
+const outlookPass = process.env.OUTLOOK_APP_PASS;
 
-// Email configuration
-const transporter = process.env.SMTP_HOST
+const emailUser = outlookMail || process.env.EMAIL_USER || process.env.SMTP_USER || 'negceslab@ch.amrita.edu';
+const emailPass = outlookPass || process.env.EMAIL_PASS || process.env.SMTP_PASS || '';
+
+const fromAddress = outlookMail
+  ? `NEGCES Lab Notification System <${outlookMail}>`
+  : emailUser;
+
+// Email configuration - Defaulting to Outlook / Office365 SMTP
+const transporter = (outlookMail && outlookPass)
+  ? nodemailer.createTransport({
+      host: 'smtp.office365.com',
+      port: 587,
+      secure: false, // STARTTLS
+      requireTLS: true,
+      auth: {
+        user: outlookMail,
+        pass: outlookPass
+      },
+      tls: {
+        ciphers: 'SSLv3'
+      }
+    })
+  : process.env.SMTP_HOST
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT || 587),
@@ -15,14 +36,17 @@ const transporter = process.env.SMTP_HOST
       }
     })
   : nodemailer.createTransport({
-      host: 'smtp.gmail.com',
+      host: 'smtp.office365.com',
       port: 587,
       secure: false,
+      requireTLS: true,
       auth: {
         user: emailUser,
         pass: emailPass
       },
-      requireTLS: true
+      tls: {
+        ciphers: 'SSLv3'
+      }
     });
 
 // Email templates
@@ -482,7 +506,7 @@ const sendEmail = async (to, template, data) => {
     const emailContent = emailTemplates[template](...data);
     
     const mailOptions = {
-      from: emailUser,
+      from: fromAddress,
       to: to,
       subject: emailContent.subject,
       html: emailContent.html
@@ -521,7 +545,7 @@ const sendAdminNewBookingRequestEmail = async (adminEmail, adminName, userName, 
 const sendSuperadminOtpEmail = async (userEmail, otp, validMinutes) => {
   try {
     const mailOptions = {
-      from: emailUser,
+      from: fromAddress,
       to: userEmail,
       subject: 'NEGCES Lab Superadmin OTP',
       html: `
