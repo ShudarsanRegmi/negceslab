@@ -2,9 +2,11 @@ package ui
 
 import (
 	"fmt"
+	"runtime"
 	"time"
 
 	"negceslab-agent/client"
+	"negceslab-agent/config"
 	"negceslab-agent/storage"
 	"negceslab-agent/sysinfo"
 
@@ -311,12 +313,40 @@ func RunUnifiedGUIApp(c *client.Client, s *storage.Storage) {
 			regBtn,
 		)
 
-		// Create Tabs
-		tab1 := container.NewTabItem("📝 Attendance & Session", tab1Content)
-		tab2 := container.NewTabItem("📋 Attendance Logs", tab2Content)
-		tab3 := container.NewTabItem("⚙️ System Registration", tab3Content)
+		// ─── TAB 4: ABOUT SYSTEM & VERSION ───────────────────────────────────
+		aboutTitle := widget.NewLabelWithStyle("NEGCES Lab Monitoring & Attendance Agent", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+		aboutVersion := widget.NewLabelWithStyle(fmt.Sprintf("Version %s (%s)", config.Version, config.BuildDate), fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
-		tabs := container.NewAppTabs(tab1, tab2, tab3)
+		sysIDStr := creds.MachineID
+		if sysIDStr == "" {
+			sysIDStr = "Unregistered Machine"
+		}
+		aboutSystemID := widget.NewLabel(fmt.Sprintf("Registered System ID: %s", sysIDStr))
+		aboutPlatform := widget.NewLabel(fmt.Sprintf("Platform / OS: %s / %s", runtime.GOOS, runtime.GOARCH))
+		aboutBackend := widget.NewLabel(fmt.Sprintf("Backend API: %s", c.GetConfig().BackendURL))
+
+		aboutFooter := widget.NewLabelWithStyle("NEGCES Lab Systems - Amrita Vishwa Vidyapeetham", fyne.TextAlignCenter, fyne.TextStyle{Italic: true})
+
+		tab4Content := container.NewVBox(
+			aboutTitle,
+			aboutVersion,
+			widget.NewSeparator(),
+			widget.NewLabelWithStyle("System Diagnostics & Settings Summary", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			aboutSystemID,
+			aboutPlatform,
+			aboutBackend,
+			layout.NewSpacer(),
+			widget.NewSeparator(),
+			aboutFooter,
+		)
+
+		// Create Tabs
+		tab1 := container.NewTabItem("📝 Attendance", tab1Content)
+		tab2 := container.NewTabItem("📋 Local Logs", tab2Content)
+		tab3 := container.NewTabItem("⚙️ Registration", tab3Content)
+		tab4 := container.NewTabItem("ℹ️ About", tab4Content)
+
+		tabs := container.NewAppTabs(tab1, tab2, tab3, tab4)
 
 		if creds.AuthToken == "" {
 			tabs.Select(tab3)

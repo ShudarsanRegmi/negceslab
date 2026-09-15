@@ -62,3 +62,6 @@ serviceAccountKey.json
 # Agent binaries
 agent/bin/
 
+# Local developer scripts & scratch files
+.local/
+

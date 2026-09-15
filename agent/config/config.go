@@ -9,6 +9,10 @@ import (
 )
 
 var (
+	// Version is set during build time using ldflags or defaults to v1.5
+	Version   = "v1.5"
+	BuildDate = "2026-09-12"
+
 	// DefaultBackendURL can be overridden at compile time via:
 	// -ldflags "-X negceslab-agent/config.DefaultBackendURL=http://localhost:5000"
 	DefaultBackendURL = "https://intranet.ch.amrita.edu/negcesapi"
