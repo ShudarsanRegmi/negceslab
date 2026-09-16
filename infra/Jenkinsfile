@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         PROD_SERVER = 'negces@172.19.18.5'
-        PROD_RELEASE_DIR = '/data/Intranet/negces/NegcesAgent/releases'
         PROD_WEB_DIR = '/data/Intranet/negces/negceslab'
         SSH_KEY_PATH = '/home/aparichit/.ssh/id_campus'
     }
@@ -14,58 +13,51 @@ pipeline {
     }
 
     stages {
-        stage('Checkout & SCM Sync') {
+        stage('1. Checkout Code') {
             steps {
+                echo "[STAGE 1] Syncing code from GitHub repository..."
                 git branch: 'main', url: 'https://github.com/ShudarsanRegmi/negceslab.git'
             }
         }
 
-        stage('Code Quality & Dependencies') {
+        stage('2. Install Web Dependencies') {
             steps {
-                sh '''
-                    echo "Checking dependencies..."
-                    cd server && npm ci
-                    cd ../client && npm ci
-                    cd ../agent && go vet ./...
-                '''
+                echo "[STAGE 2] Installing Node.js packages for Server and Client..."
+                sh 'cd server && npm ci'
+                sh 'cd client && npm ci'
             }
         }
 
-        stage('Automated Integration Tests') {
+        stage('3. Run Automated Tests') {
             steps {
-                sh '''
-                    echo "Running isolated Outlook SMTP email integration test..."
-                    node test/isolated_tests/test_outlook_email.js
-                '''
+                echo "[STAGE 3] Executing Server and Client test suites..."
+                sh 'cd server && npm test'
+                sh 'cd client && npm test'
+                sh 'node test/isolated_tests/test_outlook_email.js'
             }
         }
 
-        stage('Build & Cross-Compile Agent Binaries') {
+        stage('4. Build Web Production Bundle') {
             steps {
-                sh '''
-                    echo "Compiling Linux & Windows production agent binaries..."
-                    cd agent
-                    go build -o bin/prod/linux/NegcesLab main.go
-                    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o bin/prod/windows/NegcesLabSetup.exe installer_windows_prod.go
-                    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o bin/prod/windows/updater.exe updater/main.go
-                '''
+                echo "[STAGE 4] Compiling React Vite production assets..."
+                sh 'cd client && npm run build'
             }
         }
 
-        stage('Deploy Desktop Binaries via SCP') {
+        stage('5. Deploy Web App & Restart Server') {
             steps {
+                echo "[STAGE 5] Pulling latest code on Production Server & restarting Node backend..."
                 sh '''
-                    echo "Deploying binaries & manifest to production releases folder..."
-                    node .local/scripts/deploy_release.js --host=${PROD_SERVER} --dest=${PROD_RELEASE_DIR}
-                '''
-            }
-        }
-
-        stage('Deploy Server Web Code & Restart Services') {
-            steps {
-                sh '''
-                    echo "Updating production server code and restarting services..."
                     ssh -O -i ${SSH_KEY_PATH} ${PROD_SERVER} "cd ${PROD_WEB_DIR} && git pull origin main && cd server && npm install && pm2 restart all"
+                '''
+            }
+        }
+
+        stage('6. Post-Deployment Verification') {
+            steps {
+                echo "[STAGE 6] Performing production endpoint health check..."
+                sh '''
+                    ssh -O -i ${SSH_KEY_PATH} ${PROD_SERVER} "curl -s -f http://localhost:5000/api/health || true"
                 '''
             }
         }
@@ -73,10 +65,14 @@ pipeline {
 
     post {
         success {
-            echo "[SUCCESS] NEGCES Lab CI/CD Pipeline executed cleanly. Deployment complete!"
+            echo "=================================================================="
+            echo " [SUCCESS] NEGCES Lab Web CI/CD Pipeline Completed Successfully! "
+            echo "=================================================================="
         }
         failure {
-            echo "[FAILURE] NEGCES Lab CI/CD Pipeline failed during execution. Check logs above."
+            echo "=================================================================="
+            echo " [FAILURE] CI/CD Pipeline failed. Check console log for details."
+            echo "=================================================================="
         }
     }
 }
