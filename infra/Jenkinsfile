@@ -48,10 +48,10 @@ pipeline {
 
         stage('5. Deploy Web App Containers via Podman (Makefile)') {
             steps {
-                echo "[STAGE 5] Pulling latest code on Production Server & executing Podman container replacements via Makefile..."
+                echo "[STAGE 5] Pulling latest code on Production Server & executing Podman container replacements (Backend first, then Frontend)..."
                 sshagent([SSH_KEY_ID]) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no ${PROD_USER}@${PROD_HOST} "cd ${PROD_WEB_DIR} && git pull origin main && make build-frontend && make build-backend && make systemd-update-backend"
+                        ssh -o StrictHostKeyChecking=no ${PROD_USER}@${PROD_HOST} "cd ${PROD_WEB_DIR} && git pull origin main && make down-backend && make build-backend && make up-backend && make build-frontend-fresh"
                     '''
                 }
             }
