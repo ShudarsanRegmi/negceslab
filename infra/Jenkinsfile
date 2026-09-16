@@ -2,9 +2,11 @@ pipeline {
     agent any
 
     environment {
-        PROD_SERVER = 'negces@172.19.18.5'
-        PROD_WEB_DIR = '/data/Intranet/negces/negceslab'
-        SSH_KEY_PATH = '/home/aparichit/.ssh/id_campus'
+        // Read environment properties configured in Jenkins (with fallback defaults)
+        PROD_USER     = "${env.PROD_USER ?: 'negces'}"
+        PROD_HOST     = "${env.PROD_HOST ?: '172.19.18.5'}"
+        PROD_WEB_DIR  = "${env.PROD_WEB_DIR ?: '/data/Intranet/negces/negceslab'}"
+        SSH_KEY_ID    = "${env.SSH_KEY_ID ?: 'campus-ssh-key'}"
     }
 
     triggers {
@@ -47,18 +49,22 @@ pipeline {
         stage('5. Deploy Web App & Restart Server') {
             steps {
                 echo "[STAGE 5] Pulling latest code on Production Server & restarting Node backend..."
-                sh '''
-                    ssh -O -i ${SSH_KEY_PATH} ${PROD_SERVER} "cd ${PROD_WEB_DIR} && git pull origin main && cd server && npm install && pm2 restart all"
-                '''
+                sshagent([SSH_KEY_ID]) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ${PROD_USER}@${PROD_HOST} "cd ${PROD_WEB_DIR} && git pull origin main && cd server && npm install && pm2 restart all"
+                    '''
+                }
             }
         }
 
         stage('6. Post-Deployment Verification') {
             steps {
                 echo "[STAGE 6] Performing production endpoint health check..."
-                sh '''
-                    ssh -O -i ${SSH_KEY_PATH} ${PROD_SERVER} "curl -s -f http://localhost:5000/api/health || true"
-                '''
+                sshagent([SSH_KEY_ID]) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ${PROD_USER}@${PROD_HOST} "curl -s -f http://localhost:5000/api/health || true"
+                    '''
+                }
             }
         }
     }
