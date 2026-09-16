@@ -1,11 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        // Configured in Jenkins -> Manage Jenkins -> Tools -> NodeJS
-        nodejs 'NodeJS-18'
-    }
-
     environment {
         // Read environment properties configured in Jenkins (with fallback defaults)
         PROD_USER     = "${env.PROD_USER ?: 'negces'}"
@@ -27,33 +22,33 @@ pipeline {
             }
         }
 
-        stage('2. Install Web Dependencies') {
+        stage('2. Install Web Dependencies (Containerized)') {
             steps {
-                echo "[STAGE 2] Installing Node.js packages for Server and Client..."
-                sh 'cd server && npm ci'
-                sh 'cd client && npm ci'
+                echo "[STAGE 2] Installing Node.js packages inside Node container..."
+                sh 'docker run --rm -v $PWD:/app -w /app/server node:18-alpine npm ci'
+                sh 'docker run --rm -v $PWD:/app -w /app/client node:18-alpine npm ci'
             }
         }
 
-        stage('3. Run Automated Tests') {
+        stage('3. Run Automated Tests (Containerized)') {
             steps {
-                echo "[STAGE 3] Executing Server and Client test suites..."
-                sh 'cd server && npm test'
-                sh 'cd client && npm test'
-                sh 'node test/isolated_tests/test_outlook_email.js'
+                echo "[STAGE 3] Executing Server and Client test suites inside Node container..."
+                sh 'docker run --rm -v $PWD:/app -w /app/server node:18-alpine npm test'
+                sh 'docker run --rm -v $PWD:/app -w /app/client node:18-alpine npm test'
+                sh 'docker run --rm -v $PWD:/app -w /app node:18-alpine node test/isolated_tests/test_outlook_email.js'
             }
         }
 
-        stage('4. Build Web Production Bundle') {
+        stage('4. Build Web Production Bundle (Containerized)') {
             steps {
-                echo "[STAGE 4] Compiling React Vite production assets..."
-                sh 'cd client && npm run build'
+                echo "[STAGE 4] Compiling React Vite production assets inside Node container..."
+                sh 'docker run --rm -v $PWD:/app -w /app/client node:18-alpine npm run build'
             }
         }
 
         stage('5. Deploy Web App Containers via Podman (Makefile)') {
             steps {
-                echo "[STAGE 5] Pulling latest code on Production Server & executing Podman container replacements (Backend first, then Frontend)..."
+                echo "[STAGE 5] Pulling latest code on Production Server & executing Podman container replacements..."
                 sshagent([SSH_KEY_ID]) {
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${PROD_USER}@${PROD_HOST} "cd ${PROD_WEB_DIR} && git pull origin main && make down-backend && make build-backend && make up-backend && make build-frontend-fresh"
