@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    tools {
+        // Configured in Jenkins -> Manage Jenkins -> Tools -> NodeJS
+        nodejs 'NodeJS-18'
+    }
+
     environment {
         // Read environment properties configured in Jenkins (with fallback defaults)
         PROD_USER     = "${env.PROD_USER ?: 'negces'}"
