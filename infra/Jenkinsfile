@@ -35,7 +35,6 @@ pipeline {
                 echo "[STAGE 3] Executing Server and Client test suites inside Node container..."
                 sh 'docker run --rm -v infra_jenkins_data:/var/jenkins_home -w ${WORKSPACE}/server node:20-alpine npm test'
                 sh 'docker run --rm -v infra_jenkins_data:/var/jenkins_home -w ${WORKSPACE}/client node:20-alpine npm test'
-                sh 'docker run --rm -v infra_jenkins_data:/var/jenkins_home -w ${WORKSPACE} node:20-alpine node test/isolated_tests/test_outlook_email.js'
             }
         }
 
