@@ -6,7 +6,7 @@ pipeline {
         PROD_USER     = "${env.PROD_USER ?: 'negces'}"
         PROD_HOST     = "${env.PROD_HOST ?: '172.19.18.5'}"
         PROD_WEB_DIR  = "${env.PROD_WEB_DIR ?: '/data/Intranet/negces/negceslab'}"
-        SSH_KEY_ID    = "${env.SSH_KEY_ID ?: 'campus-ssh-key'}"
+        SSH_KEY_PATH  = "${env.SSH_KEY_PATH ?: '/var/jenkins_home/.ssh/id_campus'}"
     }
 
     triggers {
@@ -48,22 +48,14 @@ pipeline {
         stage('5. Deploy Web App Containers via Podman (Makefile)') {
             steps {
                 echo "[STAGE 5] Pulling latest code on Production Server & executing Podman container replacements..."
-                sshagent([SSH_KEY_ID]) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no ${PROD_USER}@${PROD_HOST} "cd ${PROD_WEB_DIR} && git pull origin main && make down-backend && make build-backend && make up-backend && make build-frontend-fresh"
-                    '''
-                }
+                sh 'ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${PROD_USER}@${PROD_HOST} "cd ${PROD_WEB_DIR} && git pull origin main && make down-backend && make build-backend && make up-backend && make build-frontend-fresh"'
             }
         }
 
         stage('6. Post-Deployment Container Health Check') {
             steps {
                 echo "[STAGE 6] Performing production Podman container health check..."
-                sshagent([SSH_KEY_ID]) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no ${PROD_USER}@${PROD_HOST} "cd ${PROD_WEB_DIR} && make health"
-                    '''
-                }
+                sh 'ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${PROD_USER}@${PROD_HOST} "cd ${PROD_WEB_DIR} && make health"'
             }
         }
     }
