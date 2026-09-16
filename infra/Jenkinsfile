@@ -1,0 +1,82 @@
+pipeline {
+    agent any
+
+    environment {
+        PROD_SERVER = 'negces@172.19.18.5'
+        PROD_RELEASE_DIR = '/data/Intranet/negces/NegcesAgent/releases'
+        PROD_WEB_DIR = '/data/Intranet/negces/negceslab'
+        SSH_KEY_PATH = '/home/aparichit/.ssh/id_campus'
+    }
+
+    triggers {
+        // Poll GitHub SCM every 5 minutes for new commits (LAN / No Public IP friendly)
+        pollSCM('H/5 * * * *')
+    }
+
+    stages {
+        stage('Checkout & SCM Sync') {
+            steps {
+                git branch: 'main', url: 'https://github.com/ShudarsanRegmi/negceslab.git'
+            }
+        }
+
+        stage('Code Quality & Dependencies') {
+            steps {
+                sh '''
+                    echo "Checking dependencies..."
+                    cd server && npm ci
+                    cd ../client && npm ci
+                    cd ../agent && go vet ./...
+                '''
+            }
+        }
+
+        stage('Automated Integration Tests') {
+            steps {
+                sh '''
+                    echo "Running isolated Outlook SMTP email integration test..."
+                    node test/isolated_tests/test_outlook_email.js
+                '''
+            }
+        }
+
+        stage('Build & Cross-Compile Agent Binaries') {
+            steps {
+                sh '''
+                    echo "Compiling Linux & Windows production agent binaries..."
+                    cd agent
+                    go build -o bin/prod/linux/NegcesLab main.go
+                    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o bin/prod/windows/NegcesLabSetup.exe installer_windows_prod.go
+                    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o bin/prod/windows/updater.exe updater/main.go
+                '''
+            }
+        }
+
+        stage('Deploy Desktop Binaries via SCP') {
+            steps {
+                sh '''
+                    echo "Deploying binaries & manifest to production releases folder..."
+                    node .local/scripts/deploy_release.js --host=${PROD_SERVER} --dest=${PROD_RELEASE_DIR}
+                '''
+            }
+        }
+
+        stage('Deploy Server Web Code & Restart Services') {
+            steps {
+                sh '''
+                    echo "Updating production server code and restarting services..."
+                    ssh -O -i ${SSH_KEY_PATH} ${PROD_SERVER} "cd ${PROD_WEB_DIR} && git pull origin main && cd server && npm install && pm2 restart all"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "[SUCCESS] NEGCES Lab CI/CD Pipeline executed cleanly. Deployment complete!"
+        }
+        failure {
+            echo "[FAILURE] NEGCES Lab CI/CD Pipeline failed during execution. Check logs above."
+        }
+    }
+}
