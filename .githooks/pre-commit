@@ -1,0 +1,38 @@
+#!/bin/sh
+# NEGCES Lab - Shared Team Git Pre-Commit Security and Quality Guardrail Hook
+
+# 1. Block Committing Heavy Binary Files
+STAGED_BINARIES=$(git diff --cached --name-only | grep -E '(\.(exe|dll|bin|so|a|dylib|zip|tar\.gz)$|^agent/bin/)')
+
+if [ -n "$STAGED_BINARIES" ]; then
+    echo "[ERROR] Pre-commit check failed: Executable or binary files detected in staged commit:"
+    echo "$STAGED_BINARIES"
+    echo ""
+    echo "[REASON] Binaries must be deployed via node .local/scripts/deploy_release.js to /data/Intranet/negces/NegcesAgent/releases/"
+    echo "[ACTION] Unstage these files using: git rm --cached <file>"
+    exit 1
+fi
+
+# 2. Block Committing Secret and Environment Files
+STAGED_SECRETS=$(git diff --cached --name-only | grep -E '(\.env($|\.)|serviceAccountKey\.json|\.pem$|id_rsa)')
+
+if [ -n "$STAGED_SECRETS" ]; then
+    echo "[ERROR] Pre-commit check failed: Secret or environment configuration file detected in staged commit:"
+    echo "$STAGED_SECRETS"
+    echo ""
+    echo "[REASON] Environment files contain sensitive tokens and database credentials."
+    echo "[ACTION] Unstage secret files using: git rm --cached <file>"
+    exit 1
+fi
+
+# 3. Block Commits to main Branch directly (Unless ALLOW_MAIN=1 is passed)
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$CURRENT_BRANCH" = "main" ] && [ "$ALLOW_MAIN" != "1" ]; then
+    echo "[WARNING] Pre-commit check warning: Attempting to commit directly to 'main' branch."
+    echo "[REASON] Development should take place on topic feature branches (e.g. feature/name)."
+    echo "[ACTION] Switch to a feature branch, or bypass this check with: ALLOW_MAIN=1 git commit"
+    exit 1
+fi
+
+exit 0
