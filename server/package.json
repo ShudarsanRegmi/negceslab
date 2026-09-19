@@ -9,7 +9,10 @@
     "test": "node test/sample.test.js",
     "migrate:temp-releases": "node migrate-temporary-releases.js",
     "migrate:rollback": "node migrate-temporary-releases.js rollback",
-    "test:temp-releases": "node test-temporary-release-system.js"
+    "test:temp-releases": "node test-temporary-release-system.js",
+    "seed:base": "node scripts/seed-base.js",
+    "seed:dev": "node scripts/seed-dev.js",
+    "seed:staging": "node scripts/seed-staging.js"
   },
   "dependencies": {
     "@influxdata/influxdb-client": "^1.35.0",
