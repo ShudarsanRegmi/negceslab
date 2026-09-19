@@ -81,7 +81,7 @@ const BASE_COMPUTERS = [
 
 const BASE_ADMIN = {
   firebaseUid: 'sys_admin_uid_staging_001',
-  email: 'admin@negceslab.org',
+  email: 'admin@ch.amrita.edu',
   name: 'System Administrator',
   role: 'admin'
 };

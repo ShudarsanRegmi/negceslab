@@ -17,13 +17,13 @@ const User = require('../models/user');
 const STAGING_QA_USERS = [
   {
     firebaseUid: 'qa_staging_admin_uid_001',
-    email: 'staging-admin@negceslab.org',
+    email: 'staging.admin@ch.amrita.edu',
     name: 'Staging QA Admin',
     role: 'admin'
   },
   {
     firebaseUid: 'qa_staging_student_uid_001',
-    email: 'staging-student@negceslab.org',
+    email: 'ch.en.u4cse23001@ch.students.amrita.edu',
     name: 'Staging QA Student',
     role: 'user'
   }
