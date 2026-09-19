@@ -103,11 +103,19 @@ async function seedBase() {
     }
 
     // 2. Seed Base System Administrator
-    await User.findOneAndUpdate(
-      { email: BASE_ADMIN.email },
-      BASE_ADMIN,
-      { upsert: true, new: true }
-    );
+    const existingAdmin = await User.findOne({
+      $or: [{ email: BASE_ADMIN.email }, { firebaseUid: BASE_ADMIN.firebaseUid }]
+    });
+
+    if (existingAdmin) {
+      existingAdmin.email = BASE_ADMIN.email;
+      existingAdmin.name = BASE_ADMIN.name;
+      existingAdmin.role = BASE_ADMIN.role;
+      existingAdmin.firebaseUid = BASE_ADMIN.firebaseUid;
+      await existingAdmin.save();
+    } else {
+      await User.create(BASE_ADMIN);
+    }
     console.log(`  ✓ Base Admin User [${BASE_ADMIN.email}] ensured`);
 
     console.log('✅ Base Database Seeding Completed Successfully.');

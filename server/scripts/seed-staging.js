@@ -38,11 +38,19 @@ async function seedStaging() {
 
     // 2. Seed Clean Staging QA Accounts
     for (const qaUser of STAGING_QA_USERS) {
-      await User.findOneAndUpdate(
-        { email: qaUser.email },
-        qaUser,
-        { upsert: true, new: true }
-      );
+      const existingUser = await User.findOne({
+        $or: [{ email: qaUser.email }, { firebaseUid: qaUser.firebaseUid }]
+      });
+
+      if (existingUser) {
+        existingUser.email = qaUser.email;
+        existingUser.name = qaUser.name;
+        existingUser.role = qaUser.role;
+        existingUser.firebaseUid = qaUser.firebaseUid;
+        await existingUser.save();
+      } else {
+        await User.create(qaUser);
+      }
       console.log(`  ✓ Staging QA Account [${qaUser.email}] ready`);
     }
 
