@@ -6,20 +6,15 @@ server {
     root /home/{{ target_user }}/negceslab/client/dist;
     index index.html;
 
-    # Handle root / request redirect or serving index.html
-    location = / {
-        try_files /index.html =404;
-    }
-
-    # Serve Vite assets and subpaths for /negces/ base path
-    location /negces/ {
-        alias /home/{{ target_user }}/negceslab/client/dist/;
+    # Primary SPA Routing
+    location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # Also handle assets requests directly if requested without prefix
-    location /assets/ {
-        alias /home/{{ target_user }}/negceslab/client/dist/assets/;
+    # Serve Vite assets subpath
+    location /negces/ {
+        alias /home/{{ target_user }}/negceslab/client/dist/;
+        try_files $uri $uri/ /index.html;
     }
 
     # Reverse proxy backend API requests to Node.js Podman container (port 5001)
