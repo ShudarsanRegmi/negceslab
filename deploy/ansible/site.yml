@@ -24,6 +24,7 @@
           - acl
           - nginx
           - podman
+          - containernetworking-plugins
           - python3-pip
           - certbot
           - python3-certbot-nginx

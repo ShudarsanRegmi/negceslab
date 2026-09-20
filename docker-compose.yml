@@ -121,9 +121,9 @@ services:
     command:
       - '--collector.enable-all'
     environment:
-      - CONTAINER_HOST=unix:///run/user/1003/podman/podman.sock
+      - CONTAINER_HOST=unix://${XDG_RUNTIME_DIR:-/run/user/1000}/podman/podman.sock
     volumes:
-      - /run/user/1003/podman/podman.sock:/run/user/1003/podman/podman.sock
+      - ${XDG_RUNTIME_DIR:-/run/user/1000}/podman/podman.sock:${XDG_RUNTIME_DIR:-/run/user/1000}/podman/podman.sock
     ports:
       - "9882:9882"
     restart: unless-stopped
