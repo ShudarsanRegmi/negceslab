@@ -35,6 +35,18 @@
         name: podman-compose
         state: present
 
+    - name: Enable systemd lingering for target user
+      command: "loginctl enable-linger {{ target_user }}"
+      changed_when: false
+
+    - name: Enable and start podman.socket service for target user
+      systemd:
+        name: podman.socket
+        scope: user
+        state: started
+        enabled: yes
+      become_user: "{{ target_user }}"
+
     - name: Ensure target user directory exists
       file:
         path: "{{ project_dir }}"
