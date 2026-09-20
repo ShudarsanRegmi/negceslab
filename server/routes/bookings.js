@@ -557,11 +557,19 @@ router.post('/', verifyToken, async (req, res) => {
     const isTemporaryBooking = relevantBookingWithRelease !== undefined;
     logger.debug('Booking type classification', { bookingId: booking._id, isTemporaryBooking });
 
-    // Notify all admins about the new booking
+    // Notify all application admins about the new booking (Exclude Superadmin emails)
     const userBookingId = booking._id.toString().slice(-6).toUpperCase();
     const bookingType = isTemporaryBooking ? 'temporary booking (during release period)' : 'booking';
     
-    const admins = await User.find({ role: 'admin' });
+    const superadminEmails = (process.env.SUPERADMIN_EMAILS || process.env.SUPERADMIN_EMAIL || '')
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(Boolean);
+
+    const admins = await User.find({ 
+      role: 'admin',
+      email: { $nin: superadminEmails }
+    });
     const adminNotifications = admins.map(admin => new Notification({
       userId: admin.firebaseUid,
       title: isTemporaryBooking ? 'New Temporary Booking Request' : 'New Booking Request',
