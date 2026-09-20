@@ -14,6 +14,7 @@
       apt_repository:
         repo: "deb http://archive.ubuntu.com/ubuntu jammy universe"
         state: present
+      tags: [setup]
 
     - name: Update apt cache and install required system packages
       apt:
@@ -30,15 +31,18 @@
           - python3-certbot-nginx
         state: present
         update_cache: yes
+      tags: [setup]
 
     - name: Install podman-compose via pip
       pip:
         name: podman-compose
         state: present
+      tags: [setup]
 
     - name: Enable systemd lingering for target user
       command: "loginctl enable-linger {{ target_user }}"
       changed_when: false
+      tags: [setup]
 
     - name: Enable and start podman.socket service for target user
       systemd:
@@ -47,6 +51,7 @@
         state: started
         enabled: yes
       become_user: "{{ target_user }}"
+      tags: [setup]
 
     - name: Ensure target user directory exists
       file:
@@ -55,6 +60,7 @@
         owner: "{{ target_user }}"
         group: "{{ target_user }}"
         mode: '0755'
+      tags: [setup]
 
     - name: Clone or update NegcesLab repository
       git:
@@ -63,52 +69,63 @@
         version: "{{ git_branch }}"
         force: yes
       become_user: "{{ target_user }}"
+      tags: [deploy, build, seed]
 
     - name: Deploy Nginx Reverse Proxy Configuration
       template:
         src: templates/nginx-staging.conf.j2
         dest: /etc/nginx/sites-available/negceslab-staging
         mode: '0644'
+      tags: [nginx]
 
     - name: Enable Nginx site configuration
       file:
         src: /etc/nginx/sites-available/negceslab-staging
         dest: /etc/nginx/sites-enabled/negceslab-staging
         state: link
+      tags: [nginx]
 
     - name: Remove default Nginx site configuration
       file:
         path: /etc/nginx/sites-enabled/default
         state: absent
+      tags: [nginx]
 
     - name: Test and restart Nginx service
       systemd:
         name: nginx
         state: restarted
         enabled: yes
+      tags: [nginx]
 
     - name: Ensure environment files exist from templates
-      command: make setup-env
-      args:
-        chdir: "{{ project_dir }}"
+      copy:
+        src: "{{ project_dir }}/server/.env.example"
+        dest: "{{ project_dir }}/server/.env"
+        remote_src: yes
+        force: yes
       become_user: "{{ target_user }}"
+      tags: [deploy, build, seed]
 
     - name: Build frontend React static dist bundle using Podman
       command: make build-frontend
       args:
         chdir: "{{ project_dir }}"
       become_user: "{{ target_user }}"
+      tags: [build, deploy]
 
     - name: Prune stale podman networks
       command: podman network prune -f
       become_user: "{{ target_user }}"
       ignore_errors: yes
+      tags: [deploy]
 
     - name: Boot Podman Compose stack (MongoDB, Backend, Telemetry)
       command: podman-compose --env-file server/.env up -d
       args:
         chdir: "{{ project_dir }}"
       become_user: "{{ target_user }}"
+      tags: [deploy, seed]
 
     - name: Wait for MongoDB container to become ready
       command: podman exec mongodb mongosh --eval "db.adminCommand('ping')"
@@ -118,10 +135,11 @@
       delay: 3
       become_user: "{{ target_user }}"
       ignore_errors: yes
+      tags: [deploy, seed]
 
     - name: Execute Database Seed Script for Staging Accounts
       command: podman exec backend npm run seed:staging
       args:
         chdir: "{{ project_dir }}"
       become_user: "{{ target_user }}"
-      ignore_errors: yes
+      tags: [seed]
