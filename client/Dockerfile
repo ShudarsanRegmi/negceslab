@@ -17,8 +17,8 @@ ENV VITE_GIT_COMMIT_HASH=${VITE_GIT_COMMIT_HASH}
 ENV VITE_GIT_COMMIT_DATE=${VITE_GIT_COMMIT_DATE}
 ENV VITE_GIT_BRANCH=${VITE_GIT_BRANCH}
 
-# Copy environment file
-COPY client/.env ./
+# Copy environment file (if exists)
+COPY client/.env* ./
 
 # Copy vite config
 COPY client/vite.config.ts ./

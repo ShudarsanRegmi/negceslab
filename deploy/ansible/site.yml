@@ -74,6 +74,12 @@
         state: restarted
         enabled: yes
 
+    - name: Ensure environment files exist from templates
+      command: make setup-env
+      args:
+        chdir: "{{ project_dir }}"
+      become_user: "{{ target_user }}"
+
     - name: Build frontend React static dist bundle using Podman
       command: make build-frontend
       args:
