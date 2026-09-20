@@ -3,13 +3,23 @@ server {
     listen [::]:80;
     server_name {{ domain_name | default('_') }};
 
-    # Serve built React static dist files directly
     root /home/{{ target_user }}/negceslab/client/dist;
     index index.html;
 
-    # Client-side SPA routing fallback
-    location / {
+    # Handle root / request redirect or serving index.html
+    location = / {
+        try_files /index.html =404;
+    }
+
+    # Serve Vite assets and subpaths for /negces/ base path
+    location /negces/ {
+        alias /home/{{ target_user }}/negceslab/client/dist/;
         try_files $uri $uri/ /index.html;
+    }
+
+    # Also handle assets requests directly if requested without prefix
+    location /assets/ {
+        alias /home/{{ target_user }}/negceslab/client/dist/assets/;
     }
 
     # Reverse proxy backend API requests to Node.js Podman container (port 5001)

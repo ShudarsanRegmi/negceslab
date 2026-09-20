@@ -119,7 +119,25 @@
         path: "/home/{{ target_user }}"
         entity: www-data
         etype: user
-        permissions: rx
+        permissions: x
+        state: present
+      tags: [build, deploy, nginx]
+
+    - name: Grant www-data traverse permissions on negceslab directory via ACL
+      acl:
+        path: "{{ project_dir }}"
+        entity: www-data
+        etype: user
+        permissions: x
+        state: present
+      tags: [build, deploy, nginx]
+
+    - name: Grant www-data traverse permissions on client directory via ACL
+      acl:
+        path: "{{ project_dir }}/client"
+        entity: www-data
+        etype: user
+        permissions: x
         state: present
       tags: [build, deploy, nginx]
 
