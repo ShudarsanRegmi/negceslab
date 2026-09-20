@@ -500,20 +500,49 @@ const emailTemplates = {
   })
 };
 
+// Helper: Resolves email recipient and subject.
+// STRICT RULE: If NODE_ENV is 'production', redirect settings are COMPLETELY IGNORED regardless of values.
+const resolveRecipientDetails = (targetEmail, subject) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isRedirectEnabled = process.env.ENABLE_EMAIL_REDIRECT === 'true';
+  const overrideAddress = process.env.EMAIL_OVERRIDE_TO;
+
+  if (!isProduction && isRedirectEnabled && overrideAddress) {
+    const banner = `
+      <div style="background-color: #fffbebf8; border: 1px solid #f59e0b; color: #92400e; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px; font-family: sans-serif; font-size: 13px; line-height: 1.5;">
+        <strong style="color: #b45309;">ℹ️ Debug Email Redirect Active</strong><br/>
+        This email was originally addressed to: <code>${targetEmail}</code>
+      </div>
+    `;
+    return {
+      to: overrideAddress,
+      subject: `[REDIRECTED from ${targetEmail}] ${subject}`,
+      banner
+    };
+  }
+
+  return {
+    to: targetEmail,
+    subject: subject,
+    banner: ''
+  };
+};
+
 // Email sending function
 const sendEmail = async (to, template, data) => {
   try {
     const emailContent = emailTemplates[template](...data);
+    const details = resolveRecipientDetails(to, emailContent.subject);
     
     const mailOptions = {
       from: fromAddress,
-      to: to,
-      subject: emailContent.subject,
-      html: emailContent.html
+      to: details.to,
+      subject: details.subject,
+      html: details.banner ? details.banner + emailContent.html : emailContent.html
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', result.messageId);
+    console.log(`Email sent successfully (Target: ${to}, Delivered To: ${details.to}):`, result.messageId);
     return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Error sending email:', error);
@@ -544,11 +573,10 @@ const sendAdminNewBookingRequestEmail = async (adminEmail, adminName, userName, 
 
 const sendSuperadminOtpEmail = async (userEmail, otp, validMinutes) => {
   try {
-    const mailOptions = {
-      from: fromAddress,
-      to: userEmail,
-      subject: 'NEGCES Lab Superadmin OTP',
-      html: `
+    const rawSubject = 'NEGCES Lab Superadmin OTP';
+    const details = resolveRecipientDetails(userEmail, rawSubject);
+
+    const bodyContent = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -557,6 +585,7 @@ const sendSuperadminOtpEmail = async (userEmail, otp, validMinutes) => {
           <title>Superadmin OTP</title>
         </head>
         <body>
+          ${details.banner}
           <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e0e0e0; border-radius: 8px;">
             <h2 style="margin-top: 0; color: #1f2937;">NEGCES Lab superadmin login</h2>
             <p style="color: #374151; font-size: 15px;">Use this OTP to complete your superadmin login.</p>
@@ -568,11 +597,17 @@ const sendSuperadminOtpEmail = async (userEmail, otp, validMinutes) => {
           </div>
         </body>
         </html>
-      `
+      `;
+
+    const mailOptions = {
+      from: fromAddress,
+      to: details.to,
+      subject: details.subject,
+      html: bodyContent
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('Superadmin OTP email sent successfully:', result.messageId);
+    console.log(`Superadmin OTP email sent successfully (Target: ${userEmail}, Delivered To: ${details.to}):`, result.messageId);
     return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Error sending superadmin OTP email:', error);
