@@ -104,8 +104,8 @@ const BASE_COMPUTERS = [
 ];
 
 const BASE_ADMIN = {
-  email: 'staging.superadmin@ch.amrita.edu',
-  name: 'Staging Superadmin',
+  email: 'staging.sysadmin@ch.amrita.edu',
+  name: 'Staging Sysadmin',
   role: 'admin',
   password: process.env.STAGING_QA_PASSWORD || 'Staging@123456'
 };
