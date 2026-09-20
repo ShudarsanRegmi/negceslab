@@ -114,6 +114,25 @@
       become_user: "{{ target_user }}"
       tags: [build, deploy]
 
+    - name: Grant www-data traverse permissions on target user home directory via ACL
+      acl:
+        path: "/home/{{ target_user }}"
+        entity: www-data
+        etype: user
+        permissions: rx
+        state: present
+      tags: [build, deploy, nginx]
+
+    - name: Grant www-data read/execute permissions recursively on frontend dist directory via ACL
+      acl:
+        path: "{{ project_dir }}/client/dist"
+        entity: www-data
+        etype: user
+        permissions: rx
+        recursive: yes
+        state: present
+      tags: [build, deploy, nginx]
+
     - name: Prune stale podman networks
       command: podman network prune -f
       become_user: "{{ target_user }}"
