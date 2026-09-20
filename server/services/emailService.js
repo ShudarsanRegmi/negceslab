@@ -501,13 +501,12 @@ const emailTemplates = {
 };
 
 // Helper: Resolves email recipient and subject.
-// STRICT RULE: If NODE_ENV is 'production', redirect settings are COMPLETELY IGNORED regardless of values.
+// If ENABLE_EMAIL_REDIRECT is explicitly 'true' and EMAIL_OVERRIDE_TO is provided, redirect outgoing emails.
 const resolveRecipientDetails = (targetEmail, subject) => {
-  const isProduction = process.env.NODE_ENV === 'production';
   const isRedirectEnabled = process.env.ENABLE_EMAIL_REDIRECT === 'true';
   const overrideAddress = process.env.EMAIL_OVERRIDE_TO;
 
-  if (!isProduction && isRedirectEnabled && overrideAddress) {
+  if (isRedirectEnabled && overrideAddress) {
     const banner = `
       <div style="background-color: #fffbebf8; border: 1px solid #f59e0b; color: #92400e; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px; font-family: sans-serif; font-size: 13px; line-height: 1.5;">
         <strong style="color: #b45309;">ℹ️ Debug Email Redirect Active</strong><br/>
