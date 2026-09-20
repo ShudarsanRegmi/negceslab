@@ -99,6 +99,11 @@
         chdir: "{{ project_dir }}"
       become_user: "{{ target_user }}"
 
+    - name: Prune stale podman networks
+      command: podman network prune -f
+      become_user: "{{ target_user }}"
+      ignore_errors: yes
+
     - name: Boot Podman Compose stack (MongoDB, Backend, Telemetry)
       command: podman-compose --env-file server/.env up --build -d
       args:
