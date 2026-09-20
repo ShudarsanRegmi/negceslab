@@ -1,0 +1,2 @@
+[staging]
+# Target IP address will be passed dynamically via command line or ansible-playbook -i
