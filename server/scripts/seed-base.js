@@ -6,12 +6,28 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
+const admin = require('firebase-admin');
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const Computer = require('../models/computer');
 const User = require('../models/user');
-const Policy = require('../models/policy');
+
+// Initialize Firebase Admin if service account credentials exist
+let firebaseInitialized = false;
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    }
+    firebaseInitialized = true;
+  }
+} catch (e) {
+  console.warn('⚠️ Firebase Admin Initialization Warning in seed script:', e.message);
+}
 
 const BASE_COMPUTERS = [
   {
@@ -80,10 +96,10 @@ const BASE_COMPUTERS = [
 ];
 
 const BASE_ADMIN = {
-  firebaseUid: 'sys_admin_uid_staging_001',
   email: 'admin@ch.amrita.edu',
   name: 'System Administrator',
-  role: 'admin'
+  role: 'admin',
+  password: process.env.STAGING_QA_PASSWORD || 'Staging@123456'
 };
 
 async function seedBase() {
@@ -102,21 +118,54 @@ async function seedBase() {
       console.log(`  ✓ Computer [${compData.name}] ensured`);
     }
 
-    // 2. Seed Base System Administrator
+    // 2. Ensure Firebase Auth User & get real UID
+    let uid = 'sys_admin_uid_staging_001';
+    if (firebaseInitialized) {
+      try {
+        let fbUser;
+        try {
+          fbUser = await admin.auth().getUserByEmail(BASE_ADMIN.email);
+          await admin.auth().updateUser(fbUser.uid, {
+            password: BASE_ADMIN.password,
+            displayName: BASE_ADMIN.name,
+            emailVerified: true
+          });
+          console.log(`  ✓ Updated Firebase Auth User for ${BASE_ADMIN.email}`);
+        } catch (notFound) {
+          fbUser = await admin.auth().createUser({
+            email: BASE_ADMIN.email,
+            password: BASE_ADMIN.password,
+            displayName: BASE_ADMIN.name,
+            emailVerified: true
+          });
+          console.log(`  ✓ Created new Firebase Auth User for ${BASE_ADMIN.email}`);
+        }
+        uid = fbUser.uid;
+      } catch (fbErr) {
+        console.warn(`  ⚠️ Could not sync ${BASE_ADMIN.email} to Firebase Auth:`, fbErr.message);
+      }
+    }
+
+    // 3. Upsert User in MongoDB with matching Firebase UID
     const existingAdmin = await User.findOne({
-      $or: [{ email: BASE_ADMIN.email }, { firebaseUid: BASE_ADMIN.firebaseUid }]
+      $or: [{ email: BASE_ADMIN.email }, { firebaseUid: uid }]
     });
 
     if (existingAdmin) {
       existingAdmin.email = BASE_ADMIN.email;
       existingAdmin.name = BASE_ADMIN.name;
       existingAdmin.role = BASE_ADMIN.role;
-      existingAdmin.firebaseUid = BASE_ADMIN.firebaseUid;
+      existingAdmin.firebaseUid = uid;
       await existingAdmin.save();
     } else {
-      await User.create(BASE_ADMIN);
+      await User.create({
+        email: BASE_ADMIN.email,
+        name: BASE_ADMIN.name,
+        role: BASE_ADMIN.role,
+        firebaseUid: uid
+      });
     }
-    console.log(`  ✓ Base Admin User [${BASE_ADMIN.email}] ensured`);
+    console.log(`  ✓ Base Admin User [${BASE_ADMIN.email}] ensured (UID: ${uid})`);
 
     console.log('✅ Base Database Seeding Completed Successfully.');
     if (require.main === module) {
