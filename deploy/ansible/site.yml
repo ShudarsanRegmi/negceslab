@@ -3,10 +3,10 @@
   hosts: all
   become: yes
   vars:
-    remote_user: "negces-staging"
+    target_user: "negces-staging"
     repo_url: "https://github.com/ShudarsanRegmi/negceslab.git"
     git_branch: "feature/cicd-pipeline"
-    project_dir: "/home/{{ remote_user }}/negceslab"
+    project_dir: "/home/{{ target_user }}/negceslab"
     domain_name: "_"
 
   tasks:
@@ -24,18 +24,23 @@
           - acl
           - nginx
           - podman
-          - podman-compose
+          - python3-pip
           - certbot
           - python3-certbot-nginx
         state: present
         update_cache: yes
 
+    - name: Install podman-compose via pip
+      pip:
+        name: podman-compose
+        state: present
+
     - name: Ensure target user directory exists
       file:
         path: "{{ project_dir }}"
         state: directory
-        owner: "{{ remote_user }}"
-        group: "{{ remote_user }}"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
         mode: '0755'
 
     - name: Clone or update NegcesLab repository
@@ -44,7 +49,7 @@
         dest: "{{ project_dir }}"
         version: "{{ git_branch }}"
         force: yes
-      become_user: "{{ remote_user }}"
+      become_user: "{{ target_user }}"
 
     - name: Deploy Nginx Reverse Proxy Configuration
       template:
@@ -73,17 +78,17 @@
       command: make build-frontend
       args:
         chdir: "{{ project_dir }}"
-      become_user: "{{ remote_user }}"
+      become_user: "{{ target_user }}"
 
     - name: Boot Podman Compose stack (MongoDB, Backend, Telemetry)
       command: podman-compose --env-file server/.env up --build -d
       args:
         chdir: "{{ project_dir }}"
-      become_user: "{{ remote_user }}"
+      become_user: "{{ target_user }}"
 
     - name: Execute Database Seed Script for Staging Accounts
       command: podman exec backend npm run seed:staging
       args:
         chdir: "{{ project_dir }}"
-      become_user: "{{ remote_user }}"
+      become_user: "{{ target_user }}"
       ignore_errors: yes
