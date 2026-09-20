@@ -13,16 +13,24 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const Computer = require('../models/computer');
 const User = require('../models/user');
 
-// Initialize Firebase Admin if service account credentials exist
+// Initialize Firebase Admin if credentials exist
 let firebaseInitialized = false;
 try {
+  let serviceAccount;
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-    }
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '../config/serviceAccountKey.json';
+    const absolutePath = path.isAbsolute(serviceAccountPath)
+      ? serviceAccountPath
+      : path.join(__dirname, '..', serviceAccountPath);
+    serviceAccount = require(absolutePath);
+  }
+
+  if (serviceAccount && !admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
     firebaseInitialized = true;
   }
 } catch (e) {
