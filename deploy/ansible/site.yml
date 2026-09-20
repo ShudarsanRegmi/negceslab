@@ -105,10 +105,19 @@
       ignore_errors: yes
 
     - name: Boot Podman Compose stack (MongoDB, Backend, Telemetry)
-      command: podman-compose --env-file server/.env up --build -d
+      command: podman-compose --env-file server/.env up -d
       args:
         chdir: "{{ project_dir }}"
       become_user: "{{ target_user }}"
+
+    - name: Wait for MongoDB container to become ready
+      command: podman exec mongodb mongosh --eval "db.adminCommand('ping')"
+      register: mongo_ping
+      until: mongo_ping.rc == 0
+      retries: 15
+      delay: 3
+      become_user: "{{ target_user }}"
+      ignore_errors: yes
 
     - name: Execute Database Seed Script for Staging Accounts
       command: podman exec backend npm run seed:staging
