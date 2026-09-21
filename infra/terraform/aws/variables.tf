@@ -15,3 +15,9 @@ variable "key_name" {
   default     = "negceslab-staging-key"
   description = "AWS SSH Key Pair Name"
 }
+
+variable "ssh_public_key_path" {
+  type        = string
+  default     = "~/.ssh/id_rsa.pub"
+  description = "Path to local SSH public key file"
+}

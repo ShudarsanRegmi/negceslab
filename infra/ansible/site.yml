@@ -7,12 +7,13 @@
     repo_url: "https://github.com/ShudarsanRegmi/negceslab.git"
     git_branch: "feature/cicd-pipeline"
     project_dir: "/home/{{ target_user }}/negceslab"
-    domain_name: "_"
+    domain_name: "negceslab2.shudarsanregmi.com.np"
+    ssl_email: "sudoerson@gmail.com"
 
   tasks:
     - name: Enable Ubuntu Universe Repository
       apt_repository:
-        repo: "deb http://archive.ubuntu.com/ubuntu jammy universe"
+        repo: "deb http://archive.ubuntu.com/ubuntu noble universe"
         state: present
       tags: [setup]
 
@@ -25,18 +26,13 @@
           - acl
           - nginx
           - podman
+          - podman-compose
           - containernetworking-plugins
           - python3-pip
           - certbot
           - python3-certbot-nginx
         state: present
         update_cache: yes
-      tags: [setup]
-
-    - name: Install podman-compose via pip
-      pip:
-        name: podman-compose
-        state: present
       tags: [setup]
 
     - name: Enable systemd lingering for target user
@@ -98,13 +94,31 @@
         enabled: yes
       tags: [nginx]
 
-    - name: Ensure environment files exist from templates
+    - name: Upload local uncommitted server environment file to remote VM
       copy:
-        src: "{{ project_dir }}/server/.env.example"
+        src: "../../server/.env.staging"
         dest: "{{ project_dir }}/server/.env"
-        remote_src: yes
-        force: yes
-      become_user: "{{ target_user }}"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0600'
+      tags: [deploy, build, seed]
+
+    - name: Upload local uncommitted client environment file to remote VM
+      copy:
+        src: "../../client/.env.staging"
+        dest: "{{ project_dir }}/client/.env"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0600'
+      tags: [deploy, build]
+
+    - name: Upload local uncommitted Firebase service account key to remote VM
+      copy:
+        src: "../../server/config/serviceAccountKey.staging.json"
+        dest: "{{ project_dir }}/server/config/serviceAccountKey.staging.json"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0600'
       tags: [deploy, build, seed]
 
     - name: Build frontend React static dist bundle using Podman
@@ -168,8 +182,8 @@
       command: podman exec mongodb mongosh --eval "db.adminCommand('ping')"
       register: mongo_ping
       until: mongo_ping.rc == 0
-      retries: 15
-      delay: 3
+      retries: 20
+      delay: 5
       become_user: "{{ target_user }}"
       ignore_errors: yes
       tags: [deploy, seed]
@@ -178,5 +192,44 @@
       command: podman exec backend npm run seed:staging
       args:
         chdir: "{{ project_dir }}"
+      register: seed_result
+      until: seed_result.rc == 0
+      retries: 5
+      delay: 5
       become_user: "{{ target_user }}"
       tags: [seed]
+
+    - name: Obtain Let's Encrypt SSL Certificate via Certbot (if domain is configured)
+      command: "certbot certonly --webroot -w {{ project_dir }}/client/dist -d {{ domain_name }} --non-interactive --agree-tos -m {{ ssl_email }}"
+      when: domain_name != "_" and domain_name != ""
+      ignore_errors: yes
+      tags: [ssl]
+
+    - name: Configure Nginx SSL certificate bindings if certs exist
+      block:
+        - name: Check if SSL certificate exists
+          stat:
+            path: "/etc/letsencrypt/live/{{ domain_name }}/fullchain.pem"
+          register: cert_stat
+
+        - name: Insert SSL listen directives into Nginx site configuration
+          blockinfile:
+            path: /etc/nginx/sites-available/negceslab-staging
+            insertafter: "server_name"
+            block: |
+              listen 443 ssl;
+              listen [::]:443 ssl;
+              ssl_certificate /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/{{ domain_name }}/privkey.pem;
+          when: cert_stat.stat.exists
+      when: domain_name != "_" and domain_name != ""
+      ignore_errors: yes
+      tags: [ssl]
+
+    - name: Reload Nginx service to load newly generated SSL certificates
+      systemd:
+        name: nginx
+        state: reloaded
+      when: domain_name != "_" and domain_name != ""
+      ignore_errors: yes
+      tags: [ssl]

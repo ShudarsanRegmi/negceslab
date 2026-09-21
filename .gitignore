@@ -15,8 +15,11 @@ node_modules/
 .env.test.local
 .env.production.local
 .env.prod
+.env.staging
 client/.env.prod
 server/.env.prod
+client/.env.staging
+server/.env.staging
 NOTES.local
 
 # Build files
@@ -52,8 +55,17 @@ lerna-debug.log*
 *.sln
 *.sw?
 
-# Firebase
-serviceAccountKey.json
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+infra/terraform/*/.terraform/
+infra/terraform/*/*.tfstate
+infra/terraform/*/*.tfstate.*
+infra/terraform/*/.terraform.lock.hcl
+serviceAccountKey.staging.json
+server/config/serviceAccountKey.staging.json
 .env.prod
 
 # Custom Local Documentation

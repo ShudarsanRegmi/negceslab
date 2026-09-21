@@ -49,12 +49,18 @@ resource "aws_security_group" "staging_sg" {
   }
 }
 
-# 2. Get latest Ubuntu 22.04 LTS AMI
+# 2. Key Pair (Creates SSH key automatically in AWS from local public key)
+resource "aws_key_pair" "staging_key" {
+  key_name   = var.key_name
+  public_key = file(var.ssh_public_key_path)
+}
+
+# 3. Get latest Ubuntu 24.04 LTS AMI
 data "aws_ami" "ubuntu" {
   most_recent = true
   filter {
     name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
   }
   filter {
     name   = "virtualization-type"
@@ -63,17 +69,29 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
-# 3. EC2 Instance
+# 4. EC2 Instance
 resource "aws_instance" "staging_ec2" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
-  key_name               = var.key_name
+  key_name               = aws_key_pair.staging_key.key_name
   vpc_security_group_ids = [aws_security_group.staging_sg.id]
 
   root_block_device {
     volume_size = 30
     volume_type = "gp3"
   }
+
+  user_data = <<-EOF
+              #!/bin/bash
+              useradd -m -s /bin/bash negces-staging
+              echo "negces-staging ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/negces-staging
+              chmod 0440 /etc/sudoers.d/negces-staging
+              mkdir -p /home/negces-staging/.ssh
+              cp /home/ubuntu/.ssh/authorized_keys /home/negces-staging/.ssh/authorized_keys
+              chown -R negces-staging:negces-staging /home/negces-staging/.ssh
+              chmod 700 /home/negces-staging/.ssh
+              chmod 600 /home/negces-staging/.ssh/authorized_keys
+              EOF
 
   tags = {
     Name = "negceslab-staging"

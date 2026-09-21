@@ -105,7 +105,7 @@ resource "azurerm_network_interface_security_group_association" "nic_nsg" {
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
-# 6. Ubuntu 22.04 LTS Virtual Machine
+# 6. Ubuntu 24.04 LTS Virtual Machine
 resource "azurerm_linux_virtual_machine" "vm" {
   name                = "vm-negceslab-staging"
   resource_group_name = azurerm_resource_group.rg.name
@@ -129,8 +129,8 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   source_image_reference {
     publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-lts"
+    offer     = "ubuntu-24_04-lts"
+    sku       = "server"
     version   = "latest"
   }
 }
